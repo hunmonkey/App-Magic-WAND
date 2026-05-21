@@ -1,6 +1,4 @@
 const elements = {
-  ipMenuToggle: document.querySelector("#ipMenuToggle"),
-  ipMenuPanel: document.querySelector("#ipMenuPanel"),
   ipManagementMenu: document.querySelector("#ipManagementMenu"),
   quitButton: document.querySelector("#quitButton"),
   ipManagementPage: document.querySelector("#ipManagementPage"),
@@ -52,7 +50,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 function bindEvents() {
-  elements.ipMenuToggle.addEventListener("click", toggleIpMenu);
   elements.ipManagementMenu.addEventListener("click", showIpManagementPage);
   elements.quitButton.addEventListener("click", () => {
     window.magicWand.quitApp();
@@ -75,22 +72,9 @@ function bindEvents() {
   elements.searchInput.addEventListener("input", renderTable);
 }
 
-function toggleIpMenu() {
-  const isOpen = elements.ipMenuToggle.getAttribute("aria-expanded") === "true";
-  const nextOpen = !isOpen;
-  elements.ipMenuToggle.setAttribute("aria-expanded", String(nextOpen));
-  elements.ipMenuToggle.classList.toggle("open", nextOpen);
-  elements.ipMenuPanel.hidden = !nextOpen;
-}
-
 function showIpManagementPage() {
   elements.ipManagementPage.classList.add("active");
   elements.ipManagementMenu.classList.add("active");
-  if (elements.ipMenuPanel.hidden) {
-    elements.ipMenuPanel.hidden = false;
-    elements.ipMenuToggle.setAttribute("aria-expanded", "true");
-    elements.ipMenuToggle.classList.add("open");
-  }
 }
 
 async function loadRecords() {

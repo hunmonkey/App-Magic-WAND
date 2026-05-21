@@ -16,7 +16,6 @@
   --amber-soft: #fff2d8;
   --red: #b42318;
   --red-soft: #fdecea;
-  --shadow: 0 14px 32px rgba(21, 39, 63, 0.12);
 }
 
 * {
@@ -102,7 +101,7 @@ textarea:focus {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 200px minmax(0, 1fr);
   height: 100vh;
   min-height: 720px;
   overflow: hidden;
@@ -115,25 +114,14 @@ textarea:focus {
 .side-menu {
   display: flex;
   flex-direction: column;
-  gap: 22px;
   min-height: 0;
-  padding: 22px 16px;
+  padding: 22px 8px;
   color: #e8eef8;
   background: linear-gradient(180deg, var(--nav), #0b1624);
 }
 
-.brand {
-  padding: 0 8px 18px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.18);
-}
-
-.brand .eyebrow {
-  color: #8fb3ff;
-}
-
-.eyebrow,
 .section-label {
-  margin: 0 0 5px;
+  margin: 0 0 6px;
   color: var(--blue);
   font-size: 12px;
   font-weight: 800;
@@ -141,36 +129,16 @@ textarea:focus {
   text-transform: uppercase;
 }
 
-h1,
-h2 {
-  margin: 0;
-  line-height: 1.15;
-}
-
-h1 {
-  color: #ffffff;
-  font-size: 28px;
-}
-
-h2 {
-  font-size: 28px;
-}
-
-.accordion-menu {
+.side-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.menu-group {
-  display: grid;
   gap: 6px;
 }
 
-.accordion-toggle,
 .menu-link {
   width: 100%;
   min-height: 42px;
+  padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 8px;
   color: #dbe7f5;
@@ -178,42 +146,10 @@ h2 {
   text-align: left;
 }
 
-.accordion-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  font-weight: 800;
-}
-
-.accordion-toggle:hover,
 .menu-link:hover {
   border-color: rgba(147, 197, 253, 0.35);
   color: #ffffff;
   background: var(--nav-soft);
-}
-
-.accordion-toggle.open {
-  color: #ffffff;
-  background: var(--nav-soft);
-}
-
-.chevron {
-  transition: transform 160ms ease;
-}
-
-.accordion-toggle:not(.open) .chevron {
-  transform: rotate(180deg);
-}
-
-.accordion-panel {
-  display: grid;
-  gap: 6px;
-  padding-left: 10px;
-}
-
-.menu-link {
-  padding: 0 12px;
 }
 
 .menu-link.active {
@@ -223,7 +159,7 @@ h2 {
 }
 
 .menu-link.danger {
-  margin-top: 8px;
+  margin-top: 0;
   color: #fecaca;
 }
 
@@ -237,7 +173,7 @@ h2 {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 16px;
+  padding: 6px;
 }
 
 .page {
@@ -248,20 +184,13 @@ h2 {
 
 .page.active {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 16px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  grid-template-rows: minmax(0, 1fr);
 }
 
 .page-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  gap: 16px;
+  gap: 6px;
   min-height: 0;
 }
 
@@ -269,7 +198,6 @@ h2 {
   border: 1px solid rgba(159, 174, 194, 0.7);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: var(--shadow);
 }
 
 .record-panel,
@@ -283,20 +211,20 @@ h2 {
 }
 
 .panel-heading {
-  margin-bottom: 14px;
+  margin-bottom: 6px;
 }
 
 .record-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 6px;
 }
 
 .record-form label,
 .search-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   color: #334155;
   font-size: 13px;
   font-weight: 700;
@@ -305,7 +233,7 @@ h2 {
 .button-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 6px;
   margin-top: 6px;
 }
 
@@ -327,7 +255,7 @@ h2 {
 .workspace {
   display: grid;
   grid-template-rows: auto auto minmax(300px, auto) minmax(260px, 1fr);
-  gap: 16px;
+  gap: 6px;
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -338,7 +266,7 @@ h2 {
 .list-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 6px;
   align-items: start;
 }
 
@@ -355,8 +283,8 @@ h2 {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .metric {
@@ -369,7 +297,7 @@ h2 {
 
 .metric span {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -384,7 +312,7 @@ h2 {
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  gap: 16px;
+  gap: 6px;
 }
 
 .pc-panel,
@@ -400,8 +328,8 @@ h2 {
 .interface-list,
 .diagnostic-results {
   display: grid;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .interface-item {
@@ -421,7 +349,7 @@ h2 {
 .used-device strong,
 .diagnostic-item strong {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .interface-item span {
@@ -432,8 +360,8 @@ h2 {
 .interface-item dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  margin: 11px 0 0;
+  gap: 6px;
+  margin: 6px 0 0;
 }
 
 .interface-item div,
@@ -449,7 +377,7 @@ h2 {
 }
 
 .interface-item dd {
-  margin: 3px 0 0;
+  margin: 6px 0 0;
   word-break: break-word;
 }
 
@@ -463,7 +391,7 @@ h2 {
 .diagnostic-item > div {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
 }
 
 .diagnostic-item span {
@@ -492,7 +420,7 @@ h2 {
 }
 
 .diagnostic-item p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #405064;
   line-height: 1.45;
 }
@@ -500,8 +428,8 @@ h2 {
 .usage-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 14px 0;
+  gap: 6px;
+  margin: 6px 0;
 }
 
 .usage-summary span {
@@ -560,8 +488,8 @@ h2 {
 .used-device-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .used-device {
@@ -587,7 +515,7 @@ h2 {
 .list-toolbar {
   grid-template-columns: 180px minmax(320px, 1fr);
   align-items: end;
-  margin-bottom: 14px;
+  margin-bottom: 6px;
 }
 
 .table-wrap {
@@ -668,7 +596,6 @@ tbody tr.selected {
   border-radius: 8px;
   color: #ffffff;
   background: #17202a;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.25);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, 12px);
