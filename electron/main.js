@@ -6,6 +6,7 @@ const network = require("./modules/network");
 const systemInfo = require("./modules/system-info");
 const hardwareCheck = require("./modules/hardware-check");
 const threatScan = require("./modules/threat-scan");
+const controlPanel = require("./modules/control-panel");
 
 let mainWindow = null;
 
@@ -126,6 +127,7 @@ function registerIpcHandlers() {
   systemInfo.register(ipcMain);
   hardwareCheck.register(ipcMain);
   threatScan.register(ipcMain);
+  controlPanel.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

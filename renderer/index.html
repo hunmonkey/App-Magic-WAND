@@ -14,6 +14,7 @@
           <button id="systemInfoMenu" class="menu-link" type="button">PC정보</button>
           <button id="hardwareCheckMenu" class="menu-link" type="button">하드웨어점검</button>
           <button id="threatScanMenu" class="menu-link" type="button">의심프로그램</button>
+          <button id="controlPanelMenu" class="menu-link" type="button">네트워크 설정</button>
 
           <button id="quitButton" class="menu-link danger" type="button">종료</button>
         </nav>
@@ -218,6 +219,81 @@
           </div>
         </section>
 
+        <section id="controlPanelPage" class="page">
+          <div class="control-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">네트워크 어댑터 설정</p>
+                  <p id="controlSummary" class="muted-text">어댑터를 선택하세요.</p>
+                </div>
+                <div class="header-actions">
+                  <select id="controlAdapterSelect" aria-label="어댑터 선택"></select>
+                  <button id="controlRefresh" type="button">새로고침</button>
+                </div>
+              </div>
+
+              <dl id="controlCurrentConfig" class="control-config"></dl>
+
+              <form id="ipSettingForm">
+                <div class="mode-row">
+                  <label class="radio-label">
+                    <input type="radio" name="ipMode" value="dhcp" checked>
+                    DHCP 자동
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="ipMode" value="static">
+                    수동 (고정 IP)
+                  </label>
+                </div>
+
+                <div id="staticFields" class="static-fields" hidden>
+                  <label>
+                    IP 주소
+                    <input id="ctrlIp" type="text" placeholder="예: 192.168.0.100" autocomplete="off" />
+                  </label>
+                  <label>
+                    서브넷 접두사 길이
+                    <input id="ctrlPrefix" type="number" min="1" max="30" placeholder="예: 24 (= /24)" />
+                  </label>
+                  <label>
+                    기본 게이트웨이
+                    <input id="ctrlGateway" type="text" placeholder="예: 192.168.0.1" autocomplete="off" />
+                  </label>
+                  <label>
+                    DNS 서버
+                    <input id="ctrlDns" type="text" placeholder="예: 8.8.8.8,8.8.4.4" autocomplete="off" />
+                  </label>
+                </div>
+
+                <div class="apply-row">
+                  <p class="caution-text">IP 변경 후 네트워크 연결이 일시적으로 끊길 수 있습니다.</p>
+                  <button id="applyIpButton" type="submit">설정 적용</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header compact">
+                <div>
+                  <p class="section-label">컴퓨터 이름</p>
+                  <p id="computerNameDisplay" class="muted-text">확인 중...</p>
+                </div>
+              </div>
+              <form id="computerNameForm" class="rename-form">
+                <label>
+                  새 컴퓨터 이름
+                  <input id="newComputerName" type="text" placeholder="영문, 숫자, 하이픈 (최대 15자)" maxlength="15" autocomplete="off" />
+                </label>
+                <div class="apply-row">
+                  <p class="caution-text">다음 PC 재시작 시 이름이 변경됩니다.</p>
+                  <button id="applyNameButton" type="submit">이름 변경</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
         <section id="threatScanPage" class="page">
           <div class="check-page">
             <section class="panel">
@@ -242,5 +318,6 @@
     <script src="./pages/system-info.js"></script>
     <script src="./pages/hardware-check.js"></script>
     <script src="./pages/threat-scan.js"></script>
+    <script src="./pages/control-panel.js"></script>
   </body>
 </html>

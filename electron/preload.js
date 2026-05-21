@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld("magicWand", {
   threat: {
     scan: () => ipcRenderer.invoke("threat:scan"),
   },
+  control: {
+    getAdapters:    () => ipcRenderer.invoke("control:getAdapters"),
+    applyConfig:    (name, cfg) => ipcRenderer.invoke("control:applyConfig", name, cfg),
+    getComputerName: () => ipcRenderer.invoke("control:getComputerName"),
+    renameComputer: (newName) => ipcRenderer.invoke("control:renameComputer", newName),
+  },
   app: {
     quit: () => ipcRenderer.send("app:quit"),
   },
