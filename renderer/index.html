@@ -11,6 +11,7 @@
       <aside class="side-menu">
         <nav class="side-nav" aria-label="주 메뉴">
           <button id="ipManagementMenu" class="menu-link active" type="button">IP관리</button>
+          <button id="systemInfoMenu" class="menu-link" type="button">PC정보</button>
 
           <button id="quitButton" class="menu-link danger" type="button">종료</button>
         </nav>
@@ -154,11 +155,57 @@
             </section>
           </div>
         </section>
+
+        <section id="systemInfoPage" class="page">
+          <div class="system-grid">
+            <section class="panel hardware-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">PC 사양</p>
+                  <p id="hardwareSummary" class="muted-text">아직 불러오지 않았습니다.</p>
+                </div>
+                <button id="hardwareRefresh" type="button">사양 새로고침</button>
+              </div>
+              <div id="hardwareGroups" class="spec-grid"></div>
+            </section>
+
+            <section class="panel software-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">설치된 소프트웨어</p>
+                  <p id="softwareStatus" class="muted-text">아직 불러오지 않았습니다.</p>
+                </div>
+                <button id="softwareRefresh" type="button">목록 새로고침</button>
+              </div>
+              <div class="software-toolbar">
+                <span id="softwareCount" class="muted-text">0개 설치됨</span>
+                <label class="search-field">
+                  검색
+                  <input id="softwareSearch" type="search" placeholder="이름, 게시자, 버전 검색" />
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>이름</th>
+                      <th>버전</th>
+                      <th>게시자</th>
+                      <th>설치일</th>
+                    </tr>
+                  </thead>
+                  <tbody id="softwareTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="./app.js"></script>
+    <script src="./pages/system-info.js"></script>
   </body>
 </html>

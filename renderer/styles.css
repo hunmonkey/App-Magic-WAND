@@ -608,3 +608,80 @@ tbody tr.selected {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
+.system-grid {
+  display: grid;
+  grid-template-rows: auto minmax(220px, 1fr);
+  gap: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.hardware-panel,
+.software-panel {
+  padding: 18px;
+}
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.spec-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-soft);
+}
+
+.spec-card h3 {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.spec-card dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.spec-card dl > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.spec-card dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.spec-card dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.software-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(160px, 1fr);
+  min-height: 0;
+}
+
+.software-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin: 6px 0;
+}
+
+.software-toolbar .search-field {
+  min-width: 260px;
+}

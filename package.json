@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "check": "node --check electron/main.js && node --check electron/preload.js && node --check electron/network.js && node --check renderer/app.js"
+    "check": "node --check electron/main.js && node --check electron/preload.js && node --check electron/core/run-command.js && node --check electron/modules/network.js && node --check electron/modules/ip-records.js && node --check electron/modules/system-info.js && node --check renderer/app.js && node --check renderer/pages/system-info.js"
   },
   "devDependencies": {
     "electron": "^42.2.0"

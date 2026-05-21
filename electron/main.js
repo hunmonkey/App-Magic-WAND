@@ -1,13 +1,9 @@
 const { app, BrowserWindow, ipcMain, Menu } = require("electron");
-const fs = require("fs/promises");
 const path = require("path");
 
-const {
-  isIPv4,
-  runNetworkDiagnostics,
-  scanAddressUsage,
-  scanCurrentNetwork,
-} = require("./network");
+const ipRecords = require("./modules/ip-records");
+const network = require("./modules/network");
+const systemInfo = require("./modules/system-info");
 
 let mainWindow = null;
 
@@ -123,58 +119,11 @@ app.on("window-all-closed", () => {
 });
 
 function registerIpcHandlers() {
-  ipcMain.handle("records:load", async () => {
-    try {
-      const text = await fs.readFile(getDataFilePath(), "utf-8");
-      const records = JSON.parse(text);
-      return Array.isArray(records) ? records.map(normalizeRecord) : [];
-    } catch (error) {
-      if (error.code === "ENOENT") {
-        return [];
-      }
-      throw error;
-    }
-  });
+  ipRecords.register(ipcMain);
+  network.register(ipcMain);
+  systemInfo.register(ipcMain);
 
-  ipcMain.handle("records:save", async (_event, records) => {
-    const cleanRecords = Array.isArray(records) ? records.map(normalizeRecord) : [];
-    const filePath = getDataFilePath();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, JSON.stringify(cleanRecords, null, 2), "utf-8");
-    return cleanRecords;
-  });
-
-  ipcMain.handle("network:scan", async () => scanCurrentNetwork());
-  ipcMain.handle("network:scan-addresses", async (_event, interfaceId) => scanAddressUsage(interfaceId));
-  ipcMain.handle("network:diagnose", async (_event, interfaceId) => runNetworkDiagnostics(interfaceId));
   ipcMain.on("app:quit", () => {
     app.quit();
   });
-}
-
-function getDataFilePath() {
-  if (app.isPackaged) {
-    return path.join(app.getPath("userData"), "ip_records.json");
-  }
-
-  return path.join(app.getAppPath(), "data", "ip_records.json");
-}
-
-function normalizeRecord(record) {
-  return {
-    name: String(record?.name ?? "").trim(),
-    ipAddress: normalizeIp(String(record?.ipAddress ?? record?.ip_address ?? "").trim()),
-    location: String(record?.location ?? "").trim(),
-    memo: String(record?.memo ?? "").trim(),
-  };
-}
-
-function normalizeIp(value) {
-  if (!isIPv4(value)) {
-    throw new Error("올바른 IPv4 주소 형식이 아닙니다.");
-  }
-  return value
-    .split(".")
-    .map((part) => String(Number(part)))
-    .join(".");
 }

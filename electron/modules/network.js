@@ -1,11 +1,23 @@
-const childProcess = require("child_process");
 const dns = require("dns").promises;
 const https = require("https");
 const os = require("os");
 
+const {
+  execFileAsync,
+  runPowerShell,
+  withTimeout,
+  mapWithConcurrency,
+} = require("../core/run-command");
+
 const MAX_SCAN_HOSTS = 254;
 const PING_CONCURRENCY = 36;
 const NAME_CONCURRENCY = 12;
+
+function register(ipcMain) {
+  ipcMain.handle("network:scan", async () => scanCurrentNetwork());
+  ipcMain.handle("network:scan-addresses", async (_event, interfaceId) => scanAddressUsage(interfaceId));
+  ipcMain.handle("network:diagnose", async (_event, interfaceId) => runNetworkDiagnostics(interfaceId));
+}
 
 async function scanCurrentNetwork() {
   const messages = [];
@@ -602,64 +614,8 @@ function cleanText(value) {
   return text;
 }
 
-function runPowerShell(script, timeout) {
-  const encoded = Buffer.from(script, "utf16le").toString("base64");
-  return execFileAsync(
-    "powershell",
-    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
-    { encoding: "utf8", timeout },
-  ).then((result) => result.stdout);
-}
-
-function execFileAsync(file, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    childProcess.execFile(
-      file,
-      args,
-      {
-        windowsHide: true,
-        maxBuffer: 1024 * 1024 * 8,
-        ...options,
-      },
-      (error, stdout, stderr) => {
-        if (error) {
-          error.stdout = stdout;
-          error.stderr = stderr;
-          reject(error);
-          return;
-        }
-
-        resolve({ stdout, stderr });
-      },
-    );
-  });
-}
-
-function withTimeout(promise, timeoutMs) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("timeout")), timeoutMs);
-    }),
-  ]);
-}
-
-async function mapWithConcurrency(items, concurrency, worker) {
-  const results = new Array(items.length);
-  let cursor = 0;
-  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    while (cursor < items.length) {
-      const index = cursor;
-      cursor += 1;
-      results[index] = await worker(items[index], index);
-    }
-  });
-
-  await Promise.all(runners);
-  return results;
-}
-
 module.exports = {
+  register,
   scanCurrentNetwork,
   scanAddressUsage,
   runNetworkDiagnostics,
