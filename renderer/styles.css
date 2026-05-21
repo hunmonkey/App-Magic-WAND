@@ -685,3 +685,86 @@ tbody tr.selected {
 .software-toolbar .search-field {
   min-width: 260px;
 }
+
+/* ─── Hardware Check & Threat Scan pages ────────────────────── */
+
+.check-page {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.check-page .panel {
+  padding: 18px;
+}
+
+.diagnostic-item p {
+  white-space: pre-line;
+}
+
+.notice-banner {
+  margin: 10px 0 6px;
+  padding: 10px 14px;
+  border: 1px solid #f0c05a;
+  border-radius: 8px;
+  color: var(--amber);
+  background: var(--amber-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.threat-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.threat-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-soft);
+}
+
+.threat-item > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.threat-item span {
+  height: 24px;
+  min-width: 56px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.threat-item.fail span {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.threat-item.warn span {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+
+.threat-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.threat-detail {
+  margin: 4px 0 0;
+  color: #405064;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-all;
+}

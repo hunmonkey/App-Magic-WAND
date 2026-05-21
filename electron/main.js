@@ -4,6 +4,8 @@ const path = require("path");
 const ipRecords = require("./modules/ip-records");
 const network = require("./modules/network");
 const systemInfo = require("./modules/system-info");
+const hardwareCheck = require("./modules/hardware-check");
+const threatScan = require("./modules/threat-scan");
 
 let mainWindow = null;
 
@@ -122,6 +124,8 @@ function registerIpcHandlers() {
   ipRecords.register(ipcMain);
   network.register(ipcMain);
   systemInfo.register(ipcMain);
+  hardwareCheck.register(ipcMain);
+  threatScan.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

@@ -479,9 +479,13 @@ async function runDiagnostics() {
 
 function renderDiagnostics(result) {
   elements.diagnosticSummary.textContent = result.summary || "진단 완료";
-  elements.diagnosticResults.innerHTML = "";
+  renderTestList(elements.diagnosticResults, result.tests);
+}
 
-  for (const test of result.tests ?? []) {
+function renderTestList(container, tests) {
+  container.innerHTML = "";
+
+  for (const test of tests ?? []) {
     const item = document.createElement("article");
     item.className = `diagnostic-item ${test.status}`;
     item.innerHTML = `
@@ -493,8 +497,8 @@ function renderDiagnostics(result) {
     `;
     item.querySelector("strong").textContent = test.name;
     item.querySelector("span").textContent = statusLabel(test.status);
-    item.querySelector("p").textContent = `${test.detail} ${test.hint}`;
-    elements.diagnosticResults.append(item);
+    item.querySelector("p").textContent = `${test.detail} ${test.hint ?? ""}`.trim();
+    container.append(item);
   }
 }
 
@@ -573,4 +577,6 @@ function showToast(message) {
 window.MagicWand = {
   switchPage,
   showToast,
+  renderTestList,
+  statusLabel,
 };

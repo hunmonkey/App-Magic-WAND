@@ -12,6 +12,8 @@
         <nav class="side-nav" aria-label="주 메뉴">
           <button id="ipManagementMenu" class="menu-link active" type="button">IP관리</button>
           <button id="systemInfoMenu" class="menu-link" type="button">PC정보</button>
+          <button id="hardwareCheckMenu" class="menu-link" type="button">하드웨어점검</button>
+          <button id="threatScanMenu" class="menu-link" type="button">의심프로그램</button>
 
           <button id="quitButton" class="menu-link danger" type="button">종료</button>
         </nav>
@@ -200,6 +202,37 @@
             </section>
           </div>
         </section>
+
+        <section id="hardwareCheckPage" class="page">
+          <div class="check-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">하드웨어 점검</p>
+                  <p id="hwCheckSummary" class="muted-text">아직 점검하지 않았습니다.</p>
+                </div>
+                <button id="hwCheckButton" type="button">다시 점검</button>
+              </div>
+              <div id="hwCheckResults" class="diagnostic-results"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="threatScanPage" class="page">
+          <div class="check-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">의심 프로그램 점검</p>
+                  <p id="threatSummary" class="muted-text">아직 점검하지 않았습니다.</p>
+                </div>
+                <button id="threatScanButton" type="button">다시 점검</button>
+              </div>
+              <p class="notice-banner">이 점검은 백신을 대체하지 않습니다. 의심 후보만 보여주는 1차 점검이며, 실제 악성 여부는 백신 검사로 확인해 주세요.</p>
+              <div id="threatList" class="threat-list"></div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
 
@@ -207,5 +240,7 @@
 
     <script src="./app.js"></script>
     <script src="./pages/system-info.js"></script>
+    <script src="./pages/hardware-check.js"></script>
+    <script src="./pages/threat-scan.js"></script>
   </body>
 </html>

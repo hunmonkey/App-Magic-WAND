@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld("magicWand", {
     hardware: () => ipcRenderer.invoke("system:hardware"),
     software: () => ipcRenderer.invoke("system:software"),
   },
+  hardware: {
+    check: () => ipcRenderer.invoke("hardware:check"),
+  },
+  threat: {
+    scan: () => ipcRenderer.invoke("threat:scan"),
+  },
   app: {
     quit: () => ipcRenderer.send("app:quit"),
   },

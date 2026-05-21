@@ -1,6 +1,7 @@
 const os = require("os");
 
 const { runPowerShell } = require("../core/run-command");
+const { formatBytes } = require("../core/format");
 
 const HARDWARE_SCRIPT = `
 $ErrorActionPreference = 'Stop'
@@ -233,19 +234,6 @@ function fallbackHardware() {
     ],
     messages: ["현재 Windows가 아니라서 기본 정보만 표시합니다. 자세한 사양은 Windows에서 확인할 수 있습니다."],
   };
-}
-
-function formatBytes(value) {
-  const bytes = Number(value);
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return "확인 안 됨";
-  }
-
-  const gb = bytes / 1024 ** 3;
-  if (gb >= 1024) {
-    return `${(gb / 1024).toFixed(2)} TB`;
-  }
-  return `${gb.toFixed(gb >= 10 ? 0 : 1)} GB`;
 }
 
 function formatInstallDate(value) {
