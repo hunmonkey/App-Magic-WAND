@@ -52,7 +52,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 function bindEvents() {
   elements.ipManagementMenu.addEventListener("click", showIpManagementPage);
   elements.quitButton.addEventListener("click", () => {
-    window.magicWand.quitApp();
+    window.magicWand.app.quit();
   });
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -72,14 +72,25 @@ function bindEvents() {
   elements.searchInput.addEventListener("input", renderTable);
 }
 
+function switchPage(pageSelector, menuButton) {
+  const targetPage = document.querySelector(pageSelector);
+  document.querySelectorAll(".main-content .page").forEach((page) => {
+    page.classList.toggle("active", page === targetPage);
+  });
+  document.querySelectorAll(".side-nav .menu-link").forEach((link) => {
+    if (!link.classList.contains("danger")) {
+      link.classList.toggle("active", link === menuButton);
+    }
+  });
+}
+
 function showIpManagementPage() {
-  elements.ipManagementPage.classList.add("active");
-  elements.ipManagementMenu.classList.add("active");
+  switchPage("#ipManagementPage", elements.ipManagementMenu);
 }
 
 async function loadRecords() {
   try {
-    records = await window.magicWand.loadRecords();
+    records = await window.magicWand.ipRecords.load();
     renderTable();
   } catch (error) {
     showToast(`IP 목록을 불러오지 못했습니다: ${error.message}`);
@@ -88,7 +99,7 @@ async function loadRecords() {
 
 async function saveRecords(message) {
   try {
-    records = await window.magicWand.saveRecords(records);
+    records = await window.magicWand.ipRecords.save(records);
     renderTable();
     showToast(message);
     return true;
@@ -252,7 +263,7 @@ async function refreshNetworkInfo() {
   setOverviewLoading();
 
   try {
-    networkInfo = await window.magicWand.scanNetwork();
+    networkInfo = await window.magicWand.network.scan();
     if (!selectedInterfaceId) {
       selectedInterfaceId = networkInfo.primaryInterface?.id ?? networkInfo.privateInterfaces?.[0]?.id ?? "";
     }
@@ -369,7 +380,7 @@ async function scanAddressUsage() {
   elements.freeCountChip.textContent = "비어 있음: 0";
 
   try {
-    const result = await window.magicWand.scanAddressUsage(selectedInterfaceId);
+    const result = await window.magicWand.network.scanAddresses(selectedInterfaceId);
     renderAddressUsage(result);
   } catch (error) {
     elements.usageStatus.textContent = `스캔 실패: ${error.message}`;
@@ -457,7 +468,7 @@ async function runDiagnostics() {
   elements.diagnosticResults.innerHTML = "";
 
   try {
-    const result = await window.magicWand.runDiagnostics(selectedInterfaceId);
+    const result = await window.magicWand.network.diagnose(selectedInterfaceId);
     renderDiagnostics(result);
   } catch (error) {
     elements.diagnosticSummary.textContent = `진단 실패: ${error.message}`;
@@ -468,9 +479,13 @@ async function runDiagnostics() {
 
 function renderDiagnostics(result) {
   elements.diagnosticSummary.textContent = result.summary || "진단 완료";
-  elements.diagnosticResults.innerHTML = "";
+  renderTestList(elements.diagnosticResults, result.tests);
+}
 
-  for (const test of result.tests ?? []) {
+function renderTestList(container, tests) {
+  container.innerHTML = "";
+
+  for (const test of tests ?? []) {
     const item = document.createElement("article");
     item.className = `diagnostic-item ${test.status}`;
     item.innerHTML = `
@@ -482,8 +497,8 @@ function renderDiagnostics(result) {
     `;
     item.querySelector("strong").textContent = test.name;
     item.querySelector("span").textContent = statusLabel(test.status);
-    item.querySelector("p").textContent = `${test.detail} ${test.hint}`;
-    elements.diagnosticResults.append(item);
+    item.querySelector("p").textContent = `${test.detail} ${test.hint ?? ""}`.trim();
+    container.append(item);
   }
 }
 
@@ -558,3 +573,10 @@ function showToast(message) {
     elements.toast.classList.remove("show");
   }, 2600);
 }
+
+window.MagicWand = {
+  switchPage,
+  showToast,
+  renderTestList,
+  statusLabel,
+};
