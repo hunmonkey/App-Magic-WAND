@@ -11,6 +11,10 @@
       <aside class="side-menu">
         <nav class="side-nav" aria-label="주 메뉴">
           <button id="ipManagementMenu" class="menu-link active" type="button">IP관리</button>
+          <button id="systemInfoMenu" class="menu-link" type="button">PC정보</button>
+          <button id="hardwareCheckMenu" class="menu-link" type="button">하드웨어점검</button>
+          <button id="threatScanMenu" class="menu-link" type="button">의심프로그램</button>
+          <button id="controlPanelMenu" class="menu-link" type="button">네트워크 설정</button>
 
           <button id="quitButton" class="menu-link danger" type="button">종료</button>
         </nav>
@@ -154,11 +158,166 @@
             </section>
           </div>
         </section>
+
+        <section id="systemInfoPage" class="page">
+          <div class="system-grid">
+            <section class="panel hardware-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">PC 사양</p>
+                  <p id="hardwareSummary" class="muted-text">아직 불러오지 않았습니다.</p>
+                </div>
+                <button id="hardwareRefresh" type="button">사양 새로고침</button>
+              </div>
+              <div id="hardwareGroups" class="spec-grid"></div>
+            </section>
+
+            <section class="panel software-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">설치된 소프트웨어</p>
+                  <p id="softwareStatus" class="muted-text">아직 불러오지 않았습니다.</p>
+                </div>
+                <button id="softwareRefresh" type="button">목록 새로고침</button>
+              </div>
+              <div class="software-toolbar">
+                <span id="softwareCount" class="muted-text">0개 설치됨</span>
+                <label class="search-field">
+                  검색
+                  <input id="softwareSearch" type="search" placeholder="이름, 게시자, 버전 검색" />
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>이름</th>
+                      <th>버전</th>
+                      <th>게시자</th>
+                      <th>설치일</th>
+                    </tr>
+                  </thead>
+                  <tbody id="softwareTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="hardwareCheckPage" class="page">
+          <div class="check-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">하드웨어 점검</p>
+                  <p id="hwCheckSummary" class="muted-text">아직 점검하지 않았습니다.</p>
+                </div>
+                <button id="hwCheckButton" type="button">다시 점검</button>
+              </div>
+              <div id="hwCheckResults" class="diagnostic-results"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="controlPanelPage" class="page">
+          <div class="control-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">네트워크 어댑터 설정</p>
+                  <p id="controlSummary" class="muted-text">어댑터를 선택하세요.</p>
+                </div>
+                <div class="header-actions">
+                  <select id="controlAdapterSelect" aria-label="어댑터 선택"></select>
+                  <button id="controlRefresh" type="button">새로고침</button>
+                </div>
+              </div>
+
+              <dl id="controlCurrentConfig" class="control-config"></dl>
+
+              <form id="ipSettingForm">
+                <div class="mode-row">
+                  <label class="radio-label">
+                    <input type="radio" name="ipMode" value="dhcp" checked>
+                    DHCP 자동
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="ipMode" value="static">
+                    수동 (고정 IP)
+                  </label>
+                </div>
+
+                <div id="staticFields" class="static-fields" hidden>
+                  <label>
+                    IP 주소
+                    <input id="ctrlIp" type="text" placeholder="예: 192.168.0.100" autocomplete="off" />
+                  </label>
+                  <label>
+                    서브넷 접두사 길이
+                    <input id="ctrlPrefix" type="number" min="1" max="30" placeholder="예: 24 (= /24)" />
+                  </label>
+                  <label>
+                    기본 게이트웨이
+                    <input id="ctrlGateway" type="text" placeholder="예: 192.168.0.1" autocomplete="off" />
+                  </label>
+                  <label>
+                    DNS 서버
+                    <input id="ctrlDns" type="text" placeholder="예: 8.8.8.8,8.8.4.4" autocomplete="off" />
+                  </label>
+                </div>
+
+                <div class="apply-row">
+                  <p class="caution-text">IP 변경 후 네트워크 연결이 일시적으로 끊길 수 있습니다.</p>
+                  <button id="applyIpButton" type="submit">설정 적용</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header compact">
+                <div>
+                  <p class="section-label">컴퓨터 이름</p>
+                  <p id="computerNameDisplay" class="muted-text">확인 중...</p>
+                </div>
+              </div>
+              <form id="computerNameForm" class="rename-form">
+                <label>
+                  새 컴퓨터 이름
+                  <input id="newComputerName" type="text" placeholder="영문, 숫자, 하이픈 (최대 15자)" maxlength="15" autocomplete="off" />
+                </label>
+                <div class="apply-row">
+                  <p class="caution-text">다음 PC 재시작 시 이름이 변경됩니다.</p>
+                  <button id="applyNameButton" type="submit">이름 변경</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section id="threatScanPage" class="page">
+          <div class="check-page">
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">의심 프로그램 점검</p>
+                  <p id="threatSummary" class="muted-text">아직 점검하지 않았습니다.</p>
+                </div>
+                <button id="threatScanButton" type="button">다시 점검</button>
+              </div>
+              <p class="notice-banner">이 점검은 백신을 대체하지 않습니다. 의심 후보만 보여주는 1차 점검이며, 실제 악성 여부는 백신 검사로 확인해 주세요.</p>
+              <div id="threatList" class="threat-list"></div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="./app.js"></script>
+    <script src="./pages/system-info.js"></script>
+    <script src="./pages/hardware-check.js"></script>
+    <script src="./pages/threat-scan.js"></script>
+    <script src="./pages/control-panel.js"></script>
   </body>
 </html>

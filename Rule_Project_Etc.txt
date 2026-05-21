@@ -22,12 +22,26 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 2. 주요 디렉토리 및 파일 역할 (Directory Structure)
 ------------------------------------------------------------
 - `package.json`: Electron 앱 실행 명령 및 Node 패키지 설정
-- `electron/main.js`: Electron 창 생성, 데이터 저장, 네트워크 조사 담당
-- `electron/preload.js`: 화면 코드가 사용할 수 있는 안전한 기능 연결
-- `electron/network.js`: 공인 IP, PC IP 정보, IP 대역 사용 현황, 네트워크 장애 진단 담당
+- `electron/main.js`: Electron 창 생성과 기능 모듈 등록을 담당하는 지휘자
+- `electron/preload.js`: 화면 코드가 쓸 수 있는 안전한 기능을 기능별 묶음
+  (ipRecords, network, system, app)으로 연결
+- `electron/core/run-command.js`: PowerShell 실행, 외부 명령 실행, 동시 작업 처리 등
+  모든 모듈이 함께 쓰는 공용 도구
+- `electron/modules/`: 기능별 모듈 폴더. 각 파일은 `register(ipcMain)`로 자신의 기능을 등록한다.
+  - `network.js`: 공인 IP, PC IP 정보, IP 대역 사용 현황, 네트워크 장애 진단
+  - `ip-records.js`: IP 목록 저장/불러오기 (JSON 파일)
+  - `system-info.js`: PC 사양과 설치된 소프트웨어 목록 조회
+  - `hardware-check.js`: 디스크 용량, 물리 디스크 건강, 메모리, 배터리, 시스템 이벤트 점검
+  - `threat-scan.js`: 실행 중 프로세스·시작 프로그램·설치 SW에서 의심 항목 탐지
+  - `control-panel.js`: 네트워크 어댑터 DHCP/고정 IP 설정 변경, 컴퓨터 이름 변경 (관리자 권한 필요)
 - `renderer/index.html`: 앱 화면 구조
 - `renderer/styles.css`: 앱 디자인
-- `renderer/app.js`: 화면 동작, IP 목록 관리, 검색
+- `renderer/app.js`: 페이지 전환(라우팅), IP 목록 관리, 검색, 공용 함수(switchPage, showToast)
+- `renderer/pages/`: 화면별 동작 모듈 폴더
+  - `system-info.js`: PC정보 화면(사양/소프트웨어) 동작
+  - `hardware-check.js`: 하드웨어점검 화면 동작
+  - `threat-scan.js`: 의심프로그램 화면 동작
+  - `control-panel.js`: 네트워크 설정 화면 동작 (어댑터 IP·컴퓨터 이름 변경)
 - `data/`: 실행 중 생성되는 로컬 데이터 저장 위치
 
 3. 아키텍처 특이사항 (주의)
@@ -37,4 +51,10 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 - Electron 전환 중에는 Python/PySide6 버전을 즉시 삭제하지 않고, 새 Electron 앱이 안정화된 뒤 정리합니다.
 - IP 대역 스캔은 PC와 네트워크 장비에 부담을 주지 않도록 기본 최대 254개 주소까지만 조사합니다.
 - 앱은 진짜 전체화면 모드가 아니라 일반 창을 최대화해서 시작합니다. 상단 메뉴바와 창 버튼을 유지합니다.
-- 왼쪽 사이드메뉴에서 `IP관리`와 `종료`를 제공합니다.
+- 왼쪽 사이드메뉴에서 `IP관리`, `PC정보`, `하드웨어점검`, `의심프로그램`, `네트워크 설정`, `종료`를 제공합니다.
+- 기능별 모듈 구조를 따릅니다. 새 기능은 `electron/modules/`에 모듈 파일을 만들어
+  `register(ipcMain)`를 내보낸 뒤 `main.js`의 `registerIpcHandlers`에 등록합니다.
+  화면은 `renderer/pages/`에 파일을 추가하고 `index.html`에 메뉴/페이지/스크립트를 더합니다.
+- 관리자 권한이 필요한 기능(IP 변경, 프린터/공유, 프로그램 설치/삭제 등)을 위해,
+  배포용 .exe는 항상 관리자 권한으로 실행되도록 패키징 단계에서 설정할 예정입니다.
+  (개발 중 `electron .` 실행에는 적용하지 않습니다.)
