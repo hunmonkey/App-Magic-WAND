@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Magic WAND</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-menu">
+        <div class="brand">
+          <p class="eyebrow">HomeLAB Network</p>
+          <h1>Magic WAND</h1>
+        </div>
+
+        <nav class="accordion-menu" aria-label="주 메뉴">
+          <section class="menu-group">
+            <button
+              id="ipMenuToggle"
+              class="accordion-toggle open"
+              type="button"
+              aria-expanded="true"
+              aria-controls="ipMenuPanel"
+            >
+              <span>IP관리</span>
+              <span class="chevron" aria-hidden="true">⌃</span>
+            </button>
+            <div id="ipMenuPanel" class="accordion-panel">
+              <button id="ipManagementMenu" class="menu-link active" type="button">IP관리</button>
+            </div>
+          </section>
+
+          <button id="quitButton" class="menu-link danger" type="button">종료</button>
+        </nav>
+      </aside>
+
+      <section class="main-content">
+        <section id="ipManagementPage" class="page active">
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">IP Management</p>
+              <h2>IP관리</h2>
+            </div>
+          </header>
+
+          <div class="page-grid">
+            <section class="panel record-panel">
+              <div class="panel-heading">
+                <p class="section-label">IP 등록</p>
+              </div>
+
+              <form id="recordForm" class="record-form">
+                <label>
+                  이름
+                  <input id="nameInput" type="text" placeholder="예: 거실 공유기" autocomplete="off" />
+                </label>
+                <label>
+                  IP 주소
+                  <input id="ipInput" type="text" placeholder="예: 192.168.0.1" autocomplete="off" />
+                </label>
+                <label>
+                  장소
+                  <input id="locationInput" type="text" placeholder="예: 거실" autocomplete="off" />
+                </label>
+                <label>
+                  메모
+                  <textarea id="memoInput" placeholder="필요한 메모를 적어두세요."></textarea>
+                </label>
+
+                <div class="button-grid">
+                  <button id="addButton" type="submit">추가</button>
+                  <button id="updateButton" type="button" disabled>수정</button>
+                  <button id="deleteButton" type="button" disabled>삭제</button>
+                  <button id="clearButton" type="button">비우기</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="workspace">
+              <section class="panel overview-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">네트워크 상태판</p>
+                    <p id="networkStatus" class="muted-text">아직 조사하지 않았습니다.</p>
+                  </div>
+                  <button id="scanButton" type="button">현재 정보 새로고침</button>
+                </div>
+
+                <div class="metric-grid">
+                  <div class="metric">
+                    <span>공인 IP</span>
+                    <strong id="publicIpValue">확인 전</strong>
+                  </div>
+                  <div class="metric">
+                    <span>PC 이름</span>
+                    <strong id="pcNameValue">확인 전</strong>
+                  </div>
+                  <div class="metric">
+                    <span>현재 PC 사설 IP</span>
+                    <strong id="primaryIpValue">확인 전</strong>
+                  </div>
+                  <div class="metric">
+                    <span>현재 네트워크 대역</span>
+                    <strong id="networkRangeValue">확인 전</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="dashboard-grid">
+                <section class="panel pc-panel">
+                  <div class="panel-header compact">
+                    <div>
+                      <p class="section-label">현재 PC IP 정보</p>
+                      <p id="pcInfoSummary" class="muted-text">확인 전</p>
+                    </div>
+                    <select id="interfaceSelect" aria-label="네트워크 선택"></select>
+                  </div>
+                  <div id="pcInfoBody" class="interface-list"></div>
+                </section>
+
+                <section class="panel diagnostic-panel">
+                  <div class="panel-header compact">
+                    <div>
+                      <p class="section-label">장애 원인 찾기</p>
+                      <p id="diagnosticSummary" class="muted-text">진단 전</p>
+                    </div>
+                    <button id="diagnosticButton" type="button">진단 실행</button>
+                  </div>
+                  <div id="diagnosticResults" class="diagnostic-results"></div>
+                </section>
+              </section>
+
+              <section class="panel usage-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">IP 사용 현황</p>
+                    <p id="usageStatus" class="muted-text">대역 스캔 전</p>
+                  </div>
+                  <button id="usageScanButton" type="button">IP 대역 스캔</button>
+                </div>
+
+                <div class="usage-summary">
+                  <span id="usageRangeChip">대역: 확인 전</span>
+                  <span id="usedCountChip">사용: 0</span>
+                  <span id="freeCountChip">비어 있음: 0</span>
+                </div>
+
+                <div id="addressGrid" class="address-grid"></div>
+                <div id="usedDeviceList" class="used-device-list"></div>
+              </section>
+
+              <section class="panel list-panel">
+                <div class="list-toolbar">
+                  <div>
+                    <p class="section-label">IP 목록</p>
+                    <p id="recordCount" class="muted-text">0개 등록됨</p>
+                  </div>
+                  <label class="search-field">
+                    검색
+                    <input id="searchInput" type="search" placeholder="이름, IP 주소, 장소, 메모 검색" />
+                  </label>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>이름</th>
+                        <th>IP 주소</th>
+                        <th>장소</th>
+                        <th>메모</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recordTableBody"></tbody>
+                  </table>
+                  <p id="emptyMessage" class="empty-message">등록된 IP가 없습니다.</p>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

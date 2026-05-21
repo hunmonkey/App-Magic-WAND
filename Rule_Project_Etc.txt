@@ -1,5 +1,5 @@
 ﻿============================================================
-IP Master - 프로젝트 아키텍처 및 폴더 구조 가이드
+Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 ============================================================
 
 이 문서는 AI 에이전트와 새로운 개발자가 프로젝트의 전체적인 구조를 
@@ -14,14 +14,27 @@ IP Master - 프로젝트 아키텍처 및 폴더 구조 가이드
 
 1. 핵심 기술 스택
 ------------------------------------------------------------
-- Backend: 
-- Background/Async: 
-- Database: 
-- Frontend:
-- Infra: 
+- Desktop App: Electron + HTML/CSS/JavaScript
+- Local Data: JSON file (`data/ip_records.json`) for the development stage
+- Packaging: TBD (later: Electron Builder or similar Windows .exe packaging)
+- Legacy Prototype: Python + PySide6 files remain under `src/magic_wand/` for reference until migration is complete.
 
 2. 주요 디렉토리 및 파일 역할 (Directory Structure)
 ------------------------------------------------------------
+- `package.json`: Electron 앱 실행 명령 및 Node 패키지 설정
+- `electron/main.js`: Electron 창 생성, 데이터 저장, 네트워크 조사 담당
+- `electron/preload.js`: 화면 코드가 사용할 수 있는 안전한 기능 연결
+- `electron/network.js`: 공인 IP, PC IP 정보, IP 대역 사용 현황, 네트워크 장애 진단 담당
+- `renderer/index.html`: 앱 화면 구조
+- `renderer/styles.css`: 앱 디자인
+- `renderer/app.js`: 화면 동작, IP 목록 관리, 검색
+- `data/`: 실행 중 생성되는 로컬 데이터 저장 위치
 
 3. 아키텍처 특이사항 (주의)
 ------------------------------------------------------------
+- 첫 단계는 복잡한 DB 없이 JSON 파일로 저장합니다.
+- IP 목록 기능을 기반으로 이후 네트워크 스캔, 장비 상태 확인, 내보내기 기능 등을 단계적으로 추가합니다.
+- Electron 전환 중에는 Python/PySide6 버전을 즉시 삭제하지 않고, 새 Electron 앱이 안정화된 뒤 정리합니다.
+- IP 대역 스캔은 PC와 네트워크 장비에 부담을 주지 않도록 기본 최대 254개 주소까지만 조사합니다.
+- 앱은 진짜 전체화면 모드가 아니라 일반 창을 최대화해서 시작합니다. 상단 메뉴바와 창 버튼을 유지합니다.
+- 왼쪽 아코디언 사이드메뉴에서 `IP관리`와 `종료`를 제공합니다.
