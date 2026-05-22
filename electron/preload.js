@@ -13,13 +13,29 @@ contextBridge.exposeInMainWorld("magicWand", {
   system: {
     hardware: () => ipcRenderer.invoke("system:hardware"),
     software: () => ipcRenderer.invoke("system:software"),
+    uninstallSoftware: (id) => ipcRenderer.invoke("system:uninstall-software", id),
+    saveHardwareText: (text) => ipcRenderer.invoke("system:save-hardware-text", text),
+    saveSoftwareText: (text) => ipcRenderer.invoke("system:save-software-text", text),
     openWindowsTool: (toolName) => ipcRenderer.invoke("windows-tools:open", toolName),
   },
   hardware: {
-    check: () => ipcRenderer.invoke("hardware:check"),
+    check: (runId) => ipcRenderer.invoke("hardware:check", runId),
+    onCheckProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("hardware:check-progress", listener);
+      return () => ipcRenderer.removeListener("hardware:check-progress", listener);
+    },
+    saveText: (payload) => ipcRenderer.invoke("hardware:save-check-text", payload),
   },
   threat: {
-    scan: () => ipcRenderer.invoke("threat:scan"),
+    scan: (runId, options) => ipcRenderer.invoke("threat:scan", runId, options),
+    folderRoots: () => ipcRenderer.invoke("threat:folder-roots"),
+    folderChildren: (folderPath) => ipcRenderer.invoke("threat:folder-children", folderPath),
+    onScanProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("threat:scan-progress", listener);
+      return () => ipcRenderer.removeListener("threat:scan-progress", listener);
+    },
   },
   control: {
     getAdapters:    () => ipcRenderer.invoke("control:getAdapters"),

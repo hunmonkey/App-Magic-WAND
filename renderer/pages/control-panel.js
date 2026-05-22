@@ -3,7 +3,6 @@
   const menu = document.querySelector("#controlPanelMenu");
   if (!menu || !ui) return;
 
-  const summary         = document.querySelector("#controlSummary");
   const adapterSelect   = document.querySelector("#controlAdapterSelect");
   const currentConfigEl = document.querySelector("#controlCurrentConfig");
   const staticFields    = document.querySelector("#staticFields");
@@ -46,20 +45,17 @@
   }
 
   async function loadAdapters() {
-    summary.textContent       = "어댑터 정보를 불러오는 중...";
     adapterSelect.innerHTML   = "";
     adapterSelect.disabled    = true;
     applyIpBtn.disabled       = true;
-    currentConfigEl.innerHTML = "";
+    renderConfigMessage("어댑터 정보를 불러오는 중입니다.");
 
     try {
       const result = await window.magicWand.control.getAdapters();
       adapters = result.adapters || [];
 
-      if (result.messages?.length) summary.textContent = result.messages.join(" / ");
-
       if (adapters.length === 0) {
-        summary.textContent = "사용 가능한 네트워크 어댑터가 없습니다.";
+        renderConfigMessage(result.messages?.join(" / ") || "사용 가능한 네트워크 어댑터가 없습니다.");
         return;
       }
 
@@ -74,15 +70,13 @@
       applyIpBtn.disabled    = false;
       renderCurrentConfig();
     } catch (err) {
-      summary.textContent = `불러오기 실패: ${err.message}`;
+      renderConfigMessage(`불러오기 실패: ${err.message}`);
     }
   }
 
   function renderCurrentConfig() {
     const a = adapters.find(ad => ad.name === adapterSelect.value);
     if (!a) { currentConfigEl.innerHTML = ""; return; }
-
-    summary.textContent = a.description || a.name;
 
     document.querySelector(`input[name="ipMode"][value="${a.dhcp ? "dhcp" : "static"}"]`).checked = true;
     staticFields.hidden = a.dhcp;
@@ -104,6 +98,17 @@
       div.append(dt, dd);
       currentConfigEl.append(div);
     });
+  }
+
+  function renderConfigMessage(message) {
+    currentConfigEl.innerHTML = "";
+    const div = document.createElement("div");
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = "상태";
+    dd.textContent = message;
+    div.append(dt, dd);
+    currentConfigEl.append(div);
   }
 
   function onModeChange() {

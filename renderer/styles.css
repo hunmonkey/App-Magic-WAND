@@ -350,6 +350,11 @@ textarea:focus {
   align-items: start;
 }
 
+.panel-header > div,
+.list-toolbar > div {
+  min-width: 0;
+}
+
 .panel-header.compact {
   align-items: center;
 }
@@ -358,6 +363,13 @@ textarea:focus {
   margin: 0;
   color: var(--muted);
   line-height: 1.4;
+}
+
+.panel-header .muted-text,
+.list-toolbar .muted-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-grid {
@@ -792,7 +804,11 @@ tbody tr.selected {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: calc(1.4em + 6px);
+}
+
+.hardware-save-button {
+  margin-left: auto;
 }
 
 .spec-tree {
@@ -818,24 +834,36 @@ tbody tr.selected {
   min-height: 0;
 }
 
-.software-toolbar {
+.software-save-row {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: end;
-  gap: 12px;
-  margin: 6px 0;
+  justify-content: flex-end;
+  margin-top: calc(1.4em + 6px);
 }
 
-.software-toolbar .search-field {
-  min-width: 260px;
+.software-panel .table-wrap {
+  margin-top: 6px;
+}
+
+.software-action-cell {
+  width: 72px;
+  text-align: center;
+}
+
+.software-delete-button {
+  min-width: 44px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 /* ─── Hardware Check & Threat Scan pages ────────────────────── */
 
 .check-page {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
+  gap: 6px;
   min-height: 0;
   overflow: hidden;
 }
@@ -845,6 +873,22 @@ tbody tr.selected {
   flex-direction: column;
   min-height: 0;
   padding: 18px;
+}
+
+.check-command-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+  margin-top: calc(1.4em + 6px);
+}
+
+.check-command-row button {
+  white-space: nowrap;
+}
+
+.check-save-button {
+  margin-left: auto;
 }
 
 .check-page .diagnostic-results,
@@ -872,6 +916,79 @@ tbody tr.selected {
   line-height: 1.4;
 }
 
+.threat-target-panel {
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.threat-target-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.threat-target-header > div {
+  display: flex;
+  gap: 6px;
+}
+
+.threat-target-summary {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.threat-folder-tree {
+  display: grid;
+  gap: 2px;
+  max-height: 150px;
+  margin-top: 6px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.threat-folder-empty,
+.threat-folder-node {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.threat-folder-node {
+  display: grid;
+  grid-template-columns: 24px 18px minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+  min-height: 28px;
+}
+
+.threat-folder-node button {
+  width: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+}
+
+.threat-folder-node input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
+.threat-folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .threat-list {
   display: grid;
   align-content: start;
@@ -887,6 +1004,48 @@ tbody tr.selected {
   border-radius: 8px;
   padding: 14px;
   background: var(--surface-soft);
+}
+
+.threat-progress-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.threat-progress-item > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.threat-progress-item span,
+.threat-progress-item p {
+  color: var(--muted);
+}
+
+.threat-progress-item p {
+  margin: 6px 0 0;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.threat-result-summary {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--blue-soft);
+}
+
+.threat-result-summary strong {
+  color: var(--blue);
+}
+
+.threat-result-summary p {
+  margin: 6px 0 0;
+  color: var(--text);
+  line-height: 1.4;
 }
 
 .threat-item > div {
@@ -992,6 +1151,12 @@ tbody tr.selected {
 .control-config dd {
   margin: 0;
   word-break: break-word;
+}
+
+.control-status-text {
+  margin: calc(1.4em + 6px) 0 0;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .mode-row {

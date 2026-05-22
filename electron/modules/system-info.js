@@ -1,3 +1,7 @@
+const { BrowserWindow, dialog } = require("electron");
+const { spawn } = require("child_process");
+const crypto = require("crypto");
+const fs = require("fs/promises");
 const os = require("os");
 
 const { runPowerShell } = require("../core/run-command");
@@ -108,14 +112,68 @@ $items |
   Select-Object @{ N = 'Name'; E = { $_.DisplayName } },
     @{ N = 'Version'; E = { $_.DisplayVersion } },
     @{ N = 'Publisher'; E = { $_.Publisher } },
-    @{ N = 'InstallDate'; E = { $_.InstallDate } } |
+    @{ N = 'InstallDate'; E = { $_.InstallDate } },
+    @{ N = 'UninstallString'; E = { $_.UninstallString } },
+    @{ N = 'QuietUninstallString'; E = { $_.QuietUninstallString } },
+    @{ N = 'RegistryKey'; E = { $_.PSPath } } |
   Sort-Object Name -Unique |
   ConvertTo-Json -Depth 3
 `;
 
+const softwareUninstallCommands = new Map();
+
 function register(ipcMain) {
   ipcMain.handle("system:hardware", async () => getHardwareInfo());
   ipcMain.handle("system:software", async () => getSoftwareList());
+  ipcMain.handle("system:uninstall-software", async (_event, id) => uninstallSoftware(id));
+  ipcMain.handle("system:save-hardware-text", async (event, text) => saveHardwareText(event, text));
+  ipcMain.handle("system:save-software-text", async (event, text) => saveSoftwareText(event, text));
+}
+
+async function saveHardwareText(event, text) {
+  const body = String(text ?? "").trim();
+  if (!body) {
+    throw new Error("저장할 PC 사양 내용이 없습니다.");
+  }
+
+  const window = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(window, {
+    title: "PC 사양 TXT 저장",
+    defaultPath: `PC_Spec_${getDateStamp()}.txt`,
+    filters: [{ name: "Text File", extensions: ["txt"] }],
+  });
+
+  if (result.canceled || !result.filePath) {
+    return { canceled: true };
+  }
+
+  await fs.writeFile(result.filePath, `\uFEFF${body}\n`, "utf-8");
+  return { canceled: false, filePath: result.filePath };
+}
+
+async function saveSoftwareText(event, text) {
+  const body = String(text ?? "").trim();
+  if (!body) {
+    throw new Error("저장할 설치된 소프트웨어 내용이 없습니다.");
+  }
+
+  const window = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showSaveDialog(window, {
+    title: "설치된 소프트웨어 TXT 저장",
+    defaultPath: `Installed_Software_${getDateStamp()}.txt`,
+    filters: [{ name: "Text File", extensions: ["txt"] }],
+  });
+
+  if (result.canceled || !result.filePath) {
+    return { canceled: true };
+  }
+
+  await fs.writeFile(result.filePath, `\uFEFF${body}\n`, "utf-8");
+  return { canceled: false, filePath: result.filePath };
+}
+
+function getDateStamp() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 async function getHardwareInfo() {
@@ -154,19 +212,79 @@ async function getSoftwareList() {
 
     const raw = JSON.parse(text);
     const list = Array.isArray(raw) ? raw : [raw];
+    softwareUninstallCommands.clear();
     const items = list
-      .map((item) => ({
-        name: cleanText(item.Name),
-        version: cleanText(item.Version),
-        publisher: cleanText(item.Publisher),
-        installDate: formatInstallDate(item.InstallDate),
-      }))
+      .map((item, index) => mapSoftwareItem(item, index))
       .filter((item) => item.name);
 
     return { items, count: items.length, messages: [] };
   } catch (error) {
     return { items: [], count: 0, messages: [`설치 소프트웨어 목록을 읽지 못했습니다: ${error.message}`] };
   }
+}
+
+function mapSoftwareItem(item, index) {
+  const name = cleanText(item.Name);
+  const uninstallCommand = normalizeUninstallCommand(cleanText(item.UninstallString) || cleanText(item.QuietUninstallString));
+  const id = hashSoftwareId(item, index);
+
+  if (uninstallCommand) {
+    softwareUninstallCommands.set(id, {
+      name,
+      command: uninstallCommand,
+    });
+  }
+
+  return {
+    id,
+    name,
+    version: cleanText(item.Version),
+    publisher: cleanText(item.Publisher),
+    installDate: formatInstallDate(item.InstallDate),
+    canUninstall: Boolean(uninstallCommand),
+  };
+}
+
+function hashSoftwareId(item, index) {
+  return crypto
+    .createHash("sha1")
+    .update([item.RegistryKey, item.Name, item.Version, index].map((value) => String(value ?? "")).join("|"))
+    .digest("hex");
+}
+
+function normalizeUninstallCommand(command) {
+  const text = String(command ?? "").trim();
+  if (!text) {
+    return "";
+  }
+
+  return text.replace(/(\bmsiexec(?:\.exe)?\s+)\/i(?=\s*\{)/i, "$1/X");
+}
+
+async function uninstallSoftware(id) {
+  if (process.platform !== "win32") {
+    throw new Error("프로그램 삭제는 Windows에서만 사용할 수 있습니다.");
+  }
+
+  const item = softwareUninstallCommands.get(String(id ?? ""));
+  if (!item?.command) {
+    throw new Error("이 프로그램의 삭제 명령을 찾을 수 없습니다.");
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(item.command, {
+      detached: true,
+      shell: true,
+      stdio: "ignore",
+      windowsHide: false,
+    });
+
+    child.once("error", reject);
+    child.once("spawn", () => {
+      child.unref();
+      resolve({ ok: true, name: item.name });
+    });
+  });
 }
 
 function mapHardwareGroups(raw) {

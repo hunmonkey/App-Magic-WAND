@@ -14,8 +14,7 @@
             <div class="menu-heading">PC 관리</div>
             <div class="menu-sublist">
               <button id="systemInfoMenu" class="menu-link sub-link active" type="button">기초 정보</button>
-              <button id="hardwareCheckMenu" class="menu-link sub-link" type="button">점검 : HW</button>
-              <button id="threatScanMenu" class="menu-link sub-link" type="button">점검 : SW</button>
+              <button id="checkMenu" class="menu-link sub-link" type="button">점검 : HW,SW</button>
               <button id="controlPanelMenu" class="menu-link sub-link" type="button">점검 : Network</button>
               <button class="menu-link sub-link pending" type="button">점검 : Printer</button>
               <button class="menu-link sub-link pending" type="button">점검 : Share</button>
@@ -75,9 +74,9 @@
                 <div class="panel-header">
                   <div>
                     <p class="section-label">네트워크 상태판</p>
-                    <p id="networkStatus" class="muted-text">아직 조사하지 않았습니다.</p>
+                    <p id="networkStatus" class="muted-text">현재 네트워크 정보를 확인합니다.</p>
                   </div>
-                  <button id="scanButton" type="button">현재 정보 새로고침</button>
+                  <button id="scanButton" type="button">새로고침</button>
                 </div>
 
                 <div class="metric-grid">
@@ -105,7 +104,7 @@
                   <div class="panel-header compact">
                     <div>
                       <p class="section-label">현재 PC IP 정보</p>
-                      <p id="pcInfoSummary" class="muted-text">확인 전</p>
+                      <p id="pcInfoSummary" class="muted-text">네트워크 어댑터별 IP를 확인합니다.</p>
                     </div>
                     <select id="interfaceSelect" aria-label="네트워크 선택"></select>
                   </div>
@@ -116,9 +115,9 @@
                   <div class="panel-header compact">
                     <div>
                       <p class="section-label">장애 원인 찾기</p>
-                      <p id="diagnosticSummary" class="muted-text">진단 전</p>
+                      <p id="diagnosticSummary" class="muted-text">인터넷 연결 문제의 원인을 점검합니다.</p>
                     </div>
-                    <button id="diagnosticButton" type="button">진단 실행</button>
+                    <button id="diagnosticButton" type="button">새로고침</button>
                   </div>
                   <div id="diagnosticResults" class="diagnostic-results"></div>
                 </section>
@@ -128,9 +127,9 @@
                 <div class="panel-header">
                   <div>
                     <p class="section-label">IP 사용 현황</p>
-                    <p id="usageStatus" class="muted-text">대역 스캔 전</p>
+                    <p id="usageStatus" class="muted-text">대역 내 사용 중인 IP를 확인합니다.</p>
                   </div>
-                  <button id="usageScanButton" type="button">IP 대역 스캔</button>
+                  <button id="usageScanButton" type="button">새로고침</button>
                 </div>
 
                 <div class="usage-summary">
@@ -147,7 +146,7 @@
                 <div class="list-toolbar">
                   <div>
                     <p class="section-label">IP 목록</p>
-                    <p id="recordCount" class="muted-text">0개 등록됨</p>
+                    <p id="recordCount" class="muted-text">등록한 IP를 검색하고 관리합니다.</p>
                   </div>
                   <label class="search-field">
                     검색
@@ -180,9 +179,9 @@
               <div class="panel-header">
                 <div>
                   <p class="section-label">PC 사양</p>
-                  <p id="hardwareSummary" class="muted-text">아직 불러오지 않았습니다.</p>
+                  <p id="hardwareSummary" class="muted-text">PC의 기본 사양과 장치 정보를 확인합니다.</p>
                 </div>
-                <button id="hardwareRefresh" type="button">사양 새로고침</button>
+                <button id="hardwareRefresh" type="button">새로고침</button>
               </div>
               <div class="hardware-shortcuts" aria-label="Windows 도구 바로가기">
                 <button type="button" data-windows-tool="controlPanel">제어판</button>
@@ -190,6 +189,7 @@
                 <button type="button" data-windows-tool="printers">프린터</button>
                 <button type="button" data-windows-tool="programs">프로그램</button>
                 <button type="button" data-windows-tool="cmd">CMD</button>
+                <button id="hardwareSaveText" class="hardware-save-button" type="button" disabled>TXT 저장</button>
               </div>
               <pre id="hardwareGroups" class="spec-tree"></pre>
             </section>
@@ -198,16 +198,12 @@
               <div class="panel-header">
                 <div>
                   <p class="section-label">설치된 소프트웨어</p>
-                  <p id="softwareStatus" class="muted-text">아직 불러오지 않았습니다.</p>
+                  <p id="softwareStatus" class="muted-text">설치 프로그램 목록을 확인하고 삭제를 실행합니다.</p>
                 </div>
-                <button id="softwareRefresh" type="button">목록 새로고침</button>
+                <button id="softwareRefresh" type="button">새로고침</button>
               </div>
-              <div class="software-toolbar">
-                <span id="softwareCount" class="muted-text">0개 설치됨</span>
-                <label class="search-field">
-                  검색
-                  <input id="softwareSearch" type="search" placeholder="이름, 게시자, 버전 검색" />
-                </label>
+              <div class="software-save-row">
+                <button id="softwareSaveText" type="button" disabled>TXT 저장</button>
               </div>
               <div class="table-wrap">
                 <table>
@@ -217,6 +213,7 @@
                       <th>버전</th>
                       <th>게시자</th>
                       <th>설치일</th>
+                      <th>삭제</th>
                     </tr>
                   </thead>
                   <tbody id="softwareTableBody"></tbody>
@@ -232,11 +229,43 @@
               <div class="panel-header">
                 <div>
                   <p class="section-label">하드웨어 점검</p>
-                  <p id="hwCheckSummary" class="muted-text">아직 점검하지 않았습니다.</p>
+                  <p id="hwCheckSummary" class="muted-text">주요 하드웨어 상태를 점검합니다.</p>
                 </div>
-                <button id="hwCheckButton" type="button">다시 점검</button>
+                <button id="hwCheckButton" type="button">새로고침</button>
+              </div>
+              <div class="check-command-row">
+                <button id="hwCheckStartButton" type="button">검사시작</button>
+                <button id="hwCheckStopButton" type="button" disabled>검사종료</button>
+                <button id="hwCheckSaveText" class="check-save-button" type="button" disabled>TXT 저장</button>
               </div>
               <div id="hwCheckResults" class="diagnostic-results"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">위험 소프트웨어 점검</p>
+                  <p id="threatSummary" class="muted-text">위험 소프트웨어 흔적을 점검합니다.</p>
+                </div>
+                <button id="threatScanButton" type="button">새로고침</button>
+              </div>
+              <div class="check-command-row">
+                <button id="threatScanStartButton" type="button">검사시작</button>
+                <button id="threatScanStopButton" type="button" disabled>검사종료</button>
+                <button id="threatSaveText" class="check-save-button" type="button" disabled>TXT 저장</button>
+              </div>
+              <div class="threat-target-panel">
+                <div class="threat-target-header">
+                  <strong>검사대상 폴더</strong>
+                  <div>
+                    <button id="threatReloadTreeButton" type="button">새로고침</button>
+                    <button id="threatClearTargetButton" type="button">선택 해제</button>
+                  </div>
+                </div>
+                <p id="threatTargetSummary" class="threat-target-summary">선택한 폴더가 없습니다. 기본 검사대상을 사용합니다.</p>
+                <div id="threatFolderTree" class="threat-folder-tree"></div>
+              </div>
+              <p class="notice-banner">이 점검은 Microsoft Defender와 YARA 보조 룰을 함께 사용합니다. 실제 악성 여부는 백신 검사 결과와 함께 확인해 주세요.</p>
+              <div id="threatList" class="threat-list"></div>
             </section>
           </div>
         </section>
@@ -247,7 +276,7 @@
               <div class="panel-header">
                 <div>
                   <p class="section-label">네트워크 어댑터 설정</p>
-                  <p id="controlSummary" class="muted-text">어댑터를 선택하세요.</p>
+                  <p id="controlSummary" class="muted-text">네트워크 IP 설정을 확인하고 변경합니다.</p>
                 </div>
                 <div class="header-actions">
                   <select id="controlAdapterSelect" aria-label="어댑터 선택"></select>
@@ -299,9 +328,10 @@
               <div class="panel-header compact">
                 <div>
                   <p class="section-label">컴퓨터 이름</p>
-                  <p id="computerNameDisplay" class="muted-text">확인 중...</p>
+                  <p class="muted-text">Windows 컴퓨터 이름을 확인하고 변경합니다.</p>
                 </div>
               </div>
+              <p id="computerNameDisplay" class="control-status-text">확인 중...</p>
               <form id="computerNameForm" class="rename-form">
                 <label>
                   새 컴퓨터 이름
@@ -312,22 +342,6 @@
                   <button id="applyNameButton" type="submit">이름 변경</button>
                 </div>
               </form>
-            </section>
-          </div>
-        </section>
-
-        <section id="threatScanPage" class="page">
-          <div class="check-page">
-            <section class="panel">
-              <div class="panel-header">
-                <div>
-                  <p class="section-label">의심 프로그램 점검</p>
-                  <p id="threatSummary" class="muted-text">아직 점검하지 않았습니다.</p>
-                </div>
-                <button id="threatScanButton" type="button">다시 점검</button>
-              </div>
-              <p class="notice-banner">이 점검은 백신을 대체하지 않습니다. 의심 후보만 보여주는 1차 점검이며, 실제 악성 여부는 백신 검사로 확인해 주세요.</p>
-              <div id="threatList" class="threat-list"></div>
             </section>
           </div>
         </section>

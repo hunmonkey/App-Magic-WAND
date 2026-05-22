@@ -15,22 +15,17 @@ const elements = {
   diagnosticButton: document.querySelector("#diagnosticButton"),
   interfaceSelect: document.querySelector("#interfaceSelect"),
   searchInput: document.querySelector("#searchInput"),
-  networkStatus: document.querySelector("#networkStatus"),
   publicIpValue: document.querySelector("#publicIpValue"),
   pcNameValue: document.querySelector("#pcNameValue"),
   primaryIpValue: document.querySelector("#primaryIpValue"),
   networkRangeValue: document.querySelector("#networkRangeValue"),
-  pcInfoSummary: document.querySelector("#pcInfoSummary"),
   pcInfoBody: document.querySelector("#pcInfoBody"),
-  diagnosticSummary: document.querySelector("#diagnosticSummary"),
   diagnosticResults: document.querySelector("#diagnosticResults"),
-  usageStatus: document.querySelector("#usageStatus"),
   usageRangeChip: document.querySelector("#usageRangeChip"),
   usedCountChip: document.querySelector("#usedCountChip"),
   freeCountChip: document.querySelector("#freeCountChip"),
   addressGrid: document.querySelector("#addressGrid"),
   usedDeviceList: document.querySelector("#usedDeviceList"),
-  recordCount: document.querySelector("#recordCount"),
   tableBody: document.querySelector("#recordTableBody"),
   tableWrap: document.querySelector(".table-wrap"),
   futureMenuButtons: document.querySelectorAll(".menu-link.pending"),
@@ -270,7 +265,6 @@ function renderTable() {
     elements.tableBody.append(row);
   }
 
-  elements.recordCount.textContent = `${records.length}개 등록됨`;
   elements.tableWrap.classList.toggle("empty", visibleRecords.length === 0);
   updateButtons();
 }
@@ -305,7 +299,6 @@ function updateButtons() {
 
 async function refreshNetworkInfo() {
   elements.scanButton.disabled = true;
-  elements.networkStatus.textContent = "현재 정보를 조사 중입니다...";
   setOverviewLoading();
 
   try {
@@ -317,8 +310,8 @@ async function refreshNetworkInfo() {
     renderInterfaceSelect();
     renderPcInfo();
   } catch (error) {
-    elements.networkStatus.textContent = `조사 실패: ${error.message}`;
     setOverviewFailed();
+    showToast(`네트워크 정보 조사 실패: ${error.message}`);
   } finally {
     elements.scanButton.disabled = false;
   }
@@ -344,9 +337,6 @@ function renderNetworkOverview() {
   elements.pcNameValue.textContent = networkInfo.pcName || "확인 실패";
   elements.primaryIpValue.textContent = primary?.privateIp || "확인 실패";
   elements.networkRangeValue.textContent = primary?.networkRange || "확인 실패";
-  elements.networkStatus.textContent = networkInfo.messages?.length
-    ? networkInfo.messages.join(" / ")
-    : "조사 완료";
 }
 
 function renderInterfaceSelect() {
@@ -371,9 +361,6 @@ function renderInterfaceSelect() {
 function renderPcInfo() {
   const interfaces = networkInfo?.privateInterfaces ?? [];
   const selected = getSelectedInterface();
-  elements.pcInfoSummary.textContent = interfaces.length
-    ? `${interfaces.length}개 네트워크 연결 확인`
-    : "확인된 네트워크 연결이 없습니다.";
 
   elements.pcInfoBody.innerHTML = "";
   if (!interfaces.length) {
@@ -418,7 +405,6 @@ function renderPcInfo() {
 
 async function scanAddressUsage() {
   elements.usageScanButton.disabled = true;
-  elements.usageStatus.textContent = "IP 대역을 조사 중입니다...";
   elements.addressGrid.innerHTML = "";
   elements.usedDeviceList.innerHTML = "";
   elements.usageRangeChip.textContent = "대역: 조사 중";
@@ -429,16 +415,14 @@ async function scanAddressUsage() {
     const result = await window.magicWand.network.scanAddresses(selectedInterfaceId);
     renderAddressUsage(result);
   } catch (error) {
-    elements.usageStatus.textContent = `스캔 실패: ${error.message}`;
+    elements.addressGrid.append(createEmptyState("IP 대역 스캔에 실패했습니다."));
+    showToast(`IP 대역 스캔 실패: ${error.message}`);
   } finally {
     elements.usageScanButton.disabled = false;
   }
 }
 
 function renderAddressUsage(result) {
-  elements.usageStatus.textContent = result.messages?.length
-    ? result.messages.join(" / ")
-    : `${result.totalHosts}개 주소 조사 완료`;
   elements.usageRangeChip.textContent = `대역: ${result.scannedRange || "확인 실패"}`;
   elements.usedCountChip.textContent = `사용: ${result.usedCount}`;
   elements.freeCountChip.textContent = `비어 있음: ${result.freeCount}`;
@@ -510,21 +494,21 @@ function renderUsedDeviceList(hosts) {
 
 async function runDiagnostics() {
   elements.diagnosticButton.disabled = true;
-  elements.diagnosticSummary.textContent = "진단 중입니다...";
   elements.diagnosticResults.innerHTML = "";
+  elements.diagnosticResults.append(createEmptyState("진단 중입니다."));
 
   try {
     const result = await window.magicWand.network.diagnose(selectedInterfaceId);
     renderDiagnostics(result);
   } catch (error) {
-    elements.diagnosticSummary.textContent = `진단 실패: ${error.message}`;
+    elements.diagnosticResults.innerHTML = "";
+    elements.diagnosticResults.append(createEmptyState(`진단 실패: ${error.message}`));
   } finally {
     elements.diagnosticButton.disabled = false;
   }
 }
 
 function renderDiagnostics(result) {
-  elements.diagnosticSummary.textContent = result.summary || "진단 완료";
   renderTestList(elements.diagnosticResults, result.tests);
 }
 
