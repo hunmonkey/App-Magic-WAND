@@ -1,3 +1,4 @@
+const fs = require("fs").promises;
 const { dialog, BrowserWindow } = require("electron");
 const { runPowerShell } = require("../core/run-command");
 
@@ -88,9 +89,84 @@ async function bitlocker() {
 `),
   );
   if (!result.ok) {
+    if (/액세스|거부|denied|권한|elevat|administrator/i.test(result.error || "")) {
+      throw new Error("드라이브 암호화 상태는 관리자 권한으로 실행해야 확인할 수 있습니다. 앱을 관리자 권한으로 실행한 뒤 다시 시도해 주세요.");
+    }
     throw new Error(result.error || "드라이브 암호화 상태를 확인하지 못했습니다.");
   }
   return { volumes: asArray(result.volumes) };
+}
+
+async function productKey() {
+  const result = await runJson(
+    wrap(`
+  function ConvertTo-WindowsKey {
+    param([byte[]]$DigitalProductId)
+    $map = 'BCDFGHJKMPQRTVWXY2346789'
+    $offset = 52
+    $bytes = $DigitalProductId[$offset..($offset + 14)]
+    $isWin8 = [int](($bytes[14] -shr 3) -band 1)
+    $bytes[14] = [byte](($bytes[14] -band 0xF7) -bor (($isWin8 -band 1) -shl 2))
+    $chars = @()
+    for ($i = 24; $i -ge 0; $i--) {
+      $r = 0
+      for ($j = 14; $j -ge 0; $j--) {
+        $r = ($r -shl 8) -bor $bytes[$j]
+        $bytes[$j] = [byte][math]::Floor($r / 24)
+        $r = $r % 24
+      }
+      $chars = ,($map[$r]) + $chars
+    }
+    $keyStr = -join $chars
+    if ($isWin8 -eq 1) {
+      $last = $chars.Count - 1
+      $keyStr = $keyStr.Remove(0, 1)
+      $keyStr = $keyStr.Insert($last, 'N')
+    }
+    ($keyStr -replace '(.{5})(?=.)', '$1-')
+  }
+  $os = Get-CimInstance Win32_OperatingSystem
+  $oem = (Get-CimInstance -ClassName SoftwareLicensingService).OA3xOriginalProductKey
+  $key = ''
+  $source = 'none'
+  if ($oem) {
+    $key = "$oem"
+    $source = 'firmware'
+  } else {
+    try {
+      $dpid = (Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' -Name DigitalProductId -ErrorAction Stop).DigitalProductId
+      if ($dpid) {
+        $key = ConvertTo-WindowsKey ([byte[]]$dpid)
+        $source = 'registry'
+      }
+    } catch { }
+  }
+  $out = @{ ok = $true; key = $key; source = $source; edition = $os.Caption }
+`),
+  );
+  if (!result.ok) {
+    throw new Error(result.error || "제품 키를 확인하지 못했습니다.");
+  }
+  return { key: result.key || "", source: result.source || "none", edition: result.edition || "" };
+}
+
+async function saveProductKeyText(event, text) {
+  const body = String(text ?? "").trim();
+  if (!body) {
+    throw new Error("저장할 제품 키 내용이 없습니다.");
+  }
+  const window = BrowserWindow.fromWebContents(event.sender);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const result = await dialog.showSaveDialog(window, {
+    title: "운영체제 CD-KEY TXT 저장",
+    defaultPath: `Windows_CDKEY_${stamp}.txt`,
+    filters: [{ name: "Text File", extensions: ["txt"] }],
+  });
+  if (result.canceled || !result.filePath) {
+    return { canceled: true };
+  }
+  await fs.writeFile(result.filePath, "﻿" + body + "\n", "utf-8");
+  return { canceled: false, filePath: result.filePath };
 }
 
 async function localUsers() {
@@ -147,6 +223,8 @@ async function setHidden(payload) {
 function register(ipcMain) {
   ipcMain.handle("security:activation", () => activation());
   ipcMain.handle("security:bitlocker", () => bitlocker());
+  ipcMain.handle("security:productKey", () => productKey());
+  ipcMain.handle("security:saveProductKeyText", (event, text) => saveProductKeyText(event, text));
   ipcMain.handle("security:localUsers", () => localUsers());
   ipcMain.handle("security:browse", () => browseFolder());
   ipcMain.handle("security:setHidden", (_event, payload) => setHidden(payload));

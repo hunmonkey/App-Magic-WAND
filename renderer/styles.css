@@ -1539,6 +1539,10 @@ tbody tr.selected {
   white-space: nowrap;
 }
 
+#securityKeySaveBtn {
+  margin-left: auto;
+}
+
 .tool-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1612,7 +1616,8 @@ tbody tr.selected {
   gap: 6px;
 }
 
-.share-path-row input {
+.share-path-row input,
+.share-path-row select {
   flex: 1;
   min-width: 0;
 }
@@ -1649,4 +1654,223 @@ tbody tr.selected {
   gap: 6px;
   margin-top: 6px;
   color: #334155;
+}
+
+/* Form maker page */
+.form-maker {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.fm-title {
+  max-width: 280px;
+}
+
+.fm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.fm-toolbar button {
+  min-height: 32px;
+  padding: 0 9px;
+}
+
+.fm-toolbar select {
+  min-height: 32px;
+}
+
+.fm-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--line);
+}
+
+.fm-color,
+.fm-table-insert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.fm-color input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #a9b7c9;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.fm-table-insert input {
+  width: 44px;
+  min-height: 32px;
+  text-align: center;
+}
+
+.fm-table-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--blue-soft);
+}
+
+.fm-table-tools-label {
+  margin-right: 2px;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* Form manager page */
+.form-manager-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+}
+
+.form-manager-list,
+.form-manager-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.fmg-search {
+  margin-top: 10px;
+}
+
+.fmg-table-wrap {
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  overflow: auto;
+}
+
+.fmg-preview-canvas {
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #dbe3ec;
+}
+
+.fmg-preview-sheet {
+  min-height: 0;
+}
+
+.fm-canvas {
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #dbe3ec;
+}
+
+.fm-sheet {
+  max-width: 780px;
+  min-height: 1040px;
+  margin: 0 auto;
+  padding: 56px 60px;
+  background: #fff;
+  box-shadow: 0 1px 8px rgba(16, 32, 51, 0.18);
+  line-height: 1.6;
+  outline: none;
+}
+
+#fmSheet:empty::before {
+  content: "여기에 문서를 작성하세요.";
+  color: #9aa5b1;
+}
+
+.fm-sheet table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.fm-sheet td,
+.fm-sheet th {
+  border: 1px solid #99a7b8;
+  padding: 6px 10px;
+  min-width: 40px;
+}
+
+.fm-sheet img {
+  max-width: 100%;
+}
+
+@media print {
+  body {
+    min-width: 0;
+    background: #fff;
+  }
+
+  .side-menu,
+  .form-maker > .panel-header,
+  .fm-toolbar,
+  .fm-table-tools,
+  .toast,
+  .dialog-backdrop {
+    display: none !important;
+  }
+
+  .main-content {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .page {
+    display: none !important;
+  }
+
+  #formMakerPage.page.active {
+    display: block !important;
+    height: auto;
+  }
+
+  .form-maker {
+    padding: 0;
+    overflow: visible;
+    border: none;
+  }
+
+  .fm-canvas {
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: none;
+    background: #fff;
+  }
+
+  .fm-sheet {
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
 }

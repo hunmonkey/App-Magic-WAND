@@ -11,6 +11,8 @@ const windowsTools = require("./modules/windows-tools");
 const printer = require("./modules/printer");
 const share = require("./modules/share");
 const security = require("./modules/security");
+const secureErase = require("./modules/secure-erase");
+const formMaker = require("./modules/form-maker");
 
 let mainWindow = null;
 
@@ -146,6 +148,8 @@ function registerIpcHandlers() {
   printer.register(ipcMain);
   share.register(ipcMain);
   security.register(ipcMain);
+  secureErase.register(ipcMain);
+  formMaker.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

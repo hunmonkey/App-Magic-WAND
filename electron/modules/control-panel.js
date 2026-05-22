@@ -3,6 +3,8 @@ const { runPowerShell } = require("../core/run-command");
 const os = require("os");
 
 const GET_ADAPTERS_SCRIPT = `
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $list = @(Get-NetAdapter | Sort-Object Status,Name | ForEach-Object {
   $idx = $_.InterfaceIndex
   $ip  = Get-NetIPAddress  -InterfaceIndex $idx -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -26,7 +28,9 @@ $list = @(Get-NetAdapter | Sort-Object Status,Name | ForEach-Object {
 ConvertTo-Json -InputObject $list -Compress
 `.trim();
 
-const GET_COMPUTER_NAME_SCRIPT = `(Get-CimInstance Win32_ComputerSystem).Name`;
+const GET_COMPUTER_NAME_SCRIPT = `
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+(Get-CimInstance Win32_ComputerSystem).Name`;
 
 async function getNetworkAdapters() {
   if (process.platform !== "win32") {

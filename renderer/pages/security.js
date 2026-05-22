@@ -13,8 +13,23 @@
   const pathInput = document.querySelector("#securityTargetPath");
   const hideBtn = document.querySelector("#securityHideBtn");
   const unhideBtn = document.querySelector("#securityUnhideBtn");
+  // CD-KEY
+  const keyEl = document.querySelector("#securityProductKey");
+  const keyFindBtn = document.querySelector("#securityKeyFindBtn");
+  const keySaveBtn = document.querySelector("#securityKeySaveBtn");
+  // 영구 삭제
+  const eraseTargetPath = document.querySelector("#eraseTargetPath");
+  const erasePickFileBtn = document.querySelector("#erasePickFileBtn");
+  const erasePickFolderBtn = document.querySelector("#erasePickFolderBtn");
+  const eraseRunBtn = document.querySelector("#eraseRunBtn");
+  const eraseDriveSelect = document.querySelector("#eraseDriveSelect");
+  const eraseDriveBtn = document.querySelector("#eraseDriveBtn");
+  const eraseStatus = document.querySelector("#eraseStatus");
 
   let loaded = false;
+  let foundKey = "";
+  let eraseTarget = "";
+  let erasing = false;
 
   menu.addEventListener("click", () => {
     ui.switchPage("#securityPage", menu);
@@ -22,6 +37,7 @@
       loaded = true;
       loadStatus();
       loadUsers();
+      loadDrives();
     }
   });
 
@@ -30,7 +46,16 @@
   browseBtn.addEventListener("click", pickFolder);
   hideBtn.addEventListener("click", () => setHidden(true));
   unhideBtn.addEventListener("click", () => setHidden(false));
+  keyFindBtn.addEventListener("click", findProductKey);
+  keySaveBtn.addEventListener("click", saveProductKey);
+  erasePickFileBtn.addEventListener("click", () => pickErase("file"));
+  erasePickFolderBtn.addEventListener("click", () => pickErase("folder"));
+  eraseRunBtn.addEventListener("click", runErasePath);
+  eraseDriveBtn.addEventListener("click", runEraseDrive);
+  window.magicWand.secureErase.onProgress(renderEraseProgress);
   bindToolButtons(page);
+
+  renderKeyMessage("'찾기' 버튼을 눌러 제품 키를 조회하세요.");
 
   async function loadStatus() {
     refreshBtn.disabled = true;
@@ -177,6 +202,181 @@
     } finally {
       hideBtn.disabled = false;
       unhideBtn.disabled = false;
+    }
+  }
+
+  // ── 운영체제 CD-KEY
+  async function findProductKey() {
+    keyFindBtn.disabled = true;
+    keySaveBtn.disabled = true;
+    renderKeyMessage("제품 키를 조회하는 중입니다...");
+    try {
+      const r = await window.magicWand.security.productKey();
+      renderProductKey(r);
+    } catch (err) {
+      foundKey = "";
+      renderKeyMessage(`제품 키 조회 실패: ${err.message}`);
+    } finally {
+      keyFindBtn.disabled = false;
+    }
+  }
+
+  function renderProductKey(r) {
+    const rows = [];
+    if (r.key) {
+      foundKey = r.key;
+      rows.push(["제품 키", r.key]);
+      rows.push(["키 출처", r.source === "firmware" ? "메인보드(펌웨어) OEM 키" : "현재 설치(레지스트리) 키"]);
+      keySaveBtn.disabled = false;
+    } else {
+      foundKey = "";
+      rows.push(["제품 키", "표시할 키 없음"]);
+      rows.push(["안내", "디지털 라이선스로 인증되었거나, 제품 키가 없는 무료·평가판일 수 있습니다."]);
+      keySaveBtn.disabled = true;
+    }
+    if (r.edition) rows.push(["에디션", r.edition]);
+    renderKeyRows(rows);
+  }
+
+  function renderKeyRows(rows) {
+    keyEl.innerHTML = "";
+    for (const [label, value] of rows) {
+      const div = document.createElement("div");
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = label;
+      dd.textContent = value;
+      div.append(dt, dd);
+      keyEl.append(div);
+    }
+  }
+
+  function renderKeyMessage(message) {
+    renderKeyRows([["상태", message]]);
+  }
+
+  async function saveProductKey() {
+    if (!foundKey) {
+      ui.showToast("저장할 제품 키가 없습니다.");
+      return;
+    }
+    keySaveBtn.disabled = true;
+    try {
+      const r = await window.magicWand.security.saveProductKeyText(`Windows 제품 키\r\n${foundKey}`);
+      if (!r.canceled) ui.showToast(`저장했습니다: ${r.filePath}`);
+    } catch (err) {
+      ui.showToast(`저장 실패: ${err.message}`);
+    } finally {
+      keySaveBtn.disabled = false;
+    }
+  }
+
+  // ── 복구 불가 영구 삭제
+  function selectedMethod() {
+    return document.querySelector('input[name="eraseMethod"]:checked')?.value || "zero";
+  }
+
+  async function pickErase(type) {
+    if (erasing) return;
+    try {
+      const r = await window.magicWand.secureErase.pick(type);
+      if (r.path) {
+        eraseTarget = r.path;
+        eraseTargetPath.value = r.path;
+        eraseRunBtn.disabled = false;
+      }
+    } catch (err) {
+      ui.showToast(`선택 실패: ${err.message}`);
+    }
+  }
+
+  async function loadDrives() {
+    try {
+      const r = await window.magicWand.secureErase.listDrives();
+      const usable = (r.drives || []).filter((d) => !d.isSystem);
+      eraseDriveSelect.innerHTML = "";
+      if (!usable.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "와이프 가능한 드라이브 없음";
+        eraseDriveSelect.append(opt);
+        eraseDriveBtn.disabled = true;
+        return;
+      }
+      for (const d of usable) {
+        const opt = document.createElement("option");
+        opt.value = d.letter;
+        const label = d.label ? ` ${d.label}` : "";
+        opt.textContent = `${d.letter}:${label} — 여유 ${d.freeGb}GB / 전체 ${d.sizeGb}GB`;
+        eraseDriveSelect.append(opt);
+      }
+      eraseDriveBtn.disabled = erasing;
+    } catch (err) {
+      ui.showToast(`드라이브 조회 실패: ${err.message}`);
+    }
+  }
+
+  async function runErasePath() {
+    if (!eraseTarget || erasing) return;
+    setErasing(true, "삭제를 준비하는 중입니다...");
+    try {
+      const r = await window.magicWand.secureErase.run({ mode: "path", path: eraseTarget, method: selectedMethod() });
+      if (r.canceled) {
+        setEraseStatus("삭제를 취소했습니다.");
+      } else {
+        setEraseStatus(`완료: ${r.files}개 파일을 영구 삭제했습니다${r.skipped ? `, ${r.skipped}개는 잠겨 있어 건너뜀.` : "."}`);
+        eraseTarget = "";
+        eraseTargetPath.value = "";
+      }
+    } catch (err) {
+      setEraseStatus(`삭제 실패: ${err.message}`);
+    } finally {
+      setErasing(false);
+    }
+  }
+
+  async function runEraseDrive() {
+    const drive = eraseDriveSelect.value;
+    if (!drive || erasing) return;
+    setErasing(true, "드라이브 와이프를 준비하는 중입니다...");
+    try {
+      const r = await window.magicWand.secureErase.run({ mode: "drive", drive, method: selectedMethod() });
+      if (r.canceled) {
+        setEraseStatus("와이프를 취소했습니다.");
+      } else {
+        setEraseStatus(`${r.drive}: 드라이브 와이프 완료. ${r.files}개 파일 삭제${r.skipped ? `, ${r.skipped}개 건너뜀.` : "."}`);
+      }
+    } catch (err) {
+      setEraseStatus(`와이프 실패: ${err.message}`);
+    } finally {
+      setErasing(false);
+      loadDrives();
+    }
+  }
+
+  function setErasing(on, text) {
+    erasing = on;
+    erasePickFileBtn.disabled = on;
+    erasePickFolderBtn.disabled = on;
+    eraseRunBtn.disabled = on || !eraseTarget;
+    eraseDriveBtn.disabled = on || !eraseDriveSelect.value;
+    keyFindBtn.disabled = on;
+    if (text) setEraseStatus(text);
+  }
+
+  function setEraseStatus(text) {
+    eraseStatus.hidden = false;
+    eraseStatus.textContent = text;
+  }
+
+  function renderEraseProgress(p) {
+    if (!erasing) return;
+    if (p.phase === "info") {
+      setEraseStatus(p.text);
+    } else if (p.phase === "overwrite") {
+      setEraseStatus(`덮어쓰는 중... ${p.files}개 처리${p.skipped ? ` (${p.skipped}개 건너뜀)` : ""}`);
+    } else if (p.phase === "freespace") {
+      setEraseStatus(`빈 공간 와이프 중... ${p.pass}/${p.total}회차, 약 ${p.sizeGb}GB 기록`);
     }
   }
 

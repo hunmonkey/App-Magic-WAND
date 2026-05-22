@@ -61,9 +61,28 @@ contextBridge.exposeInMainWorld("magicWand", {
   security: {
     activation: () => ipcRenderer.invoke("security:activation"),
     bitlocker: () => ipcRenderer.invoke("security:bitlocker"),
+    productKey: () => ipcRenderer.invoke("security:productKey"),
+    saveProductKeyText: (text) => ipcRenderer.invoke("security:saveProductKeyText", text),
     localUsers: () => ipcRenderer.invoke("security:localUsers"),
     browse: () => ipcRenderer.invoke("security:browse"),
     setHidden: (payload) => ipcRenderer.invoke("security:setHidden", payload),
+  },
+  secureErase: {
+    listDrives: () => ipcRenderer.invoke("secure-erase:listDrives"),
+    pick: (type) => ipcRenderer.invoke("secure-erase:pick", type),
+    run: (payload) => ipcRenderer.invoke("secure-erase:run", payload),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("secure-erase:progress", listener);
+      return () => ipcRenderer.removeListener("secure-erase:progress", listener);
+    },
+  },
+  formMaker: {
+    save: (payload) => ipcRenderer.invoke("form-maker:save", payload),
+    list: () => ipcRenderer.invoke("form-maker:list"),
+    read: (id) => ipcRenderer.invoke("form-maker:read", id),
+    write: (payload) => ipcRenderer.invoke("form-maker:write", payload),
+    delete: (id) => ipcRenderer.invoke("form-maker:delete", id),
   },
   app: {
     quit: () => ipcRenderer.send("app:quit"),

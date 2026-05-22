@@ -696,6 +696,23 @@ function cleanText(value) {
   return text;
 }
 
+async function isElevated() {
+  if (process.platform !== "win32") {
+    return false;
+  }
+  try {
+    const out = await runPowerShell(
+      "[bool]([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)",
+      5000,
+    );
+    return /true/i.test(out);
+  } catch {
+    return false;
+  }
+}
+
+const ADMIN_HINT = "이 기능은 관리자 권한이 필요합니다. 앱을 관리자 권한으로 실행한 뒤 다시 시도해 주세요.";
+
 async function repairNetwork(action, interfaceName) {
   switch (action) {
     case "dhcp-renew": {
@@ -707,11 +724,19 @@ async function repairNetwork(action, interfaceName) {
       await execFileAsync("ipconfig", ["/flushdns"], { timeout: 5000 });
       return { ok: true, message: "DNS 캐시를 초기화했습니다. [점검 시작]을 눌러 재진단해 주세요." };
     case "winsock-reset":
-      await execFileAsync("netsh", ["winsock", "reset"], { timeout: 15000 });
+      try {
+        await execFileAsync("netsh", ["winsock", "reset"], { timeout: 15000 });
+      } catch (err) {
+        throw (await isElevated()) ? err : new Error(ADMIN_HINT);
+      }
       return { ok: true, message: "네트워크 스택을 초기화했습니다. PC를 재시작해야 완전히 적용됩니다." };
     case "restart-adapter": {
       const safeName = (interfaceName || "").replace(/'/g, "''");
-      await runPowerShell(`Restart-NetAdapter -Name '${safeName}' -Confirm:$false`);
+      try {
+        await runPowerShell(`$ErrorActionPreference='Stop'\nRestart-NetAdapter -Name '${safeName}' -Confirm:$false`);
+      } catch (err) {
+        throw (await isElevated()) ? err : new Error(ADMIN_HINT);
+      }
       return { ok: true, message: "어댑터를 재시작했습니다. [점검 시작]을 눌러 재진단해 주세요." };
     }
     default:

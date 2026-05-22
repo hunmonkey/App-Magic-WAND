@@ -25,7 +25,8 @@
           <div class="menu-group">
             <div class="menu-heading">증빙 관리</div>
             <div class="menu-sublist">
-              <button class="menu-link sub-link pending" type="button">양식지 관리</button>
+              <button id="formMakerMenu" class="menu-link sub-link" type="button">양식지 제작</button>
+              <button id="formManagerMenu" class="menu-link sub-link" type="button">양식지 관리</button>
               <button class="menu-link sub-link pending" type="button">증빙</button>
             </div>
           </div>
@@ -508,6 +509,14 @@
               </div>
               <dl id="securityActivation" class="control-config"></dl>
               <div class="sec-subhead">
+                <p class="section-label">운영체제 CD-KEY</p>
+              </div>
+              <dl id="securityProductKey" class="control-config"></dl>
+              <div class="tool-actions">
+                <button id="securityKeyFindBtn" type="button">찾기</button>
+                <button id="securityKeySaveBtn" type="button" disabled>TXT 저장</button>
+              </div>
+              <div class="sec-subhead">
                 <p class="section-label">드라이브 암호화 (BitLocker)</p>
               </div>
               <div id="securityBitlocker" class="tool-list sec-list"></div>
@@ -553,16 +562,182 @@
                 <button id="securityUnhideBtn" type="button" disabled>숨김 해제</button>
               </div>
               <div class="sec-subhead">
-                <p class="section-label">디스크·삭제·복구</p>
+                <p class="section-label">디스크 및 파일 관리</p>
               </div>
               <div class="tool-actions">
                 <button type="button" data-windows-tool="diskManagement">디스크 관리</button>
                 <button type="button" data-windows-tool="recycleBin">휴지통 열기</button>
                 <button type="button" data-windows-tool="diskCleanup">디스크 정리(빈 공간)</button>
               </div>
-              <p class="caution-text small-caution">영구 삭제·데이터 복구는 되돌릴 수 없습니다. Windows 내장 도구로 신중히 진행하세요.</p>
+              <div class="sec-subhead">
+                <p class="section-label">복구 불가 영구 삭제</p>
+              </div>
+              <div class="mode-row">
+                <label class="radio-label">
+                  <input type="radio" name="eraseMethod" value="zero" checked>
+                  빠른 1회 (0으로 덮기)
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="eraseMethod" value="dod">
+                  DoD 5220.22-M (3회)
+                </label>
+              </div>
+              <label class="sec-target-label">
+                삭제 대상 (파일 또는 폴더)
+                <div class="share-path-row">
+                  <input id="eraseTargetPath" type="text" placeholder="파일 또는 폴더를 선택하세요." autocomplete="off" readonly />
+                  <button id="erasePickFileBtn" type="button">파일</button>
+                  <button id="erasePickFolderBtn" type="button">폴더</button>
+                </div>
+              </label>
+              <div class="tool-actions">
+                <button id="eraseRunBtn" type="button" disabled>선택 항목 영구 삭제</button>
+              </div>
+              <label class="sec-target-label">
+                드라이브 전체 와이프 (시스템 드라이브 제외)
+                <div class="share-path-row">
+                  <select id="eraseDriveSelect"></select>
+                  <button id="eraseDriveBtn" type="button" disabled>드라이브 와이프</button>
+                </div>
+              </label>
+              <p id="eraseStatus" class="empty-inline" hidden></p>
+              <p class="caution-text small-caution">덮어쓴 데이터는 복구할 수 없습니다. SSD는 특성상 완전 삭제가 보장되지 않을 수 있고, 시스템 드라이브는 와이프할 수 없습니다.</p>
             </section>
 
+          </div>
+        </section>
+
+        <section id="formMakerPage" class="page">
+          <section class="panel form-maker">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">양식지 제작</p>
+                <p class="muted-text">문서를 직접 작성하고 인쇄하거나 HTML 파일로 저장합니다.</p>
+              </div>
+              <input id="fmTitle" class="fm-title" type="text" placeholder="문서 제목 (저장 파일 이름)" autocomplete="off" />
+            </div>
+
+            <div class="fm-toolbar" role="toolbar" aria-label="문서 서식 도구">
+              <select id="fmBlock" aria-label="문단 스타일" title="문단 스타일">
+                <option value="p">본문</option>
+                <option value="h1">제목 1</option>
+                <option value="h2">제목 2</option>
+                <option value="h3">제목 3</option>
+              </select>
+              <select id="fmFontSize" aria-label="글자 크기" title="글자 크기">
+                <option value="">크기</option>
+                <option value="2">작게</option>
+                <option value="3">보통</option>
+                <option value="5">크게</option>
+                <option value="6">아주 크게</option>
+              </select>
+              <select id="fmFontName" aria-label="글꼴" title="글꼴">
+                <option value="">글꼴</option>
+                <option value="'Malgun Gothic'">맑은 고딕</option>
+                <option value="Gulim">굴림</option>
+                <option value="Dotum">돋움</option>
+                <option value="Batang">바탕</option>
+                <option value="Gungsuh">궁서</option>
+                <option value="Arial">Arial</option>
+                <option value="'Times New Roman'">Times New Roman</option>
+                <option value="'Courier New'">Courier New</option>
+              </select>
+              <span class="fm-sep"></span>
+              <button type="button" data-cmd="bold" title="굵게"><b>B</b></button>
+              <button type="button" data-cmd="italic" title="기울임"><i>I</i></button>
+              <button type="button" data-cmd="underline" title="밑줄"><u>U</u></button>
+              <button type="button" data-cmd="strikeThrough" title="취소선"><s>S</s></button>
+              <label class="fm-color" title="글자색">
+                글자색
+                <input id="fmColor" type="color" value="#17202a" />
+              </label>
+              <span class="fm-sep"></span>
+              <button type="button" data-cmd="justifyLeft" title="왼쪽 정렬">좌</button>
+              <button type="button" data-cmd="justifyCenter" title="가운데 정렬">중</button>
+              <button type="button" data-cmd="justifyRight" title="오른쪽 정렬">우</button>
+              <button type="button" data-cmd="insertUnorderedList" title="글머리표 목록">• 목록</button>
+              <button type="button" data-cmd="insertOrderedList" title="번호 목록">1. 목록</button>
+              <span class="fm-sep"></span>
+              <span class="fm-table-insert" title="표 삽입 (행 × 열)">
+                표
+                <input id="fmTableRows" type="number" min="1" max="20" value="2" aria-label="표 행 수" />
+                ×
+                <input id="fmTableCols" type="number" min="1" max="10" value="2" aria-label="표 열 수" />
+                <button id="fmInsertTable" type="button">삽입</button>
+              </span>
+              <button id="fmInsertImage" type="button" title="이미지 삽입">이미지</button>
+              <button type="button" data-cmd="insertHorizontalRule" title="구분선">구분선</button>
+              <span class="fm-sep"></span>
+              <button id="fmStore" type="button" title="보관함(양식지 관리)에 저장">보관함에 저장</button>
+              <button id="fmPrint" type="button" title="인쇄 또는 PDF로 저장">인쇄 / PDF</button>
+              <button id="fmSave" type="button" title="HTML 파일로 저장">파일 저장</button>
+              <button id="fmClear" type="button" title="새 문서 (현재 내용 지우기)">새 문서</button>
+              <span id="fmTableTools" class="fm-table-tools" role="group" aria-label="표 편집" hidden>
+                <span class="fm-table-tools-label">표 편집</span>
+                <button id="fmRowAbove" type="button" title="위에 행 추가">행+↑</button>
+                <button id="fmRowBelow" type="button" title="아래에 행 추가">행+↓</button>
+                <button id="fmColLeft" type="button" title="왼쪽에 열 추가">열+←</button>
+                <button id="fmColRight" type="button" title="오른쪽에 열 추가">열+→</button>
+                <button id="fmRowDelete" type="button" title="현재 행 삭제">행 삭제</button>
+                <button id="fmColDelete" type="button" title="현재 열 삭제">열 삭제</button>
+                <button id="fmTableDelete" type="button" title="표 전체 삭제">표 삭제</button>
+              </span>
+              <input id="fmImageInput" type="file" accept="image/*" hidden />
+            </div>
+
+            <div class="fm-canvas">
+              <div id="fmSheet" class="fm-sheet" contenteditable="true" spellcheck="false"></div>
+            </div>
+          </section>
+        </section>
+
+        <section id="formManagerPage" class="page">
+          <div class="form-manager-grid">
+            <section class="panel form-manager-list">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">양식지 관리</p>
+                  <p id="fmgSummary" class="muted-text">보관함에 저장한 양식지를 관리합니다.</p>
+                </div>
+                <button id="fmgRefresh" type="button">새로고침</button>
+              </div>
+              <label class="search-field fmg-search">
+                검색
+                <input id="fmgSearch" type="search" placeholder="문서 제목 검색" />
+              </label>
+              <div class="tool-actions">
+                <button id="fmgEditBtn" type="button" disabled>열어서 편집</button>
+                <button id="fmgRenameBtn" type="button" disabled>이름 변경</button>
+                <button id="fmgDuplicateBtn" type="button" disabled>복제</button>
+                <button id="fmgPrintBtn" type="button" disabled>인쇄</button>
+                <button id="fmgExportBtn" type="button" disabled>HTML 내보내기</button>
+                <button id="fmgDeleteBtn" type="button" disabled>삭제</button>
+              </div>
+              <div class="table-wrap fmg-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>제목</th>
+                      <th>수정일</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fmgTableBody"></tbody>
+                </table>
+                <p id="fmgEmptyMessage" class="empty-message">저장된 양식지가 없습니다.</p>
+              </div>
+            </section>
+
+            <section class="panel form-manager-preview">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">미리보기</p>
+                  <p id="fmgPreviewTitle" class="muted-text">목록에서 문서를 선택하면 내용을 미리 봅니다.</p>
+                </div>
+              </div>
+              <div class="fmg-preview-canvas">
+                <div id="fmgPreview" class="fm-sheet fmg-preview-sheet"></div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -594,5 +769,7 @@
     <script src="./pages/printer.js"></script>
     <script src="./pages/share.js"></script>
     <script src="./pages/security.js"></script>
+    <script src="./pages/form-maker.js"></script>
+    <script src="./pages/form-manager.js"></script>
   </body>
 </html>

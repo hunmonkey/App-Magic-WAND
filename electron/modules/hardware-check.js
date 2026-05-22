@@ -3,12 +3,15 @@ const fsPromises = require("fs/promises");
 const os = require("os");
 const path = require("path");
 
-const { BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog } = require("electron");
 
 const { execFileAsync, runPowerShell } = require("../core/run-command");
 const { formatBytes } = require("../core/format");
 
-const TOOLS_DIR = path.join(__dirname, "..", "..", "tools");
+// 개발 중에는 프로젝트 루트의 tools/, 패키지에서는 resources/tools/ 를 사용한다.
+const TOOLS_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "tools")
+  : path.join(__dirname, "..", "..", "tools");
 const SMARTCTL_CANDIDATES = [
   path.join(TOOLS_DIR, "smartctl", "smartctl.exe"),
   path.join(TOOLS_DIR, "smartmontools", "bin", "smartctl.exe"),

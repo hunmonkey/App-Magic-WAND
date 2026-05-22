@@ -2,9 +2,14 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+const { app } = require("electron");
+
 const { execFileAsync, runPowerShell } = require("../core/run-command");
 
-const TOOLS_DIR = path.join(__dirname, "..", "..", "tools");
+// 개발 중에는 프로젝트 루트의 tools/, 패키지에서는 resources/tools/ 를 사용한다.
+const TOOLS_DIR = app.isPackaged
+  ? path.join(process.resourcesPath, "tools")
+  : path.join(__dirname, "..", "..", "tools");
 const YARA_EXE = path.join(TOOLS_DIR, "yara", "yara64.exe");
 const YARA_RULES = path.join(TOOLS_DIR, "yara", "rules", "magic-wand-suspicious.yar");
 const DEFENDER_TIMEOUT = 180000;
