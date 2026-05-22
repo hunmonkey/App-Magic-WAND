@@ -7,6 +7,7 @@ const systemInfo = require("./modules/system-info");
 const hardwareCheck = require("./modules/hardware-check");
 const threatScan = require("./modules/threat-scan");
 const controlPanel = require("./modules/control-panel");
+const windowsTools = require("./modules/windows-tools");
 
 let mainWindow = null;
 
@@ -62,7 +63,7 @@ function buildApplicationMenu() {
         {
           label: "종료",
           accelerator: "Alt+F4",
-          click: () => app.quit(),
+          click: () => requestQuitConfirmation(),
         },
       ],
     },
@@ -115,6 +116,16 @@ function getActiveWindow() {
   return BrowserWindow.getFocusedWindow() ?? mainWindow;
 }
 
+function requestQuitConfirmation() {
+  const window = getActiveWindow();
+  if (!window || window.isDestroyed()) {
+    app.quit();
+    return;
+  }
+
+  window.webContents.send("app:request-quit-confirmation");
+}
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -128,6 +139,7 @@ function registerIpcHandlers() {
   hardwareCheck.register(ipcMain);
   threatScan.register(ipcMain);
   controlPanel.register(ipcMain);
+  windowsTools.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

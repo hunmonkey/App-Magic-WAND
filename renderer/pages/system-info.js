@@ -8,6 +8,7 @@
   const hardwareSummary = document.querySelector("#hardwareSummary");
   const hardwareGroups = document.querySelector("#hardwareGroups");
   const hardwareRefresh = document.querySelector("#hardwareRefresh");
+  const hardwareShortcuts = document.querySelectorAll("[data-windows-tool]");
   const softwareStatus = document.querySelector("#softwareStatus");
   const softwareSearch = document.querySelector("#softwareSearch");
   const softwareRefresh = document.querySelector("#softwareRefresh");
@@ -19,16 +20,29 @@
 
   menu.addEventListener("click", () => {
     ui.switchPage("#systemInfoPage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadHardware();
-      loadSoftware();
-    }
+    loadOnce();
   });
 
+  if (menu.classList.contains("active")) {
+    loadOnce();
+  }
+
   hardwareRefresh.addEventListener("click", loadHardware);
+  hardwareShortcuts.forEach((button) => {
+    button.addEventListener("click", () => openWindowsTool(button));
+  });
   softwareRefresh.addEventListener("click", loadSoftware);
   softwareSearch.addEventListener("input", renderSoftware);
+
+  function loadOnce() {
+    if (loaded) {
+      return;
+    }
+
+    loaded = true;
+    loadHardware();
+    loadSoftware();
+  }
 
   async function loadHardware() {
     hardwareRefresh.disabled = true;
@@ -49,28 +63,50 @@
     hardwareSummary.textContent = info.messages?.length
       ? info.messages.join(" / ")
       : "PC 사양을 불러왔습니다.";
-    hardwareGroups.innerHTML = "";
+    hardwareGroups.textContent = formatHardwareTree(info.groups ?? []);
+  }
 
-    for (const group of info.groups ?? []) {
-      const card = document.createElement("article");
-      card.className = "spec-card";
+  function formatHardwareTree(groups) {
+    if (!groups.length) {
+      return "- PC 사양\n  -- 확인 안 됨";
+    }
 
-      const title = document.createElement("h3");
-      title.textContent = group.title;
-      card.append(title);
-
-      const dl = document.createElement("dl");
-      for (const item of group.items ?? []) {
-        const row = document.createElement("div");
-        const dt = document.createElement("dt");
-        dt.textContent = item.label;
-        const dd = document.createElement("dd");
-        dd.textContent = item.value || "확인 안 됨";
-        row.append(dt, dd);
-        dl.append(row);
+    const lines = [];
+    for (const group of groups) {
+      lines.push(`- ${group.title}`);
+      const items = group.items ?? [];
+      if (!items.length) {
+        lines.push("  -- 확인 안 됨");
       }
-      card.append(dl);
-      hardwareGroups.append(card);
+      for (const item of items) {
+        appendTreeItem(lines, item, 1);
+      }
+      lines.push("");
+    }
+    return lines.join("\n").trim();
+  }
+
+  function appendTreeItem(lines, item, depth) {
+    const indent = "  ".repeat(depth);
+    const marker = depth === 1 ? "--" : "---";
+    const hasChildren = Boolean(item.children?.length);
+    const value = item.value || (hasChildren ? "" : "확인 안 됨");
+    lines.push(value ? `${indent}${marker} ${item.label}: ${value}` : `${indent}${marker} ${item.label}`);
+
+    for (const child of item.children ?? []) {
+      appendTreeItem(lines, child, depth + 1);
+    }
+  }
+
+  async function openWindowsTool(button) {
+    const toolName = button.dataset.windowsTool;
+    button.disabled = true;
+    try {
+      await window.magicWand.system.openWindowsTool(toolName);
+    } catch (error) {
+      ui.showToast(`Windows 도구를 열지 못했습니다: ${error.message}`);
+    } finally {
+      button.disabled = false;
     }
   }
 

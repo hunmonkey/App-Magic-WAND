@@ -27,7 +27,7 @@ Use the network buttons in the app to refresh, scan the selected IP range, or ru
 ## Layout
 
 The app opens as a maximized standard window, so the native menu bar and window buttons remain available.
-Use the left side menu to open `IP관리` or exit the app.
+Use the left side menu groups `PC 관리`, `증빙 관리`, and `프로그램 종료` to move through the app.
 
 ## Legacy Python prototype
 

@@ -1,5 +1,4 @@
 const elements = {
-  ipManagementMenu: document.querySelector("#ipManagementMenu"),
   quitButton: document.querySelector("#quitButton"),
   ipManagementPage: document.querySelector("#ipManagementPage"),
   form: document.querySelector("#recordForm"),
@@ -34,6 +33,10 @@ const elements = {
   recordCount: document.querySelector("#recordCount"),
   tableBody: document.querySelector("#recordTableBody"),
   tableWrap: document.querySelector(".table-wrap"),
+  futureMenuButtons: document.querySelectorAll(".menu-link.pending"),
+  quitDialog: document.querySelector("#quitDialog"),
+  quitConfirmButton: document.querySelector("#quitConfirmButton"),
+  quitCancelButton: document.querySelector("#quitCancelButton"),
   toast: document.querySelector("#toast"),
 };
 
@@ -42,6 +45,7 @@ let selectedIndex = null;
 let selectedInterfaceId = "";
 let networkInfo = null;
 let toastTimer = null;
+let quitConfirmed = false;
 
 window.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
@@ -50,10 +54,27 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 function bindEvents() {
-  elements.ipManagementMenu.addEventListener("click", showIpManagementPage);
   elements.quitButton.addEventListener("click", () => {
-    window.magicWand.app.quit();
+    showQuitDialog();
   });
+  elements.futureMenuButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      showFuturePage(button);
+    });
+  });
+  elements.quitConfirmButton.addEventListener("click", confirmQuit);
+  elements.quitCancelButton.addEventListener("click", hideQuitDialog);
+  elements.quitDialog.addEventListener("click", (event) => {
+    if (event.target === elements.quitDialog) {
+      hideQuitDialog();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.quitDialog.hidden) {
+      hideQuitDialog();
+    }
+  });
+  window.magicWand.app.onQuitRequested(showQuitDialog);
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
     await addRecord();
@@ -72,6 +93,16 @@ function bindEvents() {
   elements.searchInput.addEventListener("input", renderTable);
 }
 
+window.addEventListener("beforeunload", (event) => {
+  if (quitConfirmed) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = false;
+  showQuitDialog();
+});
+
 function switchPage(pageSelector, menuButton) {
   const targetPage = document.querySelector(pageSelector);
   document.querySelectorAll(".main-content .page").forEach((page) => {
@@ -84,8 +115,23 @@ function switchPage(pageSelector, menuButton) {
   });
 }
 
-function showIpManagementPage() {
-  switchPage("#ipManagementPage", elements.ipManagementMenu);
+function showQuitDialog() {
+  elements.quitDialog.hidden = false;
+  elements.quitConfirmButton.focus();
+}
+
+function showFuturePage(menuButton) {
+  switchPage("#futurePage", menuButton);
+}
+
+function hideQuitDialog() {
+  elements.quitDialog.hidden = true;
+  elements.quitButton.focus();
+}
+
+function confirmQuit() {
+  quitConfirmed = true;
+  window.magicWand.app.quit();
 }
 
 async function loadRecords() {

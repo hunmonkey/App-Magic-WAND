@@ -1,3 +1,45 @@
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanEL.ttf") format("truetype");
+  font-weight: 200;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanLight.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanRegular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanBold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanEB.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "NanumHuman";
+  src: url("./fonts/NanumHumanHeavy.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+}
+
 :root {
   color-scheme: light;
   --bg: #edf2f7;
@@ -32,11 +74,10 @@ body {
   min-height: 720px;
   color: var(--text);
   background: var(--bg);
-  font-family:
-    "Segoe UI",
-    "Malgun Gothic",
-    Arial,
-    sans-serif;
+  font-family: "NanumHuman";
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 button,
@@ -115,7 +156,7 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 22px 8px;
+  padding: 12px 8px;
   color: #e8eef8;
   background: linear-gradient(180deg, var(--nav), #0b1624);
 }
@@ -124,7 +165,7 @@ textarea:focus {
   margin: 0 0 6px;
   color: var(--blue);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -132,21 +173,50 @@ textarea:focus {
 .side-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+}
+
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-group + .menu-group {
+  margin-top: 8px;
+}
+
+.menu-heading {
+  padding: 7px 8px 3px;
+  color: #93c5fd;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.menu-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .menu-link {
   width: 100%;
-  min-height: 42px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #dbe7f5;
   background: transparent;
+  font-size: 12px;
+  font-weight: 400;
   text-align: left;
 }
 
-.menu-link:hover {
+.menu-link.sub-link {
+  padding-left: 18px;
+}
+
+.menu-link:hover:not(:disabled) {
   border-color: rgba(147, 197, 253, 0.35);
   color: #ffffff;
   background: var(--nav-soft);
@@ -159,11 +229,19 @@ textarea:focus {
 }
 
 .menu-link.danger {
-  margin-top: 0;
+  margin-top: 8px;
   color: #fecaca;
 }
 
-.menu-link.danger:hover {
+.menu-link.pending {
+  color: #b8c7da;
+}
+
+.menu-link.pending.active {
+  color: #ffffff;
+}
+
+.menu-link.danger:hover:not(:disabled) {
   border-color: rgba(248, 113, 113, 0.45);
   color: #ffffff;
   background: #3b1720;
@@ -191,6 +269,7 @@ textarea:focus {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 6px;
+  height: 100%;
   min-height: 0;
 }
 
@@ -207,7 +286,9 @@ textarea:focus {
 }
 
 .record-panel {
-  align-self: start;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
 }
 
 .panel-heading {
@@ -226,8 +307,8 @@ textarea:focus {
   flex-direction: column;
   gap: 6px;
   color: #334155;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .button-grid {
@@ -254,12 +335,11 @@ textarea:focus {
 
 .workspace {
   display: grid;
-  grid-template-rows: auto auto minmax(300px, auto) minmax(260px, 1fr);
+  grid-template-rows: auto minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 6px;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
 }
 
 .panel-header,
@@ -277,7 +357,7 @@ textarea:focus {
 .muted-text {
   margin: 0;
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .metric-grid {
@@ -300,12 +380,12 @@ textarea:focus {
   margin-bottom: 6px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .metric strong {
   display: block;
-  line-height: 1.35;
+  line-height: 1.4;
   word-break: break-word;
 }
 
@@ -313,11 +393,14 @@ textarea:focus {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
   gap: 6px;
+  min-height: 0;
 }
 
 .pc-panel,
 .diagnostic-panel {
-  min-height: 260px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
 }
 
 #interfaceSelect {
@@ -328,8 +411,12 @@ textarea:focus {
 .interface-list,
 .diagnostic-results {
   display: grid;
+  align-content: start;
   gap: 6px;
   margin-top: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .interface-item {
@@ -373,7 +460,7 @@ textarea:focus {
 .interface-item dt {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .interface-item dd {
@@ -401,7 +488,7 @@ textarea:focus {
   padding: 3px 8px;
   text-align: center;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .diagnostic-item.ok span {
@@ -422,7 +509,7 @@ textarea:focus {
 .diagnostic-item p {
   margin: 6px 0 0;
   color: #405064;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .usage-summary {
@@ -438,15 +525,15 @@ textarea:focus {
   padding: 6px 10px;
   color: #334155;
   background: var(--surface-soft);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .address-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
   gap: 6px;
-  max-height: 260px;
+  min-height: 0;
   overflow: auto;
   padding: 2px;
 }
@@ -458,7 +545,7 @@ textarea:focus {
   padding: 0;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .address-cell.free {
@@ -487,9 +574,19 @@ textarea:focus {
 
 .used-device-list {
   display: grid;
+  align-content: start;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 6px;
   margin-top: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.usage-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 0.7fr);
+  min-height: 0;
 }
 
 .used-device {
@@ -547,11 +644,12 @@ th {
   z-index: 1;
   color: #334155;
   background: #f7fafc;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 td {
-  line-height: 1.45;
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -586,6 +684,68 @@ tbody tr.selected {
   color: var(--muted);
 }
 
+.future-panel {
+  display: grid;
+  place-items: center;
+}
+
+.future-panel h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.confirm-dialog {
+  width: min(320px, calc(100vw - 48px));
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 18px 42px rgba(23, 32, 42, 0.24);
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.dialog-actions button {
+  min-width: 76px;
+}
+
+.danger-action {
+  border-color: #b42318;
+  color: #ffffff;
+  background: #b42318;
+}
+
+.danger-action:hover:not(:disabled) {
+  border-color: #8f1d15;
+  color: #ffffff;
+  background: #8f1d15;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -611,11 +771,10 @@ tbody tr.selected {
 
 .system-grid {
   display: grid;
-  grid-template-rows: auto minmax(220px, 1fr);
+  grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr);
   gap: 6px;
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
 }
 
 .hardware-panel,
@@ -623,47 +782,33 @@ tbody tr.selected {
   padding: 18px;
 }
 
-.spec-grid {
+.hardware-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.hardware-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
 }
 
-.spec-card {
+.spec-tree {
+  margin: 6px 0 0;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 14px;
   background: var(--surface-soft);
-}
-
-.spec-card h3 {
-  margin: 0 0 8px;
-  color: #334155;
-  font-size: 14px;
-}
-
-.spec-card dl {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-}
-
-.spec-card dl > div {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 8px;
-  min-width: 0;
-}
-
-.spec-card dt {
-  color: var(--muted);
+  color: var(--text);
+  font-family: "NanumHuman";
   font-size: 12px;
-  font-weight: 800;
-}
-
-.spec-card dd {
-  margin: 0;
+  line-height: 1.4;
+  user-select: text;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -689,13 +834,26 @@ tbody tr.selected {
 /* ─── Hardware Check & Threat Scan pages ────────────────────── */
 
 .check-page {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
 }
 
 .check-page .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   padding: 18px;
+}
+
+.check-page .diagnostic-results,
+.check-page .threat-list {
+  flex: 1;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .diagnostic-item p {
@@ -709,14 +867,19 @@ tbody tr.selected {
   border-radius: 8px;
   color: var(--amber);
   background: var(--amber-soft);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .threat-list {
   display: grid;
+  align-content: start;
   gap: 6px;
   margin-top: 6px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .threat-item {
@@ -740,7 +903,7 @@ tbody tr.selected {
   padding: 3px 8px;
   text-align: center;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -757,31 +920,35 @@ tbody tr.selected {
 .threat-meta {
   margin: 6px 0 0;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .threat-detail {
   margin: 4px 0 0;
   color: #405064;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.4;
   word-break: break-all;
 }
 
 /* ─── Control Panel page ─────────────────────────────────────── */
 
 .control-page {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 6px;
   min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
+  overflow: hidden;
 }
 
 .control-page .panel {
   padding: 18px;
+}
+
+.control-page .panel:first-child {
+  min-height: 0;
+  overflow: auto;
 }
 
 .header-actions {
@@ -819,7 +986,7 @@ tbody tr.selected {
 .control-config dt {
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .control-config dd {
@@ -837,8 +1004,8 @@ tbody tr.selected {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   cursor: pointer;
 }
 
@@ -864,8 +1031,8 @@ tbody tr.selected {
   flex-direction: column;
   gap: 6px;
   color: #334155;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .apply-row {
@@ -881,7 +1048,7 @@ tbody tr.selected {
 .caution-text {
   margin: 0;
   color: var(--amber);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .rename-form {
@@ -896,7 +1063,7 @@ tbody tr.selected {
   flex-direction: column;
   gap: 6px;
   color: #334155;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 400;
   max-width: 360px;
 }

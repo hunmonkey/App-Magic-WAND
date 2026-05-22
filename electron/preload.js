@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("magicWand", {
   system: {
     hardware: () => ipcRenderer.invoke("system:hardware"),
     software: () => ipcRenderer.invoke("system:software"),
+    openWindowsTool: (toolName) => ipcRenderer.invoke("windows-tools:open", toolName),
   },
   hardware: {
     check: () => ipcRenderer.invoke("hardware:check"),
@@ -28,5 +29,10 @@ contextBridge.exposeInMainWorld("magicWand", {
   },
   app: {
     quit: () => ipcRenderer.send("app:quit"),
+    onQuitRequested: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on("app:request-quit-confirmation", listener);
+      return () => ipcRenderer.removeListener("app:request-quit-confirmation", listener);
+    },
   },
 });
