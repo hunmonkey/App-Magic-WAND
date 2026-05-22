@@ -17,6 +17,61 @@ function register(ipcMain) {
   ipcMain.handle("network:scan", async () => scanCurrentNetwork());
   ipcMain.handle("network:scan-addresses", async (_event, interfaceId) => scanAddressUsage(interfaceId));
   ipcMain.handle("network:diagnose", async (_event, interfaceId) => runNetworkDiagnostics(interfaceId));
+  ipcMain.handle("network:scan-range", async (_event, startIp, endIp) => scanIpRange(startIp, endIp));
+  ipcMain.handle("network:repair", async (_event, action, interfaceName) => repairNetwork(action, interfaceName));
+}
+
+async function scanIpRange(startIp, endIp) {
+  if (!isIPv4(startIp) || !isIPv4(endIp)) {
+    return { hosts: [], messages: ["올바른 IP 주소를 입력해 주세요."] };
+  }
+  const startNum = ipv4ToNumber(startIp);
+  const endNum   = ipv4ToNumber(endIp);
+  if (startNum > endNum) {
+    return { hosts: [], messages: ["시작 IP가 끝 IP보다 큽니다."] };
+  }
+  const count = endNum - startNum + 1;
+  if (count > 255) {
+    return { hosts: [], messages: [`범위가 ${count}개입니다. 최대 255개까지 입력해 주세요.`] };
+  }
+
+  const ips = [];
+  for (let n = startNum; n <= endNum; n++) {
+    ips.push(numberToIPv4(n >>> 0));
+  }
+
+  const selfIps = new Set((await getPrivateInterfaces()).map((i) => i.privateIp));
+  const pingResults = await mapWithConcurrency(ips, PING_CONCURRENCY, async (ip) => ({
+    ip,
+    alive: await pingHost(ip, 450),
+  }));
+  const arpMap = await getArpTable();
+  const aliveSet = new Set(pingResults.filter((r) => r.alive || arpMap.has(r.ip)).map((r) => r.ip));
+  selfIps.forEach((ip) => { if (ips.includes(ip)) aliveSet.add(ip); });
+
+  const nameMap = new Map();
+  selfIps.forEach((ip) => { if (aliveSet.has(ip)) nameMap.set(ip, os.hostname()); });
+  await mapWithConcurrency([...aliveSet].filter((ip) => !nameMap.has(ip)), NAME_CONCURRENCY, async (ip) => {
+    const name = await reverseDns(ip);
+    if (name) nameMap.set(ip, name);
+  });
+
+  const hosts = ips.map((ip) => ({
+    ip,
+    status: aliveSet.has(ip) ? "used" : "free",
+    role: selfIps.has(ip) ? "self" : "",
+    name: nameMap.get(ip) ?? "",
+    macAddress: arpMap.get(ip) ?? "",
+  }));
+
+  return {
+    startIp,
+    endIp,
+    hosts,
+    usedCount: hosts.filter((h) => h.status === "used").length,
+    freeCount: hosts.filter((h) => h.status === "free").length,
+    messages: [],
+  };
 }
 
 async function scanCurrentNetwork() {
@@ -112,11 +167,14 @@ async function runNetworkDiagnostics(interfaceId) {
       name: "PC 사설 IP 확인",
       status: "fail",
       detail: "현재 PC에서 사용 중인 사설 IP를 찾지 못했습니다.",
-      hint: "랜선, 와이파이 연결, 네트워크 어댑터 사용 여부를 먼저 확인해 주세요.",
+      hint: "어댑터가 비활성화됐거나 DHCP 서버 응답이 없는 상태입니다. 아래 복구를 시도하거나 물리적 연결(랜선·Wi-Fi)을 확인해 주세요.",
+      repairs: [
+        { action: "dhcp-renew", label: "IP 재발급", interfaceName: "" },
+      ],
     });
 
     return {
-      summary: "PC가 공유기에서 주소를 받지 못한 상태로 보입니다.",
+      summary: "PC가 내부 네트워크 주소를 받지 못한 상태로 보입니다.",
       tests,
       messages,
     };
@@ -127,6 +185,7 @@ async function runNetworkDiagnostics(interfaceId) {
     status: "ok",
     detail: `${target.name}에서 ${target.privateIp} 주소를 사용 중입니다.`,
     hint: "PC가 내부 네트워크에 연결되어 있습니다.",
+    repairs: [],
   });
 
   let gatewayOk = false;
@@ -140,14 +199,24 @@ async function runNetworkDiagnostics(interfaceId) {
         : `게이트웨이 ${target.gateway}에서 응답이 없습니다.`,
       hint: gatewayOk
         ? "PC와 공유기 사이 연결은 정상으로 보입니다."
-        : "랜선, 와이파이 신호, 공유기 전원, IP 대역이 맞는지 확인해 주세요.",
+        : "IP 대역 불일치 또는 DHCP 충돌 가능성이 있습니다. IP 재발급을 시도해 보세요. 지속되면 랜선·Wi-Fi 연결과 공유기 전원을 확인하세요.",
+      repairs: gatewayOk ? [] : [
+        { action: "dhcp-renew",     label: "IP 재발급",     interfaceName: target.name },
+        { action: "restart-adapter", label: "어댑터 재시작", interfaceName: target.name },
+      ],
     });
   } else {
     tests.push({
       name: "공유기 주소 확인",
       status: "warn",
       detail: "게이트웨이 주소를 확인하지 못했습니다.",
-      hint: "수동 IP 설정이 잘못되었거나 네트워크 정보 조회가 제한되었을 수 있습니다.",
+      hint: "게이트웨이 주소가 없습니다. 수동 IP 설정을 확인하거나 DHCP로 전환해 보세요.",
+      repairs: [
+        {
+          action: "dhcp-renew", label: "IP 재발급", interfaceName: target.name,
+          fallbacks: [{ action: "restart-adapter", label: "어댑터 재시작", interfaceName: target.name }],
+        },
+      ],
     });
   }
 
@@ -158,7 +227,11 @@ async function runNetworkDiagnostics(interfaceId) {
     detail: internetIpOk ? "외부 IP 1.1.1.1에 응답이 있습니다." : "외부 IP 1.1.1.1에 응답이 없습니다.",
     hint: internetIpOk
       ? "공유기 밖 인터넷 통로는 열려 있습니다."
-      : "공유기 WAN, 모뎀, 인터넷 회선 상태를 확인해 주세요.",
+      : "공유기까지는 연결됐지만 외부 인터넷이 차단된 상태입니다. 네트워크 스택 초기화를 시도하거나 공유기 WAN·모뎀·인터넷 회선을 확인해 주세요.",
+    repairs: internetIpOk ? [] : [
+      { action: "winsock-reset", label: "네트워크 스택 초기화", interfaceName: target.name },
+      { action: "dns-flush",     label: "DNS 캐시 초기화",     interfaceName: target.name },
+    ],
   });
 
   const dnsResult = await lookupDns("www.google.com");
@@ -170,7 +243,13 @@ async function runNetworkDiagnostics(interfaceId) {
       : `도메인 이름을 IP로 바꾸지 못했습니다. ${dnsResult.error}`,
     hint: dnsResult.ok
       ? "DNS 설정은 정상으로 보입니다."
-      : "DNS 서버를 공유기 주소, 1.1.1.1, 8.8.8.8 등으로 바꿔 테스트해 보세요.",
+      : "IP 통신은 가능하지만 도메인 변환이 안 됩니다. DNS 캐시 초기화 후 재진단하고, 개선되지 않으면 어댑터 설정에서 DNS를 1.1.1.1로 변경해 보세요.",
+    repairs: dnsResult.ok ? [] : [
+      {
+        action: "dns-flush", label: "DNS 캐시 초기화", interfaceName: target.name,
+        fallbacks: [{ action: "dhcp-renew", label: "IP 재발급 (DNS 갱신)", interfaceName: target.name }],
+      },
+    ],
   });
 
   const publicIp = await fetchPublicIp(messages);
@@ -180,7 +259,10 @@ async function runNetworkDiagnostics(interfaceId) {
     detail: publicIp ? `현재 공인 IP는 ${publicIp}입니다.` : "공인 IP 조회 사이트에 접속하지 못했습니다.",
     hint: publicIp
       ? "외부 웹 요청도 정상으로 보입니다."
-      : "인터넷이 느리거나 보안 프로그램, 방화벽, DNS 문제일 수 있습니다.",
+      : "외부 API 서버에 일시적으로 접속하지 못했습니다. DNS 캐시 초기화 후 재진단해 보세요.",
+    repairs: publicIp ? [] : [
+      { action: "dns-flush", label: "DNS 캐시 초기화", interfaceName: target.name },
+    ],
   });
 
   return {
@@ -612,6 +694,29 @@ function cleanText(value) {
     return "";
   }
   return text;
+}
+
+async function repairNetwork(action, interfaceName) {
+  switch (action) {
+    case "dhcp-renew": {
+      const args = interfaceName ? ["/renew", interfaceName] : ["/renew"];
+      await execFileAsync("ipconfig", args, { timeout: 20000 });
+      return { ok: true, message: "IP 재발급을 완료했습니다. [점검 시작]을 눌러 재진단해 주세요." };
+    }
+    case "dns-flush":
+      await execFileAsync("ipconfig", ["/flushdns"], { timeout: 5000 });
+      return { ok: true, message: "DNS 캐시를 초기화했습니다. [점검 시작]을 눌러 재진단해 주세요." };
+    case "winsock-reset":
+      await execFileAsync("netsh", ["winsock", "reset"], { timeout: 15000 });
+      return { ok: true, message: "네트워크 스택을 초기화했습니다. PC를 재시작해야 완전히 적용됩니다." };
+    case "restart-adapter": {
+      const safeName = (interfaceName || "").replace(/'/g, "''");
+      await runPowerShell(`Restart-NetAdapter -Name '${safeName}' -Confirm:$false`);
+      return { ok: true, message: "어댑터를 재시작했습니다. [점검 시작]을 눌러 재진단해 주세요." };
+    }
+    default:
+      throw new Error(`알 수 없는 복구 액션입니다: ${action}`);
+  }
 }
 
 module.exports = {

@@ -9,6 +9,7 @@ $list = @(Get-NetAdapter | Sort-Object Status,Name | ForEach-Object {
   $gw  = Get-NetRoute      -InterfaceIndex $idx -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1
   $if  = Get-NetIPInterface -InterfaceIndex $idx -AddressFamily IPv4 -ErrorAction SilentlyContinue
   $dns = @(Get-DnsClientServerAddress -InterfaceIndex $idx -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty ServerAddresses)
+  $ip6 = Get-NetIPAddress -InterfaceIndex $idx -AddressFamily IPv6 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notmatch '^fe80' -and $_.IPAddress -ne '::1' } | Select-Object -First 1
   [pscustomobject]@{
     name        = $_.Name
     description = $_.InterfaceDescription
@@ -19,6 +20,7 @@ $list = @(Get-NetAdapter | Sort-Object Status,Name | ForEach-Object {
     gateway     = if ($gw) { $gw.NextHop }           else { '' }
     dns         = ($dns -join ',')
     dhcp        = if ($if) { $if.Dhcp -eq 'Enabled' } else { $true }
+    ipv6        = if ($ip6) { $ip6.IPAddress }        else { '' }
   }
 })
 ConvertTo-Json -InputObject $list -Compress

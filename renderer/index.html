@@ -16,9 +16,9 @@
               <button id="systemInfoMenu" class="menu-link sub-link active" type="button">기초 정보</button>
               <button id="checkMenu" class="menu-link sub-link" type="button">점검 : HW,SW</button>
               <button id="controlPanelMenu" class="menu-link sub-link" type="button">점검 : Network</button>
-              <button class="menu-link sub-link pending" type="button">점검 : Printer</button>
-              <button class="menu-link sub-link pending" type="button">점검 : Share</button>
-              <button class="menu-link sub-link pending" type="button">점검 : Security</button>
+              <button id="printerMenu" class="menu-link sub-link" type="button">점검 : Printer</button>
+              <button id="shareMenu" class="menu-link sub-link" type="button">점검 : Share</button>
+              <button id="securityMenu" class="menu-link sub-link" type="button">점검 : Security</button>
             </div>
           </div>
 
@@ -264,85 +264,305 @@
                 <p id="threatTargetSummary" class="threat-target-summary">선택한 폴더가 없습니다. 기본 검사대상을 사용합니다.</p>
                 <div id="threatFolderTree" class="threat-folder-tree"></div>
               </div>
-              <p class="notice-banner">이 점검은 Microsoft Defender와 YARA 보조 룰을 함께 사용합니다. 실제 악성 여부는 백신 검사 결과와 함께 확인해 주세요.</p>
               <div id="threatList" class="threat-list"></div>
             </section>
           </div>
         </section>
 
         <section id="controlPanelPage" class="page">
-          <div class="control-page">
-            <section class="panel">
+          <div class="net-page">
+
+            <!-- 좌측: IP 사용 현황 -->
+            <section class="panel net-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">IP 사용 현황</p>
+                  <p class="muted-text">IP 대역을 스캔하여 사용 현황을 확인합니다.</p>
+                </div>
+              </div>
+              <div class="net-range-row">
+                <div class="net-legend">
+                  <span class="legend-dot used"></span><span class="legend-text">사용중</span>
+                  <span class="legend-dot conflict"></span><span class="legend-text">충돌</span>
+                  <span class="legend-dot free"></span><span class="legend-text">미사용</span>
+                </div>
+                <div class="net-controls">
+                  <input id="netStartIp" type="text" class="net-ip-input" placeholder="000.000.000.000" maxlength="15">
+                  <span class="net-range-sep">~</span>
+                  <input id="netEndIp" type="text" class="net-ip-input" placeholder="000.000.000.000" maxlength="15">
+                  <button id="netScanBtn" type="button">검색</button>
+                  <button id="netAutoBtn" type="button">자동 감지</button>
+                </div>
+              </div>
+              <div id="netIpGrid" class="net-ip-grid"></div>
+              <p id="netScanStatus" class="muted-text net-scan-status"></p>
+            </section>
+
+            <!-- 중앙: PC IP 설정 -->
+            <section class="panel net-panel net-scroll">
               <div class="panel-header">
                 <div>
                   <p class="section-label">네트워크 어댑터 설정</p>
                   <p id="controlSummary" class="muted-text">네트워크 IP 설정을 확인하고 변경합니다.</p>
                 </div>
-                <div class="header-actions">
-                  <select id="controlAdapterSelect" aria-label="어댑터 선택"></select>
-                  <button id="controlRefresh" type="button">새로고침</button>
+                <button id="controlRefresh" type="button">새로고침</button>
+              </div>
+              <div class="net-adapter-row">
+                <select id="controlAdapterSelect" aria-label="어댑터 선택"></select>
+              </div>
+              <dl id="controlCurrentConfig" class="control-config"></dl>
+              <div class="panel-header compact ctrl-change-header">
+                <div>
+                  <p class="section-label">현재 선택 어댑터 설정 변경</p>
+                  <p class="caution-text small-caution">방식 선택 후 설정 적용 — 변경 시 연결이 일시적으로 끊길 수 있습니다.</p>
                 </div>
               </div>
-
-              <dl id="controlCurrentConfig" class="control-config"></dl>
-
               <form id="ipSettingForm">
                 <div class="mode-row">
                   <label class="radio-label">
                     <input type="radio" name="ipMode" value="dhcp" checked>
-                    DHCP 자동
+                    자동 (Dynamic)
                   </label>
                   <label class="radio-label">
                     <input type="radio" name="ipMode" value="static">
-                    수동 (고정 IP)
+                    수동 (Static)
                   </label>
                 </div>
-
-                <div id="staticFields" class="static-fields" hidden>
-                  <label>
-                    IP 주소
-                    <input id="ctrlIp" type="text" placeholder="예: 192.168.0.100" autocomplete="off" />
-                  </label>
-                  <label>
-                    서브넷 접두사 길이
-                    <input id="ctrlPrefix" type="number" min="1" max="30" placeholder="예: 24 (= /24)" />
-                  </label>
-                  <label>
-                    기본 게이트웨이
-                    <input id="ctrlGateway" type="text" placeholder="예: 192.168.0.1" autocomplete="off" />
-                  </label>
-                  <label>
-                    DNS 서버
-                    <input id="ctrlDns" type="text" placeholder="예: 8.8.8.8,8.8.4.4" autocomplete="off" />
-                  </label>
+                <div id="staticFields" class="static-fields">
+                  <label>IP 주소<input id="ctrlIp" type="text" placeholder="예: 192.168.0.100" autocomplete="off"></label>
+                  <label>서브넷 마스크<input id="ctrlSubnet" type="text" placeholder="예: 255.255.255.0" autocomplete="off"></label>
+                  <label>DNS 1<input id="ctrlDns1" type="text" placeholder="예: 8.8.8.8" autocomplete="off"></label>
+                  <label>DNS 2<input id="ctrlDns2" type="text" placeholder="예: 8.8.4.4" autocomplete="off"></label>
+                  <label class="static-full">기본 게이트웨이<input id="ctrlGateway" type="text" placeholder="예: 192.168.0.1" autocomplete="off"></label>
                 </div>
-
                 <div class="apply-row">
-                  <p class="caution-text">IP 변경 후 네트워크 연결이 일시적으로 끊길 수 있습니다.</p>
                   <button id="applyIpButton" type="submit">설정 적용</button>
                 </div>
               </form>
             </section>
 
-            <section class="panel">
-              <div class="panel-header compact">
+            <!-- 우측: 네트워크 장애 조치 -->
+            <section class="panel net-panel">
+              <div class="panel-header">
                 <div>
-                  <p class="section-label">컴퓨터 이름</p>
-                  <p class="muted-text">Windows 컴퓨터 이름을 확인하고 변경합니다.</p>
+                  <p class="section-label">네트워크 장애 조치</p>
+                  <p class="muted-text">인터넷 연결 문제의 원인을 단계별로 점검합니다.</p>
+                </div>
+                <button id="netRefreshBtn" type="button">새로고침</button>
+              </div>
+              <div class="net-overview-grid">
+                <div class="net-metric"><span>공인 IP</span><strong id="netPublicIp">—</strong></div>
+                <div class="net-metric"><span>현재 PC 사설 IP</span><strong id="netPrivateIp">—</strong></div>
+                <div class="net-metric"><span>게이트웨이</span><strong id="netGateway">—</strong></div>
+                <div class="net-metric"><span>네트워크 대역</span><strong id="netRange">—</strong></div>
+              </div>
+              <div class="diag-action-row">
+                <button id="netDiagBtn" type="button">점검 시작</button>
+              </div>
+              <div id="netDiagResults" class="net-diag-results"></div>
+            </section>
+
+          </div>
+        </section>
+
+        <section id="printerPage" class="page">
+          <div class="col3-page">
+
+            <!-- 좌측: 프린터 목록 -->
+            <section class="panel tool-panel tool-rows">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">프린터 목록</p>
+                  <p class="muted-text">연결된 프린터(네트워크·USB)를 찾아 선택합니다.</p>
+                </div>
+                <button id="printerRefresh" type="button">새로고침</button>
+              </div>
+              <div id="printerList" class="tool-list"></div>
+            </section>
+
+            <!-- 중앙: 선택 프린터 점검·환경설정 -->
+            <section class="panel tool-panel tool-scroll">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">프린터 점검·환경설정</p>
+                  <p class="muted-text">선택한 프린터를 점검하고 기본 설정을 바꿉니다.</p>
                 </div>
               </div>
-              <p id="computerNameDisplay" class="control-status-text">확인 중...</p>
-              <form id="computerNameForm" class="rename-form">
-                <label>
-                  새 컴퓨터 이름
-                  <input id="newComputerName" type="text" placeholder="영문, 숫자, 하이픈 (최대 15자)" maxlength="15" autocomplete="off" />
-                </label>
-                <div class="apply-row">
-                  <p class="caution-text">다음 PC 재시작 시 이름이 변경됩니다.</p>
-                  <button id="applyNameButton" type="submit">이름 변경</button>
+              <dl id="printerSelected" class="control-config"></dl>
+              <div class="tool-actions">
+                <button id="printerTestBtn" type="button" disabled>테스트 페이지 인쇄</button>
+                <button id="printerDefaultBtn" type="button" disabled>기본 프린터로 설정</button>
+                <button id="printerClearBtn" type="button" disabled>대기 문서 모두 취소</button>
+                <button id="printerQueueBtn" type="button">인쇄 대기열 열기</button>
+              </div>
+              <p class="muted-text printer-hint">목록에서 프린터를 먼저 선택해 주세요.</p>
+            </section>
+
+            <!-- 우측: 드라이버 설치·장애 조치 -->
+            <section class="panel tool-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">드라이버 설치·장애 조치</p>
+                  <p class="muted-text">드라이버 설치와 인쇄 문제를 처리합니다.</p>
                 </div>
+              </div>
+              <div class="tool-actions">
+                <button type="button" data-windows-tool="addPrinter">프린터·드라이버 추가</button>
+                <button type="button" data-windows-tool="printers">장치 및 프린터 열기</button>
+                <button type="button" data-windows-tool="printerTroubleshoot">프린터 문제 해결사</button>
+                <button id="printerSpoolerBtn" type="button">인쇄 스풀러 재시작</button>
+              </div>
+              <p class="caution-text small-caution">스풀러 재시작과 드라이버 설치에는 관리자 권한이 필요할 수 있습니다.</p>
+              <p class="muted-text printer-note">연결된 프린터가 없어도 「프린터·드라이버 추가」로 모델별 드라이버를 설치할 수 있습니다.</p>
+            </section>
+
+          </div>
+        </section>
+
+        <section id="sharePage" class="page">
+          <div class="page-grid">
+
+            <!-- 좌측: 폴더 공유 등록 -->
+            <section class="panel record-panel">
+              <div class="panel-heading">
+                <p class="section-label">폴더 공유 등록</p>
+                <p class="muted-text">네트워크에 공유할 폴더를 등록합니다.</p>
+              </div>
+              <form id="shareForm" class="record-form">
+                <label>
+                  공유 폴더 경로
+                  <div class="share-path-row">
+                    <input id="shareFolderPath" type="text" placeholder="찾아보기로 폴더를 선택하세요." autocomplete="off" readonly />
+                    <button id="shareBrowseBtn" type="button">찾아보기</button>
+                  </div>
+                </label>
+                <label>
+                  공유 이름
+                  <input id="shareName" type="text" placeholder="예: 공용자료" autocomplete="off" />
+                </label>
+                <div class="mode-row">
+                  <label class="radio-label">
+                    <input type="radio" name="sharePermission" value="read" checked />
+                    읽기 전용
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="sharePermission" value="full" />
+                    읽기 + 쓰기
+                  </label>
+                </div>
+                <label>
+                  설명
+                  <input id="shareDesc" type="text" placeholder="예: 부서 공용 폴더" autocomplete="off" />
+                </label>
+                <div class="button-grid">
+                  <button id="shareCreateBtn" type="submit">공유</button>
+                  <button id="shareClearBtn" type="button">비우기</button>
+                </div>
+                <p class="caution-text small-caution">폴더 공유에는 관리자 권한이 필요할 수 있습니다.</p>
               </form>
             </section>
+
+            <!-- 우측: 공유 목록 + 관리 -->
+            <section class="panel share-right">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">공유 폴더 목록</p>
+                  <p class="muted-text">현재 공유 중인 폴더를 확인하고 관리합니다.</p>
+                </div>
+                <button id="shareRefresh" type="button">새로고침</button>
+              </div>
+              <div class="tool-actions">
+                <button id="shareRemoveBtn" type="button" disabled>공유 중지</button>
+                <button type="button" data-windows-tool="sharedFolders">공유 폴더 관리</button>
+                <button type="button" data-windows-tool="networkSharing">네트워크 공유 센터</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>공유 이름</th>
+                      <th>폴더 경로</th>
+                      <th>설명</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shareTableBody"></tbody>
+                </table>
+                <p id="shareEmptyMessage" class="empty-message">공유 중인 폴더가 없습니다.</p>
+              </div>
+            </section>
+
+          </div>
+        </section>
+
+        <section id="securityPage" class="page">
+          <div class="col3-page">
+
+            <!-- 좌측: 정품·암호화 상태 -->
+            <section class="panel tool-panel tool-scroll">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">정품 인증·암호화 상태</p>
+                  <p class="muted-text">Windows 정품 인증과 드라이브 암호화를 확인합니다.</p>
+                </div>
+                <button id="securityRefresh" type="button">새로고침</button>
+              </div>
+              <dl id="securityActivation" class="control-config"></dl>
+              <div class="sec-subhead">
+                <p class="section-label">드라이브 암호화 (BitLocker)</p>
+              </div>
+              <div id="securityBitlocker" class="tool-list sec-list"></div>
+              <div class="tool-actions">
+                <button type="button" data-windows-tool="bitlocker">BitLocker 관리</button>
+              </div>
+            </section>
+
+            <!-- 중앙: 사용자 계정·암호 -->
+            <section class="panel tool-panel tool-rows">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">사용자 계정·암호</p>
+                  <p class="muted-text">로컬 사용자 계정과 암호를 관리합니다.</p>
+                </div>
+                <button id="securityUsersRefresh" type="button">새로고침</button>
+              </div>
+              <div class="tool-actions">
+                <button type="button" data-windows-tool="userAccounts">사용자 계정 설정</button>
+                <button type="button" data-windows-tool="localUsers">로컬 사용자·암호 관리</button>
+                <button type="button" data-windows-tool="signInOptions">로그인·암호 옵션</button>
+              </div>
+              <div id="securityUserList" class="tool-list"></div>
+            </section>
+
+            <!-- 우측: 파일 보안 도구 -->
+            <section class="panel tool-panel tool-scroll">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">파일 보안 도구</p>
+                  <p class="muted-text">폴더·파일을 숨기고 안전하게 관리합니다.</p>
+                </div>
+              </div>
+              <label class="sec-target-label">
+                대상 폴더
+                <div class="share-path-row">
+                  <input id="securityTargetPath" type="text" placeholder="찾아보기로 폴더를 선택하세요." autocomplete="off" readonly />
+                  <button id="securityBrowseBtn" type="button">찾아보기</button>
+                </div>
+              </label>
+              <div class="tool-actions">
+                <button id="securityHideBtn" type="button" disabled>숨김 설정</button>
+                <button id="securityUnhideBtn" type="button" disabled>숨김 해제</button>
+              </div>
+              <div class="sec-subhead">
+                <p class="section-label">디스크·삭제·복구</p>
+              </div>
+              <div class="tool-actions">
+                <button type="button" data-windows-tool="diskManagement">디스크 관리</button>
+                <button type="button" data-windows-tool="recycleBin">휴지통 열기</button>
+                <button type="button" data-windows-tool="diskCleanup">디스크 정리(빈 공간)</button>
+              </div>
+              <p class="caution-text small-caution">영구 삭제·데이터 복구는 되돌릴 수 없습니다. Windows 내장 도구로 신중히 진행하세요.</p>
+            </section>
+
           </div>
         </section>
 
@@ -371,5 +591,8 @@
     <script src="./pages/hardware-check.js"></script>
     <script src="./pages/threat-scan.js"></script>
     <script src="./pages/control-panel.js"></script>
+    <script src="./pages/printer.js"></script>
+    <script src="./pages/share.js"></script>
+    <script src="./pages/security.js"></script>
   </body>
 </html>

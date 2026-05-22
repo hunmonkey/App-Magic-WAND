@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("magicWand", {
     scan: () => ipcRenderer.invoke("network:scan"),
     scanAddresses: (interfaceId) => ipcRenderer.invoke("network:scan-addresses", interfaceId),
     diagnose: (interfaceId) => ipcRenderer.invoke("network:diagnose", interfaceId),
+    repair: (action, interfaceName) => ipcRenderer.invoke("network:repair", action, interfaceName),
+    scanRange: (startIp, endIp) => ipcRenderer.invoke("network:scan-range", startIp, endIp),
   },
   system: {
     hardware: () => ipcRenderer.invoke("system:hardware"),
@@ -42,6 +44,26 @@ contextBridge.exposeInMainWorld("magicWand", {
     applyConfig:    (name, cfg) => ipcRenderer.invoke("control:applyConfig", name, cfg),
     getComputerName: () => ipcRenderer.invoke("control:getComputerName"),
     renameComputer: (newName) => ipcRenderer.invoke("control:renameComputer", newName),
+  },
+  printer: {
+    list: () => ipcRenderer.invoke("printer:list"),
+    testPage: (name) => ipcRenderer.invoke("printer:testPage", name),
+    clearQueue: (name) => ipcRenderer.invoke("printer:clearQueue", name),
+    setDefault: (name) => ipcRenderer.invoke("printer:setDefault", name),
+    restartSpooler: () => ipcRenderer.invoke("printer:restartSpooler"),
+  },
+  share: {
+    list: () => ipcRenderer.invoke("share:list"),
+    browse: () => ipcRenderer.invoke("share:browse"),
+    create: (payload) => ipcRenderer.invoke("share:create", payload),
+    remove: (name) => ipcRenderer.invoke("share:remove", name),
+  },
+  security: {
+    activation: () => ipcRenderer.invoke("security:activation"),
+    bitlocker: () => ipcRenderer.invoke("security:bitlocker"),
+    localUsers: () => ipcRenderer.invoke("security:localUsers"),
+    browse: () => ipcRenderer.invoke("security:browse"),
+    setHidden: (payload) => ipcRenderer.invoke("security:setHidden", payload),
   },
   app: {
     quit: () => ipcRenderer.send("app:quit"),

@@ -8,6 +8,9 @@ const hardwareCheck = require("./modules/hardware-check");
 const threatScan = require("./modules/threat-scan");
 const controlPanel = require("./modules/control-panel");
 const windowsTools = require("./modules/windows-tools");
+const printer = require("./modules/printer");
+const share = require("./modules/share");
+const security = require("./modules/security");
 
 let mainWindow = null;
 
@@ -140,6 +143,9 @@ function registerIpcHandlers() {
   threatScan.register(ipcMain);
   controlPanel.register(ipcMain);
   windowsTools.register(ipcMain);
+  printer.register(ipcMain);
+  share.register(ipcMain);
+  security.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

@@ -46,6 +46,7 @@ logs/
 # IDE/에디터
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
