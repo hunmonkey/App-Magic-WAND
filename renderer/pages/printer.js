@@ -33,7 +33,9 @@
 
   async function loadPrinters() {
     refreshBtn.disabled = true;
-    listEl.innerHTML = "<p class='empty-inline'>프린터를 찾는 중입니다.</p>";
+    ui.setBusy(refreshBtn, true);
+    listEl.innerHTML = "";
+    listEl.append(ui.createLoadingState("프린터를 찾는 중입니다."));
     try {
       const result = await window.magicWand.printer.list();
       printers = result.printers || [];
@@ -43,6 +45,7 @@
       listEl.append(emptyState(`프린터 목록을 불러오지 못했습니다: ${err.message}`));
     } finally {
       refreshBtn.disabled = false;
+      ui.setBusy(refreshBtn, false);
     }
   }
 
@@ -128,6 +131,7 @@
     if (!selectedName) return;
     const original = btn.textContent;
     btn.disabled = true;
+    ui.setBusy(btn, true);
     btn.textContent = "처리 중...";
     try {
       await window.magicWand.printer[method](selectedName);
@@ -136,6 +140,7 @@
     } catch (err) {
       ui.showToast(`오류: ${err.message}`);
     } finally {
+      ui.setBusy(btn, false);
       btn.textContent = original;
       btn.disabled = !selectedName;
     }
@@ -145,6 +150,7 @@
     if (!selectedName) return;
     const original = testBtn.textContent;
     testBtn.disabled = true;
+    ui.setBusy(testBtn, true);
     testBtn.textContent = "인쇄 중...";
     try {
       const r = await window.magicWand.printer.testPage(selectedName);
@@ -152,6 +158,7 @@
     } catch (err) {
       ui.showToast(`테스트 페이지 인쇄 실패: ${err.message}`);
     } finally {
+      ui.setBusy(testBtn, false);
       testBtn.textContent = original;
       testBtn.disabled = !selectedName;
     }
@@ -160,18 +167,21 @@
   async function clearQueue() {
     if (!selectedName) return;
     clearBtn.disabled = true;
+    ui.setBusy(clearBtn, true);
     try {
       const result = await window.magicWand.printer.clearQueue(selectedName);
       ui.showToast(`대기 문서 ${result.removed}건을 취소했습니다.`);
     } catch (err) {
       ui.showToast(`오류: ${err.message}`);
     } finally {
+      ui.setBusy(clearBtn, false);
       clearBtn.disabled = !selectedName;
     }
   }
 
   async function restartSpooler() {
     spoolerBtn.disabled = true;
+    ui.setBusy(spoolerBtn, true);
     const original = spoolerBtn.textContent;
     spoolerBtn.textContent = "재시작 중...";
     try {
@@ -180,6 +190,7 @@
     } catch (err) {
       ui.showToast(`오류: ${err.message}`);
     } finally {
+      ui.setBusy(spoolerBtn, false);
       spoolerBtn.textContent = original;
       spoolerBtn.disabled = false;
     }

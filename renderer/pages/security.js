@@ -32,12 +32,10 @@
 
   menu.addEventListener("click", () => {
     ui.switchPage("#securityPage", menu);
-  });
-
-  refreshBtn.addEventListener("click", () => {
-    loadStatus();
     loadDrives();
   });
+
+  refreshBtn.addEventListener("click", loadStatus);
   usersRefreshBtn.addEventListener("click", loadUsers);
   browseBtn.addEventListener("click", pickFolder);
   hideBtn.addEventListener("click", () => setHidden(true));
@@ -55,13 +53,13 @@
   renderActivationMessage("새로고침 버튼을 눌러 정품 인증·암호화 상태를 확인하세요.");
   bitlockerEl.append(emptyState("새로고침 버튼을 눌러 드라이브 암호화를 확인하세요."));
   userListEl.append(emptyState("새로고침 버튼을 눌러 사용자 계정을 불러오세요."));
-  initDriveSelectMessage();
+  setDrivePlaceholder("드라이브 목록을 불러오는 중입니다");
 
-  function initDriveSelectMessage() {
+  function setDrivePlaceholder(text) {
     eraseDriveSelect.innerHTML = "";
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "정품·암호화 새로고침 후 표시됩니다";
+    opt.textContent = text;
     eraseDriveSelect.append(opt);
     eraseDriveBtn.disabled = true;
   }
@@ -300,18 +298,16 @@
   }
 
   async function loadDrives() {
+    if (erasing) return;
+    setDrivePlaceholder("드라이브 목록을 불러오는 중입니다");
     try {
       const r = await window.magicWand.secureErase.listDrives();
       const usable = (r.drives || []).filter((d) => !d.isSystem);
-      eraseDriveSelect.innerHTML = "";
       if (!usable.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "와이프 가능한 드라이브 없음";
-        eraseDriveSelect.append(opt);
-        eraseDriveBtn.disabled = true;
+        setDrivePlaceholder("와이프 가능한 드라이브 없음");
         return;
       }
+      eraseDriveSelect.innerHTML = "";
       for (const d of usable) {
         const opt = document.createElement("option");
         opt.value = d.letter;
@@ -321,6 +317,7 @@
       }
       eraseDriveBtn.disabled = erasing;
     } catch (err) {
+      setDrivePlaceholder("드라이브 목록을 불러오지 못했습니다");
       ui.showToast(`드라이브 조회 실패: ${err.message}`);
     }
   }

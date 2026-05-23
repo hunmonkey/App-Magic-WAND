@@ -118,6 +118,43 @@
  - Code-Server 및 Unraid 환경 인지: 현재 코드가 실행되는 환경이 홈랩 서버(Hwan-In)의 Docker 컨테이너 내부이거나, 강력한 방화벽(OPNsense) 아래의 로컬 네트워크일 수 있음을 항상 염두에 두세요. 네트워크 경로, 포트 설정, 권한(Permissions) 문제를 제안할 때 이를 고려하여 판단해 주세요.
  - 터미널 실행 안전장치 (Claude Code / Codex 용): 터미널 명령줄(CLI) 도구를 통해 시스템 권한을 바꾸거나, 대량의 파일을 삭제/수정하거나, 도커 볼륨을 날려버리는 등의 파괴적인 명령어는 사용자(황재훈)의 명시적인 사전 승인 없이는 절대 단독으로 실행하지 마세요.
 
+### 6-1. 파일 배포 및 포터블 exe 빌드 규칙
+
+Magic WAND처럼 Electron 포터블 exe를 만드는 프로젝트에서는 아래 순서를 지키세요.
+
+1. 빌드 전 기본 확인
+   - 먼저 `npm.cmd run check`를 실행해 문법 오류가 없는지 확인합니다.
+   - 그다음 `npm.cmd run dist`로 포터블 exe를 만듭니다.
+   - 빌드 결과물은 보통 `dist/MagicWand-0.1.0-portable.exe`에 생성됩니다.
+   - `author is missed in package.json`, `DEP0190`, `build/build/icon.png path doesn't exist`처럼 빌드는 성공하고 경고만 남는 메시지는 실패로 단정하지 말고 최종 exit code와 생성 파일을 확인합니다.
+
+2. 정품키 파일 동봉 규칙
+   - 정품키 기능이 켜진 배포본은 exe 파일만으로 실행되지 않을 수 있습니다.
+   - `MagicWand-0.1.0-portable.exe`와 `magicwand.lic`는 같은 폴더에 함께 배포해야 합니다.
+   - 압축 해제형 `dist/win-unpacked/Magic WAND.exe`를 테스트할 때는 `dist/win-unpacked/magicwand.lic`도 함께 둡니다.
+   - 잠금 화면에 `설정 필요`, `검증용 공개키가 들어 있지 않습니다`가 나오면 앱 고장이 아니라 `electron/modules/license.js`의 공개키가 비어 있거나, 공개키 삽입 전의 오래된 exe를 실행한 것입니다. `tools/keygen/generate-keys.js`로 키쌍을 만들고 `public.pem`만 앱에 심은 뒤 다시 빌드하세요.
+   - `private.pem`은 정품키를 찍어내는 도장 같은 파일입니다. 절대 배포하거나 GitHub에 올리지 마세요.
+
+3. 배포에 포함하면 안 되는 파일
+   - `tools/keygen/`, `tools/keygen/private.pem`, `Rule_PW.txt`, 개발용 `.env`, 임시 데이터(`data/`)는 배포하거나 GitHub에 올리지 않습니다.
+   - 앱 실행에 필요한 보조 도구만 `extraResources`에 넣습니다. 현재 기준은 `tools/hardware-probe`, `tools/smartctl`, `tools/yara`입니다.
+   - `tools` 폴더 전체를 통째로 넣으면 개발용 키 발급 도구까지 배포될 수 있으므로 피하세요.
+
+4. 빌드 실패 원인별 대응
+   - `7za.exe process failed`, `Cannot open the file as archive`, `다른 프로세스가 파일을 사용 중` 메시지가 나오면 대개 빌드 임시 압축 파일이나 기존 exe를 다른 프로세스가 붙잡고 있는 상태입니다.
+   - 먼저 실행 중인 Magic WAND 창을 닫습니다. 포터블 exe는 실행되면 임시 폴더에 `Magic WAND.exe`를 풀어 실행하므로, 창이 열려 있으면 새 exe를 덮어쓰기 어렵습니다.
+   - 필요하면 `Get-Process`로 `MagicWand-0.1.0-portable`, `Magic WAND`, `7za`, `electron-builder`, `node npm run dist` 프로세스가 남아 있는지 확인합니다.
+   - 정리할 때는 Magic WAND 빌드/실행과 직접 관련된 프로세스만 종료합니다. 이름이 비슷한 다른 프로그램(예: 보안 프로그램, 제조사 도구)은 종료하지 마세요.
+   - 깨진 임시 파일을 지울 때는 반드시 `Resolve-Path`로 실제 경로가 `dist` 안인지 확인한 뒤 `dist/magic-wand-*-x64.nsis.7z` 같은 빌드 임시 파일만 삭제합니다. 무작정 `dist` 전체를 지우지 마세요.
+   - 빌드가 시간 제한으로 끊겼다면 곧바로 다시 실행하지 말고, 남아 있는 `node`/`electron-builder` 프로세스와 `dist/*.7z` 임시 파일을 먼저 확인합니다.
+
+5. 배포 후 확인
+   - `npm.cmd run check` 재실행
+   - `Get-Item dist/MagicWand-0.1.0-portable.exe`로 새 생성 시간 확인
+   - `dist/win-unpacked/resources/tools/keygen`이 없는지 확인
+   - 정품키 상태가 `ok-needs-login`으로 평가되는지 확인
+   - 사용자에게는 exe 단독이 아니라 `MagicWAND 실행 파일 + magicwand.lic`를 같은 폴더에 두라고 안내합니다.
+
 
 ## 7. 프로젝트 고유 UI/UX 디자인 원칙 (Design & Aesthetic Rules)
 

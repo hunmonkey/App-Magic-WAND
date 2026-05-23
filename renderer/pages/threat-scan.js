@@ -68,6 +68,7 @@
       lastSummaryText = `${result.summary || "점검 완료"}${notes}`;
       addProgress("검사를 완료했습니다.", lastSummaryText);
       renderFinalResult(result.items ?? []);
+      await ui.notifyComplete("위험 소프트웨어 점검을 완료했습니다.", { achievementKey: "checksDone" });
     } catch (error) {
       if (currentRunId === runId) {
         lastSummaryText = `점검 실패: ${error.message}`;
@@ -244,8 +245,11 @@
     list.innerHTML = "";
 
     for (const entry of progressLog) {
-      const card = document.createElement("article");
-      card.className = "threat-progress-item";
+    const card = document.createElement("article");
+    card.className = "threat-progress-item";
+    if (scanRunning) {
+      card.classList.add("busy-card");
+    }
 
       const head = document.createElement("div");
       const strong = document.createElement("strong");
@@ -459,6 +463,11 @@
     saveButton.disabled = isRunning || !lastResult;
     reloadTreeButton.disabled = isRunning;
     clearTargetButton.disabled = isRunning || targetPaths.length === 0;
+    ui.setBusy(startButton, isRunning);
+    ui.setBusy(rerunButton, isRunning);
+    if (!isRunning) {
+      list.querySelectorAll(".busy-card").forEach((card) => card.classList.remove("busy-card"));
+    }
     renderFolderTree();
   }
 

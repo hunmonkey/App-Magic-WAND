@@ -21,9 +21,8 @@
     loadOnce();
   });
 
-  if (menu.classList.contains("active")) {
-    loadOnce();
-  }
+  hardwareGroups.textContent = "새로고침 버튼을 눌러 PC 사양을 불러오세요.";
+  renderSoftwareMessage("새로고침 버튼을 눌러 설치 프로그램 목록을 불러오세요.");
 
   hardwareRefresh.addEventListener("click", loadHardware);
   hardwareSaveText.addEventListener("click", saveHardwareText);
@@ -45,6 +44,7 @@
 
   async function loadHardware() {
     hardwareRefresh.disabled = true;
+    ui.setBusy(hardwareRefresh, true);
     hardwareSaveText.disabled = true;
     hardwareGroups.textContent = "PC 사양을 불러오는 중입니다.";
 
@@ -55,6 +55,7 @@
       hardwareGroups.textContent = `- PC 사양\n  -- 불러오기 실패: ${error.message}`;
     } finally {
       hardwareRefresh.disabled = false;
+      ui.setBusy(hardwareRefresh, false);
     }
   }
 
@@ -129,6 +130,7 @@
 
   async function loadSoftware() {
     softwareRefresh.disabled = true;
+    ui.setBusy(softwareRefresh, true);
     softwareSaveText.disabled = true;
     renderSoftwareMessage("설치 프로그램을 불러오는 중입니다.");
 
@@ -141,6 +143,7 @@
       renderSoftwareMessage(`목록을 불러오지 못했습니다: ${error.message}`);
     } finally {
       softwareRefresh.disabled = false;
+      ui.setBusy(softwareRefresh, false);
     }
   }
 

@@ -46,6 +46,7 @@
 
       lastResult = result;
       renderFinalResult(result);
+      await ui.notifyComplete("하드웨어 점검을 완료했습니다.", { achievementKey: "checksDone" });
     } catch (error) {
       if (currentRunId === runId) {
         lastSummaryText = `점검 실패: ${error.message}`;
@@ -102,10 +103,7 @@
   }
 
   function renderWaitingMessage() {
-    const empty = document.createElement("p");
-    empty.className = "empty-inline";
-    empty.textContent = "검사 항목을 준비 중입니다.";
-    results.append(empty);
+    results.append(ui.createLoadingState("검사 항목을 준비 중입니다."));
   }
 
   function renderStatusMessage(message) {
@@ -144,6 +142,8 @@
     rerunButton.disabled = isRunning;
     stopButton.disabled = !isRunning;
     saveButton.disabled = isRunning || !lastResult;
+    ui.setBusy(startButton, isRunning);
+    ui.setBusy(rerunButton, isRunning);
   }
 
   function getDateStamp() {

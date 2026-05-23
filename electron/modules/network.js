@@ -1,3 +1,4 @@
+const { shell } = require("electron");
 const dns = require("dns").promises;
 const https = require("https");
 const os = require("os");
@@ -19,6 +20,8 @@ function register(ipcMain) {
   ipcMain.handle("network:diagnose", async (_event, interfaceId) => runNetworkDiagnostics(interfaceId));
   ipcMain.handle("network:scan-range", async (_event, startIp, endIp) => scanIpRange(startIp, endIp));
   ipcMain.handle("network:repair", async (_event, action, interfaceName) => repairNetwork(action, interfaceName));
+  ipcMain.handle("network:router-info", async () => findRouterInfo());
+  ipcMain.handle("network:open-router", async (_event, url) => openRouterUrl(url));
 }
 
 async function scanIpRange(startIp, endIp) {
@@ -92,6 +95,103 @@ async function scanCurrentNetwork() {
     privateInterfaces,
     messages,
   };
+}
+
+async function findRouterInfo() {
+  const current = await scanCurrentNetwork();
+  const target = current.primaryInterface ?? current.privateInterfaces?.[0] ?? null;
+  const wifi = await getWifiInfo();
+  const ips = buildRouterCandidates(target);
+  const arpMap = await getArpTable();
+  const gateway = target?.gateway || "";
+
+  const candidates = await mapWithConcurrency(ips, 8, async (ip) => ({
+    ip,
+    role: ip === gateway ? "현재 게이트웨이" : "공유기 후보",
+    reachable: await pingHost(ip, 650),
+    macAddress: arpMap.get(ip) || "",
+    adminUrls: [`http://${ip}`, `https://${ip}`],
+  }));
+
+  return {
+    interface: target,
+    wifi,
+    candidates,
+    messages: current.messages,
+  };
+}
+
+function buildRouterCandidates(target) {
+  const values = [];
+  if (target?.gateway && isIPv4(target.gateway)) {
+    values.push(target.gateway);
+  }
+  if (target?.privateIp && isIPv4(target.privateIp)) {
+    const parts = target.privateIp.split(".");
+    values.push(`${parts[0]}.${parts[1]}.${parts[2]}.1`);
+    values.push(`${parts[0]}.${parts[1]}.${parts[2]}.254`);
+  }
+  values.push("192.168.0.1", "192.168.1.1", "192.168.10.1", "192.168.100.1", "10.0.0.1", "172.16.0.1");
+  return [...new Set(values.filter(isIPv4))];
+}
+
+async function getWifiInfo() {
+  if (process.platform !== "win32") {
+    return [];
+  }
+  try {
+    const output = await runPowerShell("netsh wlan show interfaces", 6000);
+    return parseWifiInterfaces(output);
+  } catch {
+    return [];
+  }
+}
+
+function parseWifiInterfaces(output) {
+  const items = [];
+  let current = {};
+
+  for (const line of String(output || "").split(/\r?\n/)) {
+    const match = line.match(/^\s*([^:]+?)\s*:\s*(.*?)\s*$/);
+    if (!match) {
+      continue;
+    }
+    const key = match[1].trim().toLowerCase();
+    const value = match[2].trim();
+    if ((key === "name" || key === "이름") && (current.name || current.ssid)) {
+      items.push(current);
+      current = {};
+    }
+
+    if (key === "name" || key === "이름") current.name = value;
+    else if (key === "description" || key === "설명") current.description = value;
+    else if (key === "state" || key === "상태") current.state = value;
+    else if (key === "ssid") current.ssid = value;
+    else if (key === "bssid") current.bssid = value;
+    else if (key === "signal" || key === "신호") current.signal = value;
+    else if (key === "radio type" || key === "무선 유형" || key === "무선 종류") current.radioType = value;
+    else if (key === "channel" || key === "채널") current.channel = value;
+  }
+
+  if (current.name || current.ssid) {
+    items.push(current);
+  }
+  return items;
+}
+
+async function openRouterUrl(url) {
+  const text = String(url ?? "").trim();
+  let parsed;
+  try {
+    parsed = new URL(text);
+  } catch {
+    throw new Error("공유기 주소가 올바르지 않습니다.");
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    throw new Error("공유기 주소는 http 또는 https로 시작해야 합니다.");
+  }
+  await shell.openExternal(parsed.toString());
+  return { ok: true };
 }
 
 async function scanAddressUsage(interfaceId) {

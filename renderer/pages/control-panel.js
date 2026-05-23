@@ -25,10 +25,23 @@
   const privIpEl    = document.querySelector("#netPrivateIp");
   const gatewayEl   = document.querySelector("#netGateway");
   const rangeEl     = document.querySelector("#netRange");
+  const routerFindBtn = document.querySelector("#routerFindBtn");
+  const routerSummary = document.querySelector("#routerSummary");
+  const routerResults = document.querySelector("#routerResults");
+  const monitorSummary = document.querySelector("#netMonitorSummary");
+  const monitorTarget = document.querySelector("#netMonitorTarget");
+  const monitorStartBtn = document.querySelector("#netMonitorStartBtn");
+  const monitorStopBtn = document.querySelector("#netMonitorStopBtn");
+  const monitorPing = document.querySelector("#netMonitorPing");
+  const monitorDown = document.querySelector("#netMonitorDown");
+  const monitorUp = document.querySelector("#netMonitorUp");
+  const monitorChart = document.querySelector("#netMonitorChart");
 
   let adapters = [];
   let loaded = false;
   let selectedInterfaceId = "";
+  let monitorRunning = false;
+  let monitorPoints = [];
 
   initGrid();
   renderConfigMessage("새로고침 버튼을 눌러 네트워크 어댑터 정보를 불러오세요.");
@@ -54,6 +67,15 @@
   scanBtn.addEventListener("click", doScan);
   diagBtn.addEventListener("click", runDiag);
   refreshBtn.addEventListener("click", refreshOverview);
+  routerFindBtn.addEventListener("click", findRouter);
+  monitorStartBtn.addEventListener("click", startMonitor);
+  monitorStopBtn.addEventListener("click", stopMonitor);
+  window.magicWand.netMonitor.onTick(handleMonitorTick);
+  window.addEventListener("beforeunload", () => {
+    if (monitorRunning) {
+      window.magicWand.netMonitor.stop();
+    }
+  });
 
   // ─────────────────────────────────────────────
   // Init
@@ -81,6 +103,7 @@
 
   async function autoDetect() {
     autoBtn.disabled = true;
+    ui.setBusy(autoBtn, true);
     scanStatus.textContent = "네트워크 정보를 불러오는 중...";
     try {
       const result = await window.magicWand.network.scan();
@@ -110,6 +133,7 @@
       scanStatus.textContent = `네트워크 정보 조회 실패: ${err.message}`;
     } finally {
       autoBtn.disabled = false;
+      ui.setBusy(autoBtn, false);
     }
   }
 
@@ -121,6 +145,7 @@
       return;
     }
     scanBtn.disabled = true;
+    ui.setBusy(scanBtn, true);
     scanStatus.textContent = "스캔 중... (잠시 기다려 주세요)";
     resetGrid();
     try {
@@ -135,6 +160,7 @@
       scanStatus.textContent = `스캔 실패: ${err.message}`;
     } finally {
       scanBtn.disabled = false;
+      ui.setBusy(scanBtn, false);
     }
   }
 
@@ -184,6 +210,7 @@
   // ─────────────────────────────────────────────
   async function refreshOverview() {
     refreshBtn.disabled = true;
+    ui.setBusy(refreshBtn, true);
     try {
       const result = await window.magicWand.network.scan();
       const iface = result.primaryInterface ?? result.privateInterfaces?.[0];
@@ -196,12 +223,15 @@
       // 실패 시 기존 값 유지
     } finally {
       refreshBtn.disabled = false;
+      ui.setBusy(refreshBtn, false);
     }
   }
 
   async function runDiag() {
     diagBtn.disabled = true;
-    diagResults.innerHTML = "<p class='muted-text'>진단 중...</p>";
+    ui.setBusy(diagBtn, true);
+    diagResults.innerHTML = "";
+    diagResults.append(ui.createLoadingState("진단 중입니다."));
     try {
       const result = await window.magicWand.network.diagnose(selectedInterfaceId);
       renderDiag(result);
@@ -209,7 +239,218 @@
       diagResults.innerHTML = `<p class='muted-text'>진단 실패: ${err.message}</p>`;
     } finally {
       diagBtn.disabled = false;
+      ui.setBusy(diagBtn, false);
     }
+  }
+
+  async function findRouter() {
+    routerFindBtn.disabled = true;
+    ui.setBusy(routerFindBtn, true);
+    routerResults.innerHTML = "";
+    routerResults.append(ui.createLoadingState("공유기 후보를 찾는 중입니다."));
+    routerSummary.textContent = "게이트웨이와 자주 쓰는 공유기 주소를 확인합니다.";
+    try {
+      const result = await window.magicWand.network.routerInfo();
+      renderRouterInfo(result);
+    } catch (err) {
+      routerResults.innerHTML = `<p class="empty-inline">공유기 정보를 불러오지 못했습니다: ${err.message}</p>`;
+      routerSummary.textContent = "공유기 찾기에 실패했습니다.";
+    } finally {
+      routerFindBtn.disabled = false;
+      ui.setBusy(routerFindBtn, false);
+    }
+  }
+
+  function renderRouterInfo(result) {
+    routerResults.innerHTML = "";
+    const wifi = result.wifi?.find((item) => item.ssid) ?? result.wifi?.[0];
+    const gateway = result.candidates?.find((item) => item.role === "현재 게이트웨이");
+    routerSummary.textContent = gateway
+      ? `현재 공유기 후보: ${gateway.ip}`
+      : "게이트웨이를 찾지 못해 기본 공유기 주소를 확인했습니다.";
+
+    if (wifi) {
+      const wifiBox = document.createElement("div");
+      wifiBox.className = "router-wifi-box";
+      wifiBox.append(routerLine("Wi-Fi", wifi.ssid || wifi.name || "확인 안 됨"));
+      wifiBox.append(routerLine("신호", wifi.signal || "확인 안 됨"));
+      wifiBox.append(routerLine("채널", wifi.channel || "확인 안 됨"));
+      routerResults.append(wifiBox);
+    }
+
+    const candidates = result.candidates || [];
+    if (!candidates.length) {
+      routerResults.append(emptyState("공유기 후보를 찾지 못했습니다."));
+      return;
+    }
+
+    for (const item of candidates) {
+      const card = document.createElement("article");
+      card.className = `router-card ${item.reachable ? "ok" : ""}`;
+      const head = document.createElement("div");
+      head.className = "router-card-head";
+      const title = document.createElement("strong");
+      title.textContent = item.ip;
+      const badge = document.createElement("span");
+      badge.className = `tool-badge ${item.reachable ? "ok" : "muted"}`;
+      badge.textContent = item.reachable ? "응답" : "미응답";
+      head.append(title, badge);
+
+      const meta = document.createElement("p");
+      meta.className = "tool-meta";
+      meta.textContent = `${item.role}${item.macAddress ? ` · MAC ${item.macAddress}` : ""}`;
+
+      const actions = document.createElement("div");
+      actions.className = "router-actions";
+      for (const url of item.adminUrls || []) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = url.startsWith("https") ? "HTTPS 열기" : "HTTP 열기";
+        btn.addEventListener("click", () => openRouter(url));
+        actions.append(btn);
+      }
+      card.append(head, meta, actions);
+      routerResults.append(card);
+    }
+  }
+
+  function routerLine(label, value) {
+    const row = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    const span = document.createElement("span");
+    span.textContent = value;
+    row.append(strong, span);
+    return row;
+  }
+
+  function emptyState(message) {
+    const p = document.createElement("p");
+    p.className = "empty-inline";
+    p.textContent = message;
+    return p;
+  }
+
+  async function openRouter(url) {
+    try {
+      await window.magicWand.network.openRouter(url);
+    } catch (err) {
+      ui.showToast(`공유기 페이지 열기 실패: ${err.message}`);
+    }
+  }
+
+  async function startMonitor() {
+    if (monitorRunning) return;
+    const targetHost = monitorTarget.value.trim() || "1.1.1.1";
+    monitorRunning = true;
+    monitorPoints = [];
+    monitorStartBtn.disabled = true;
+    ui.setBusy(monitorStartBtn, true);
+    monitorStopBtn.disabled = false;
+    monitorTarget.disabled = true;
+    monitorSummary.textContent = "실시간 모니터링을 시작했습니다.";
+    drawMonitorChart();
+    try {
+      await window.magicWand.netMonitor.start({
+        targetHost,
+        interfaceName: currentInterfaceName(),
+        intervalMs: 2000,
+      });
+    } catch (err) {
+      monitorRunning = false;
+      monitorStartBtn.disabled = false;
+      ui.setBusy(monitorStartBtn, false);
+      monitorStopBtn.disabled = true;
+      monitorTarget.disabled = false;
+      monitorSummary.textContent = `모니터 시작 실패: ${err.message}`;
+    }
+  }
+
+  async function stopMonitor() {
+    if (!monitorRunning) return;
+    monitorRunning = false;
+    monitorStartBtn.disabled = false;
+    ui.setBusy(monitorStartBtn, false);
+    monitorStopBtn.disabled = true;
+    monitorTarget.disabled = false;
+    monitorSummary.textContent = "모니터링을 정지했습니다.";
+    try {
+      await window.magicWand.netMonitor.stop();
+    } catch {}
+  }
+
+  function currentInterfaceName() {
+    return adapterSelect.value || selectedInterfaceId.split("|")[0] || "";
+  }
+
+  function handleMonitorTick(payload) {
+    if (!monitorRunning) return;
+    if (payload.error) {
+      monitorSummary.textContent = `모니터링 오류: ${payload.error}`;
+    } else {
+      monitorSummary.textContent = `${payload.interfaceName || "네트워크"} · 대상 ${payload.targetHost}`;
+    }
+    monitorPing.textContent = payload.online && payload.latencyMs != null ? `${Math.round(payload.latencyMs)}ms` : "응답 없음";
+    monitorDown.textContent = formatRate(payload.downloadBps);
+    monitorUp.textContent = formatRate(payload.uploadBps);
+    monitorPoints.push({
+      down: Number(payload.downloadBps) || 0,
+      up: Number(payload.uploadBps) || 0,
+      ping: Number(payload.latencyMs) || 0,
+    });
+    if (monitorPoints.length > 40) {
+      monitorPoints = monitorPoints.slice(-40);
+    }
+    drawMonitorChart();
+  }
+
+  function drawMonitorChart() {
+    if (!monitorChart) return;
+    const ctx = monitorChart.getContext("2d");
+    const width = monitorChart.width;
+    const height = monitorChart.height;
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#ccd6e2";
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 4; i += 1) {
+      const y = Math.round((height / 4) * i);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+    drawLine(ctx, width, height, monitorPoints.map((point) => point.down), "#2563eb");
+    drawLine(ctx, width, height, monitorPoints.map((point) => point.up), "#15803d");
+  }
+
+  function drawLine(ctx, width, height, values, color) {
+    if (values.length < 2) return;
+    const max = Math.max(1, ...monitorPoints.flatMap((point) => [point.down, point.up]));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    values.forEach((value, index) => {
+      const x = (index / Math.max(1, values.length - 1)) * (width - 8) + 4;
+      const y = height - 6 - (Math.max(0, value) / max) * (height - 14);
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  function formatRate(bytesPerSecond) {
+    const value = Number(bytesPerSecond) || 0;
+    if (value < 1024) return `${value} B/s`;
+    const units = ["KB/s", "MB/s", "GB/s"];
+    let size = value / 1024;
+    let index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index += 1;
+    }
+    return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[index]}`;
   }
 
   function renderDiag(result) {

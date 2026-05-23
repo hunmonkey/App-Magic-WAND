@@ -87,6 +87,7 @@
     renderResults(lastReport);
     setRunning(false);
     saveButton.disabled = false;
+    await ui.notifyComplete("통합 점검을 완료했습니다.", { achievementKey: "checksDone" });
   }
 
   // ── 항목별 수집기 ───────────────────────────────
@@ -315,6 +316,9 @@
   function addProgress(message, detail = "") {
     const card = document.createElement("article");
     card.className = "threat-progress-item";
+    if (running) {
+      card.classList.add("busy-card");
+    }
     const head = document.createElement("div");
     const strong = document.createElement("strong");
     strong.textContent = message;
@@ -336,6 +340,10 @@
     saveButton.disabled = isRunning || !lastReport;
     Object.values(options).forEach((el) => { el.disabled = isRunning; });
     headInputs.forEach((el) => { if (el !== dateInput) el.disabled = isRunning; });
+    ui.setBusy(startButton, isRunning);
+    if (!isRunning) {
+      progress.querySelectorAll(".busy-card").forEach((card) => card.classList.remove("busy-card"));
+    }
   }
 
   // ── 증빙 문서 저장 ──────────────────────────────

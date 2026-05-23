@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 const ipRecords = require("./modules/ip-records");
 const network = require("./modules/network");
@@ -13,12 +14,32 @@ const share = require("./modules/share");
 const security = require("./modules/security");
 const secureErase = require("./modules/secure-erase");
 const formMaker = require("./modules/form-maker");
+const fileTools = require("./modules/file-tools");
+const asset = require("./modules/asset");
+const health = require("./modules/health");
+const cleanup = require("./modules/cleanup");
+const driver = require("./modules/driver");
+const eventLog = require("./modules/event-log");
+const swLicense = require("./modules/sw-license");
+const netMonitor = require("./modules/net-monitor");
+const uiSettings = require("./modules/ui-settings");
+const achievements = require("./modules/achievements");
+const remote = require("./modules/remote");
+const license = require("./modules/license");
 
 let mainWindow = null;
+let lockWindow = null;
+let lastGate = null;
 
 app.setName("Magic WAND");
 
-function createWindow() {
+// 정품키 게이트는 패키징된 빌드에서만 강제한다.
+// 개발 중(electron .)에는 건너뛴다. (MW_FORCE_GATE=1로 강제 가능)
+function gateEnabled() {
+  return app.isPackaged || process.env.MW_FORCE_GATE === "1";
+}
+
+function createMainWindow() {
   mainWindow = new BrowserWindow({
     title: "Magic WAND",
     width: 1180,
@@ -48,88 +69,57 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
 }
 
+function createLockWindow() {
+  lockWindow = new BrowserWindow({
+    title: "Magic WAND",
+    width: 460,
+    height: 580,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    autoHideMenuBar: true,
+    backgroundColor: "#f4f7fb",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  lockWindow.loadFile(path.join(__dirname, "..", "renderer", "lock.html"));
+}
+
+// 로그인/해제 성공 → 잠금 창을 닫고 본 화면으로 전환
+function enterApp() {
+  createMainWindow();
+  if (lockWindow && !lockWindow.isDestroyed()) {
+    lockWindow.close();
+  }
+  lockWindow = null;
+}
+
 app.whenReady().then(() => {
   registerIpcHandlers();
-  Menu.setApplicationMenu(buildApplicationMenu());
-  createWindow();
+  registerLicenseHandlers();
+  Menu.setApplicationMenu(null);
+
+  if (!gateEnabled()) {
+    createMainWindow();
+  } else {
+    lastGate = license.evaluateStartup(app);
+    createLockWindow();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      if (!gateEnabled() || mainWindow) {
+        createMainWindow();
+      } else {
+        createLockWindow();
+      }
     }
   });
 });
-
-function buildApplicationMenu() {
-  return Menu.buildFromTemplate([
-    {
-      label: "파일",
-      submenu: [
-        {
-          label: "종료",
-          accelerator: "Alt+F4",
-          click: () => requestQuitConfirmation(),
-        },
-      ],
-    },
-    {
-      label: "창",
-      submenu: [
-        {
-          label: "최소화",
-          accelerator: "Ctrl+M",
-          click: () => {
-            getActiveWindow()?.minimize();
-          },
-        },
-        {
-          label: "최대화/복원",
-          click: () => {
-            const window = getActiveWindow();
-            if (!window) {
-              return;
-            }
-
-            if (window.isMaximized()) {
-              window.unmaximize();
-            } else {
-              window.maximize();
-            }
-          },
-        },
-        {
-          label: "기본 크기로 조정",
-          click: () => {
-            const window = getActiveWindow();
-            if (!window) {
-              return;
-            }
-
-            if (window.isMaximized()) {
-              window.unmaximize();
-            }
-            window.setSize(1180, 760);
-            window.center();
-          },
-        },
-      ],
-    },
-  ]);
-}
-
-function getActiveWindow() {
-  return BrowserWindow.getFocusedWindow() ?? mainWindow;
-}
-
-function requestQuitConfirmation() {
-  const window = getActiveWindow();
-  if (!window || window.isDestroyed()) {
-    app.quit();
-    return;
-  }
-
-  window.webContents.send("app:request-quit-confirmation");
-}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -150,8 +140,53 @@ function registerIpcHandlers() {
   security.register(ipcMain);
   secureErase.register(ipcMain);
   formMaker.register(ipcMain);
+  fileTools.register(ipcMain);
+  asset.register(ipcMain);
+  health.register(ipcMain);
+  cleanup.register(ipcMain);
+  driver.register(ipcMain);
+  eventLog.register(ipcMain);
+  swLicense.register(ipcMain);
+  netMonitor.register(ipcMain);
+  uiSettings.register(ipcMain);
+  achievements.register(ipcMain);
+  remote.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();
   });
+}
+
+function registerLicenseHandlers() {
+  // 잠금 창이 로드되며 현재 상태를 조회
+  ipcMain.handle("license:status", () => lastGate || { status: "ok-needs-login" });
+
+  // 계정/암호 로그인
+  ipcMain.handle("license:login", (_event, { account, password }) => {
+    const result = license.tryLogin(app, account, password);
+    if (result.ok) enterApp();
+    return result;
+  });
+
+  // 마스터 해제키 파일 선택 → 잠금 해제
+  ipcMain.handle("license:unlock", async () => {
+    const picked = await dialog.showOpenDialog(lockWindow, {
+      title: "마스터 해제키 선택",
+      filters: [{ name: "정품키 파일", extensions: ["lic"] }],
+      properties: ["openFile"],
+    });
+    if (picked.canceled || !picked.filePaths[0]) return { ok: false, reason: "canceled" };
+    let raw;
+    try {
+      raw = fs.readFileSync(picked.filePaths[0], "utf8");
+    } catch {
+      return { ok: false, reason: "read-error" };
+    }
+    const result = license.tryUnlock(app, raw);
+    if (result.ok) lastGate = license.evaluateStartup(app);
+    return { ...result, status: lastGate ? lastGate.status : undefined };
+  });
+
+  // 잠금 화면에서 종료
+  ipcMain.on("license:quit", () => app.quit());
 }

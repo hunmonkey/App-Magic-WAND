@@ -17,6 +17,7 @@
   const tableWrap = page.querySelector(".table-wrap");
 
   let shares = [];
+  let mappings = [];
   let selectedName = "";
 
   const emptyMessage = document.querySelector("#shareEmptyMessage");
@@ -65,6 +66,7 @@
     }
     const fullAccess = document.querySelector('input[name="sharePermission"]:checked').value === "full";
     createBtn.disabled = true;
+    ui.setBusy(createBtn, true);
     createBtn.textContent = "공유 중...";
     try {
       await window.magicWand.share.create({ name, path, description: descInput.value.trim(), fullAccess });
@@ -74,6 +76,7 @@
     } catch (err) {
       ui.showToast(`공유 실패: ${err.message}`);
     } finally {
+      ui.setBusy(createBtn, false);
       createBtn.disabled = false;
       createBtn.textContent = "공유";
     }
@@ -86,42 +89,56 @@
 
   async function loadShares() {
     refreshBtn.disabled = true;
+    ui.setBusy(refreshBtn, true);
     emptyMessage.textContent = "공유 폴더 목록을 불러오는 중입니다.";
     tableBody.innerHTML = "";
     tableWrap.classList.add("empty");
     try {
       const result = await window.magicWand.share.list();
       shares = result.shares || [];
-      emptyMessage.textContent = "공유 중인 폴더가 없습니다.";
+      mappings = result.mappings || [];
+      emptyMessage.textContent = "공유 중이거나 연결된 폴더가 없습니다.";
       renderTable();
     } catch (err) {
-      emptyMessage.textContent = "공유 중인 폴더가 없습니다.";
+      emptyMessage.textContent = "공유 중이거나 연결된 폴더가 없습니다.";
       ui.showToast(`공유 목록 조회 실패: ${err.message}`);
     } finally {
       refreshBtn.disabled = false;
+      ui.setBusy(refreshBtn, false);
     }
   }
 
   function renderTable() {
     tableBody.innerHTML = "";
-    const visible = shares.filter((s) => !s.special);
-    if (!visible.length) {
+    const myShares = shares.filter((s) => !s.special);
+    if (!myShares.length && !mappings.length) {
       tableWrap.classList.add("empty");
       updateRemoveButton();
       return;
     }
     tableWrap.classList.remove("empty");
-    for (const s of visible) {
+    for (const s of myShares) {
       const row = document.createElement("tr");
       if (s.name === selectedName) row.classList.add("selected");
-      row.append(cell(s.name), cell(s.path), cell(s.description || ""));
+      row.append(cell("내 공유"), cell(s.name), cell(s.path), cell(s.description || ""));
       row.addEventListener("click", () => {
         selectedName = s.name === selectedName ? "" : s.name;
         renderTable();
       });
       tableBody.append(row);
     }
+    for (const m of mappings) {
+      const row = document.createElement("tr");
+      row.classList.add("share-network-row");
+      row.append(cell("연결됨"), cell(m.localPath || ""), cell(m.remotePath || ""), cell(statusText(m.status)));
+      tableBody.append(row);
+    }
     updateRemoveButton();
+  }
+
+  function statusText(status) {
+    const map = { Ok: "정상", OK: "정상", Disconnected: "연결 끊김", Paused: "일시 중지", Unavailable: "사용 불가" };
+    return map[status] || status || "";
   }
 
   function updateRemoveButton() {
@@ -133,6 +150,7 @@
     const ok = await ui.showConfirm(`공유 "${selectedName}"을(를) 중지할까요? (폴더와 파일은 삭제되지 않습니다.)`, { confirmText: "공유 중지" });
     if (!ok) return;
     removeBtn.disabled = true;
+    ui.setBusy(removeBtn, true);
     try {
       await window.magicWand.share.remove(selectedName);
       ui.showToast("공유를 중지했습니다.");
@@ -141,6 +159,8 @@
     } catch (err) {
       ui.showToast(`공유 중지 실패: ${err.message}`);
       removeBtn.disabled = false;
+    } finally {
+      ui.setBusy(removeBtn, false);
     }
   }
 

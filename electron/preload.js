@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("magicWand", {
     diagnose: (interfaceId) => ipcRenderer.invoke("network:diagnose", interfaceId),
     repair: (action, interfaceName) => ipcRenderer.invoke("network:repair", action, interfaceName),
     scanRange: (startIp, endIp) => ipcRenderer.invoke("network:scan-range", startIp, endIp),
+    routerInfo: () => ipcRenderer.invoke("network:router-info"),
+    openRouter: (url) => ipcRenderer.invoke("network:open-router", url),
   },
   system: {
     hardware: () => ipcRenderer.invoke("system:hardware"),
@@ -83,6 +85,96 @@ contextBridge.exposeInMainWorld("magicWand", {
     read: (id) => ipcRenderer.invoke("form-maker:read", id),
     write: (payload) => ipcRenderer.invoke("form-maker:write", payload),
     delete: (id) => ipcRenderer.invoke("form-maker:delete", id),
+  },
+  fileTools: {
+    pickFiles: () => ipcRenderer.invoke("file-tools:pickFiles"),
+    pickFolders: () => ipcRenderer.invoke("file-tools:pickFolders"),
+    pickDestination: () => ipcRenderer.invoke("file-tools:pickDestination"),
+    pickIcon: () => ipcRenderer.invoke("file-tools:pickIcon"),
+    commonFolders: () => ipcRenderer.invoke("file-tools:commonFolders"),
+    loadSettings: () => ipcRenderer.invoke("file-tools:loadSettings"),
+    saveSettings: (settings) => ipcRenderer.invoke("file-tools:saveSettings", settings),
+    createBackup: (payload) => ipcRenderer.invoke("file-tools:createBackup", payload),
+    transfer: (payload) => ipcRenderer.invoke("file-tools:transfer", payload),
+    cancel: (jobId) => ipcRenderer.invoke("file-tools:cancel", jobId),
+    openPath: (targetPath) => ipcRenderer.invoke("file-tools:openPath", targetPath),
+    createShortcut: (payload) => ipcRenderer.invoke("file-tools:createShortcut", payload),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("file-tools:progress", listener);
+      return () => ipcRenderer.removeListener("file-tools:progress", listener);
+    },
+  },
+  asset: {
+    load: () => ipcRenderer.invoke("asset:load"),
+    save: (list) => ipcRenderer.invoke("asset:save", list),
+  },
+  health: {
+    bootTime: () => ipcRenderer.invoke("health:bootTime"),
+    temps: () => ipcRenderer.invoke("health:temps"),
+    listSnapshots: () => ipcRenderer.invoke("health:listSnapshots"),
+    saveSnapshot: (payload) => ipcRenderer.invoke("health:saveSnapshot", payload),
+    deleteSnapshot: (id) => ipcRenderer.invoke("health:deleteSnapshot", id),
+  },
+  cleanup: {
+    scan: (targetIds) => ipcRenderer.invoke("cleanup:scan", targetIds),
+    run: (payload) => ipcRenderer.invoke("cleanup:run", payload),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("cleanup:progress", listener);
+      return () => ipcRenderer.removeListener("cleanup:progress", listener);
+    },
+  },
+  driver: {
+    list: () => ipcRenderer.invoke("driver:list"),
+    export: (payload) => ipcRenderer.invoke("driver:export", payload),
+    onProgress: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("driver:progress", listener);
+      return () => ipcRenderer.removeListener("driver:progress", listener);
+    },
+  },
+  eventLog: {
+    scan: (options) => ipcRenderer.invoke("eventLog:scan", options),
+    saveText: (text) => ipcRenderer.invoke("eventLog:saveText", text),
+  },
+  swLicense: {
+    list: () => ipcRenderer.invoke("swLicense:list"),
+    save: (payload) => ipcRenderer.invoke("swLicense:save", payload),
+    delete: (id) => ipcRenderer.invoke("swLicense:delete", id),
+  },
+  netMonitor: {
+    start: (options) => ipcRenderer.invoke("netMonitor:start", options),
+    stop: () => ipcRenderer.invoke("netMonitor:stop"),
+    onTick: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("netMonitor:tick", listener);
+      return () => ipcRenderer.removeListener("netMonitor:tick", listener);
+    },
+  },
+  uiSettings: {
+    get: () => ipcRenderer.invoke("uiSettings:get"),
+    save: (settings) => ipcRenderer.invoke("uiSettings:save", settings),
+    notify: (payload) => ipcRenderer.invoke("uiSettings:notify", payload),
+  },
+  achievements: {
+    get: () => ipcRenderer.invoke("achv:get"),
+    bump: (payload) => ipcRenderer.invoke("achv:bump", payload),
+  },
+  remote: {
+    targets: () => ipcRenderer.invoke("remote:targets"),
+    run: (payload) => ipcRenderer.invoke("remote:run", payload),
+    onResult: (callback) => {
+      const listener = (_event, payload) => callback(payload);
+      ipcRenderer.on("remote:result", listener);
+      return () => ipcRenderer.removeListener("remote:result", listener);
+    },
+  },
+  license: {
+    status: () => ipcRenderer.invoke("license:status"),
+    login: (account, password) => ipcRenderer.invoke("license:login", { account, password }),
+    unlock: () => ipcRenderer.invoke("license:unlock"),
+    quit: () => ipcRenderer.send("license:quit"),
   },
   app: {
     quit: () => ipcRenderer.send("app:quit"),

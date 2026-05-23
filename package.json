@@ -9,7 +9,7 @@
     "start": "electron .",
     "dev": "electron .",
     "dist": "electron-builder --win portable",
-    "check": "node --check electron/main.js && node --check electron/preload.js && node --check electron/core/run-command.js && node --check electron/core/format.js && node --check electron/modules/network.js && node --check electron/modules/ip-records.js && node --check electron/modules/system-info.js && node --check electron/modules/hardware-check.js && node --check electron/modules/threat-scan.js && node --check electron/modules/windows-tools.js && node --check renderer/app.js && node --check renderer/pages/system-info.js && node --check renderer/pages/hardware-check.js && node --check renderer/pages/threat-scan.js && node --check electron/modules/control-panel.js && node --check renderer/pages/control-panel.js && node --check electron/modules/printer.js && node --check electron/modules/share.js && node --check electron/modules/security.js && node --check renderer/pages/printer.js && node --check renderer/pages/share.js && node --check renderer/pages/security.js && node --check electron/modules/secure-erase.js && node --check electron/modules/form-maker.js && node --check renderer/pages/form-maker.js && node --check renderer/pages/form-manager.js && node --check renderer/pages/integrated-check.js"
+    "check": "node --check electron/main.js && node --check electron/preload.js && node --check electron/core/run-command.js && node --check electron/core/format.js && node --check electron/modules/network.js && node --check electron/modules/ip-records.js && node --check electron/modules/system-info.js && node --check electron/modules/hardware-check.js && node --check electron/modules/threat-scan.js && node --check electron/modules/windows-tools.js && node --check renderer/app.js && node --check renderer/pages/system-info.js && node --check renderer/pages/hardware-check.js && node --check renderer/pages/threat-scan.js && node --check electron/modules/control-panel.js && node --check renderer/pages/control-panel.js && node --check electron/modules/printer.js && node --check electron/modules/share.js && node --check electron/modules/security.js && node --check renderer/pages/printer.js && node --check renderer/pages/share.js && node --check renderer/pages/security.js && node --check electron/modules/secure-erase.js && node --check electron/modules/form-maker.js && node --check electron/modules/file-tools.js && node --check renderer/pages/form-maker.js && node --check renderer/pages/form-manager.js && node --check renderer/pages/label-maker.js && node --check renderer/pages/integrated-check.js && node --check renderer/pages/file-tools.js && node --check renderer/pages/web-shortcut.js && node --check electron/modules/license.js && node --check renderer/lock.js && node --check electron/modules/asset.js && node --check electron/modules/health.js && node --check electron/modules/cleanup.js && node --check electron/modules/driver.js && node --check electron/modules/event-log.js && node --check electron/modules/sw-license.js && node --check electron/modules/net-monitor.js && node --check electron/modules/ui-settings.js && node --check electron/modules/achievements.js && node --check electron/modules/remote.js && node --check renderer/menu.js && node --check renderer/pages/asset.js && node --check renderer/pages/health.js && node --check renderer/pages/cleanup.js && node --check renderer/pages/driver.js && node --check renderer/pages/event-log.js && node --check renderer/pages/sw-license.js && node --check renderer/pages/remote.js"
   },
   "devDependencies": {
     "electron": "^42.2.0",
@@ -28,8 +28,16 @@
     ],
     "extraResources": [
       {
-        "from": "tools",
-        "to": "tools"
+        "from": "tools/hardware-probe",
+        "to": "tools/hardware-probe"
+      },
+      {
+        "from": "tools/smartctl",
+        "to": "tools/smartctl"
+      },
+      {
+        "from": "tools/yara",
+        "to": "tools/yara"
       }
     ],
     "win": {

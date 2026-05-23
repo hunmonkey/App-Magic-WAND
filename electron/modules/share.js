@@ -114,7 +114,7 @@ $out | ConvertTo-Json -Depth 4 -Compress
 async function listShares() {
   const result = await runJson(
     wrap(`
-  $list = Get-SmbShare | ForEach-Object {
+  $list = Get-SmbShare -ErrorAction SilentlyContinue | ForEach-Object {
     [pscustomobject]@{
       name        = $_.Name
       path        = $_.Path
@@ -122,13 +122,20 @@ async function listShares() {
       special     = [bool]$_.Special
     }
   }
-  $out = @{ ok = $true; shares = @($list) }
+  $maps = Get-SmbMapping -ErrorAction SilentlyContinue | ForEach-Object {
+    [pscustomobject]@{
+      localPath  = $_.LocalPath
+      remotePath = $_.RemotePath
+      status     = [string]$_.Status
+    }
+  }
+  $out = @{ ok = $true; shares = @($list); mappings = @($maps) }
 `),
   );
   if (!result.ok) {
     throw new Error(result.error || "공유 목록을 불러오지 못했습니다.");
   }
-  return { shares: asArray(result.shares) };
+  return { shares: asArray(result.shares), mappings: asArray(result.mappings) };
 }
 
 async function browseFolder() {

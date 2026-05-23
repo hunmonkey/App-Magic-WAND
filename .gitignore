@@ -11,6 +11,10 @@
 # 기초 연결 정보 (절대 커밋 금지)
 Rule_PW.txt
 
+# 보안 라이선스 발급용 도구 / 비밀키 / 발급된 정품키 (절대 커밋 금지)
+tools/keygen/
+*.lic
+
 # Python 캐시/검사 산출물
 __pycache__/
 *.py[cod]

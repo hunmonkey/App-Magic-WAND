@@ -28,7 +28,6 @@ const elements = {
   usedDeviceList: document.querySelector("#usedDeviceList"),
   tableBody: document.querySelector("#recordTableBody"),
   tableWrap: document.querySelector(".table-wrap"),
-  futureMenuButtons: document.querySelectorAll(".menu-link.pending"),
   quitDialog: document.querySelector("#quitDialog"),
   quitConfirmButton: document.querySelector("#quitConfirmButton"),
   quitCancelButton: document.querySelector("#quitCancelButton"),
@@ -46,21 +45,30 @@ let networkInfo = null;
 let toastTimer = null;
 let quitConfirmed = false;
 let confirmResolve = null;
+let commandPalette = null;
+let commandInput = null;
+let commandList = null;
+let commandItems = [];
+let commandActiveIndex = 0;
+let uiSettings = { soundEnabled: true, desktopNotificationEnabled: false };
+let soundContext = null;
+let achievementState = null;
 
-window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", () => {
   bindEvents();
-  await loadRecords();
   setOverviewIdle();
+  renderTable();
+
+  window.setTimeout(() => {
+    loadUiSettings();
+    refreshAchievements();
+    loadRecords();
+  }, 0);
 });
 
 function bindEvents() {
   elements.quitButton.addEventListener("click", () => {
     showQuitDialog();
-  });
-  elements.futureMenuButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      showFuturePage(button);
-    });
   });
   elements.quitConfirmButton.addEventListener("click", confirmQuit);
   elements.quitCancelButton.addEventListener("click", hideQuitDialog);
@@ -77,6 +85,15 @@ function bindEvents() {
     }
   });
   document.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      openCommandPalette();
+      return;
+    }
+    if (commandPalette && !commandPalette.hidden) {
+      handleCommandPaletteKey(event);
+      return;
+    }
     if (event.key !== "Escape") {
       return;
     }
@@ -117,6 +134,9 @@ window.addEventListener("beforeunload", (event) => {
 
 function switchPage(pageSelector, menuButton) {
   const targetPage = document.querySelector(pageSelector);
+  if (!targetPage) {
+    return;
+  }
   document.querySelectorAll(".main-content .page").forEach((page) => {
     page.classList.toggle("active", page === targetPage);
   });
@@ -127,13 +147,147 @@ function switchPage(pageSelector, menuButton) {
   });
 }
 
+function createCommandPalette() {
+  commandPalette = document.createElement("div");
+  commandPalette.className = "command-palette";
+  commandPalette.hidden = true;
+  commandPalette.innerHTML = `
+    <section class="command-box" role="dialog" aria-modal="true">
+      <input id="commandPaletteInput" type="search" autocomplete="off" placeholder="기능 검색" />
+      <div id="commandPaletteList" class="command-list"></div>
+      <div class="command-footer">
+        <label><input id="soundToggle" type="checkbox" /> 소리</label>
+        <label><input id="desktopNotifyToggle" type="checkbox" /> 바탕화면 알림</label>
+      </div>
+    </section>
+  `;
+  document.body.append(commandPalette);
+  commandInput = commandPalette.querySelector("#commandPaletteInput");
+  commandList = commandPalette.querySelector("#commandPaletteList");
+  commandInput.addEventListener("input", () => renderCommandList());
+  commandPalette.addEventListener("click", (event) => {
+    if (event.target === commandPalette) {
+      closeCommandPalette();
+    }
+  });
+  commandPalette.querySelector("#soundToggle").addEventListener("change", saveUiSettingsFromPalette);
+  commandPalette.querySelector("#desktopNotifyToggle").addEventListener("change", saveUiSettingsFromPalette);
+}
+
+function collectCommands() {
+  const headings = new Map();
+  document.querySelectorAll(".menu-group").forEach((group) => {
+    const heading = group.querySelector(".menu-heading")?.textContent?.trim() || "";
+    group.querySelectorAll(".menu-link:not(.danger)").forEach((button) => headings.set(button, heading));
+  });
+  commandItems = [...document.querySelectorAll(".side-nav .menu-link:not(.danger)")].map((button) => ({
+    label: button.textContent.trim(),
+    group: headings.get(button) || "",
+    button,
+  }));
+}
+
+function openCommandPalette() {
+  if (!commandPalette) {
+    createCommandPalette();
+  }
+  collectCommands();
+  commandPalette.hidden = false;
+  commandInput.value = "";
+  commandActiveIndex = 0;
+  updateSettingsToggles();
+  renderCommandList();
+  commandInput.focus();
+}
+
+function closeCommandPalette() {
+  if (!commandPalette) return;
+  commandPalette.hidden = true;
+}
+
+function renderCommandList() {
+  const keyword = commandInput.value.trim().toLowerCase();
+  const visible = commandItems.filter((item) => {
+    const text = `${item.group} ${item.label}`.toLowerCase();
+    return !keyword || text.includes(keyword);
+  });
+  commandActiveIndex = Math.min(commandActiveIndex, Math.max(0, visible.length - 1));
+  commandList.innerHTML = "";
+  if (!visible.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-inline";
+    empty.textContent = "검색 결과가 없습니다.";
+    commandList.append(empty);
+    return;
+  }
+  visible.forEach((item, index) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "command-item";
+    btn.classList.toggle("active", index === commandActiveIndex);
+    btn.innerHTML = `<span></span><strong></strong>`;
+    btn.querySelector("span").textContent = item.group;
+    btn.querySelector("strong").textContent = item.label;
+    btn.addEventListener("click", () => runCommand(item));
+    commandList.append(btn);
+  });
+}
+
+function handleCommandPaletteKey(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeCommandPalette();
+    return;
+  }
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const count = commandList.querySelectorAll(".command-item").length;
+    if (!count) return;
+    commandActiveIndex = (commandActiveIndex + (event.key === "ArrowDown" ? 1 : -1) + count) % count;
+    renderCommandList();
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const items = commandList.querySelectorAll(".command-item");
+    items[commandActiveIndex]?.click();
+  }
+}
+
+async function runCommand(item) {
+  closeCommandPalette();
+  item.button.click();
+  await bumpAchievement("commandsUsed");
+}
+
+async function loadUiSettings() {
+  try {
+    uiSettings = await window.magicWand.uiSettings.get();
+  } catch {
+    uiSettings = { soundEnabled: true, desktopNotificationEnabled: false };
+  }
+}
+
+async function saveUiSettingsFromPalette() {
+  uiSettings = {
+    soundEnabled: commandPalette.querySelector("#soundToggle").checked,
+    desktopNotificationEnabled: commandPalette.querySelector("#desktopNotifyToggle").checked,
+  };
+  try {
+    uiSettings = await window.magicWand.uiSettings.save(uiSettings);
+  } catch (error) {
+    showToast(`알림 설정 저장 실패: ${error.message}`);
+  }
+}
+
+function updateSettingsToggles() {
+  commandPalette.querySelector("#soundToggle").checked = uiSettings.soundEnabled !== false;
+  commandPalette.querySelector("#desktopNotifyToggle").checked = uiSettings.desktopNotificationEnabled === true;
+}
+
 function showQuitDialog() {
   elements.quitDialog.hidden = false;
   elements.quitConfirmButton.focus();
-}
-
-function showFuturePage(menuButton) {
-  switchPage("#futurePage", menuButton);
 }
 
 function hideQuitDialog() {
@@ -340,6 +494,7 @@ function updateButtons() {
 
 async function refreshNetworkInfo() {
   elements.scanButton.disabled = true;
+  setBusy(elements.scanButton, true);
   setOverviewLoading();
 
   try {
@@ -355,6 +510,7 @@ async function refreshNetworkInfo() {
     showToast(`네트워크 정보 조사 실패: ${error.message}`);
   } finally {
     elements.scanButton.disabled = false;
+    setBusy(elements.scanButton, false);
   }
 }
 
@@ -373,7 +529,7 @@ function setOverviewLoading() {
   elements.primaryIpValue.textContent = "확인 중";
   elements.networkRangeValue.textContent = "확인 중";
   elements.pcInfoBody.innerHTML = "";
-  elements.pcInfoBody.append(createEmptyState("네트워크 정보를 확인하는 중입니다."));
+  elements.pcInfoBody.append(createLoadingState("네트워크 정보를 확인하는 중입니다."));
 }
 
 function setOverviewFailed() {
@@ -457,6 +613,7 @@ function renderPcInfo() {
 
 async function scanAddressUsage() {
   elements.usageScanButton.disabled = true;
+  setBusy(elements.usageScanButton, true);
   elements.addressGrid.innerHTML = "";
   elements.usedDeviceList.innerHTML = "";
   elements.usageRangeChip.textContent = "대역: 조사 중";
@@ -471,6 +628,7 @@ async function scanAddressUsage() {
     showToast(`IP 대역 스캔 실패: ${error.message}`);
   } finally {
     elements.usageScanButton.disabled = false;
+    setBusy(elements.usageScanButton, false);
   }
 }
 
@@ -546,8 +704,9 @@ function renderUsedDeviceList(hosts) {
 
 async function runDiagnostics() {
   elements.diagnosticButton.disabled = true;
+  setBusy(elements.diagnosticButton, true);
   elements.diagnosticResults.innerHTML = "";
-  elements.diagnosticResults.append(createEmptyState("진단 중입니다."));
+  elements.diagnosticResults.append(createLoadingState("진단 중입니다."));
 
   try {
     const result = await window.magicWand.network.diagnose(selectedInterfaceId);
@@ -557,6 +716,7 @@ async function runDiagnostics() {
     elements.diagnosticResults.append(createEmptyState(`진단 실패: ${error.message}`));
   } finally {
     elements.diagnosticButton.disabled = false;
+    setBusy(elements.diagnosticButton, false);
   }
 }
 
@@ -616,6 +776,30 @@ function createEmptyState(message) {
   return element;
 }
 
+function createLoadingState(message) {
+  const element = document.createElement("p");
+  element.className = "empty-inline busy-inline";
+  const spinner = document.createElement("span");
+  spinner.className = "busy-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = message;
+  element.append(spinner, text);
+  return element;
+}
+
+function setBusy(element, isBusy) {
+  if (!element) {
+    return;
+  }
+  element.classList.toggle("is-busy", Boolean(isBusy));
+  if (isBusy) {
+    element.setAttribute("aria-busy", "true");
+  } else {
+    element.removeAttribute("aria-busy");
+  }
+}
+
 function findIpIndex(ipAddress) {
   const index = records.findIndex((record) => record.ipAddress === ipAddress);
   return index === -1 ? null : index;
@@ -656,10 +840,101 @@ function showToast(message) {
   }, 2600);
 }
 
+async function notifyComplete(message, options = {}) {
+  showToast(message);
+  if (uiSettings.soundEnabled !== false) {
+    playCompleteSound();
+  }
+  if (uiSettings.desktopNotificationEnabled) {
+    window.magicWand.uiSettings.notify({ title: "Magic WAND", body: message }).catch(() => {});
+  }
+  if (options.achievementKey) {
+    await bumpAchievement(options.achievementKey);
+  }
+}
+
+function playCompleteSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    soundContext = soundContext || new AudioContext();
+    const osc = soundContext.createOscillator();
+    const gain = soundContext.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, soundContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, soundContext.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, soundContext.currentTime + 0.22);
+    osc.connect(gain).connect(soundContext.destination);
+    osc.start();
+    osc.stop(soundContext.currentTime + 0.24);
+  } catch {}
+}
+
+async function refreshAchievements() {
+  try {
+    achievementState = await window.magicWand.achievements.get();
+    renderAchievements();
+  } catch {
+    achievementState = null;
+  }
+}
+
+async function bumpAchievement(key) {
+  try {
+    achievementState = await window.magicWand.achievements.bump({ key });
+    renderAchievements();
+    for (const badge of achievementState.newBadges || []) {
+      showToast(`새 배지: ${badge.label}`);
+    }
+    return achievementState;
+  } catch {
+    return achievementState;
+  }
+}
+
+function renderAchievements() {
+  const stats = document.querySelector("#achievementStats");
+  const badges = document.querySelector("#achievementBadges");
+  if (!stats || !badges || !achievementState) return;
+  stats.innerHTML = "";
+  [
+    ["점검", achievementState.checksDone],
+    ["백업", achievementState.backupsDone],
+    ["정리", achievementState.cleanupsDone],
+    ["명령", achievementState.commandsUsed],
+  ].forEach(([label, value]) => {
+    const item = document.createElement("span");
+    item.textContent = `${label} ${Number(value || 0)}`;
+    stats.append(item);
+  });
+
+  badges.innerHTML = "";
+  const badgeDetails = achievementState.badgeDetails || [];
+  if (!badgeDetails.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-inline";
+    empty.textContent = "아직 획득한 배지가 없습니다.";
+    badges.append(empty);
+    return;
+  }
+  for (const badge of badgeDetails) {
+    const chip = document.createElement("span");
+    chip.title = badge.description || "";
+    chip.textContent = badge.label;
+    badges.append(chip);
+  }
+}
+
 window.MagicWand = {
   switchPage,
   showToast,
+  notifyComplete,
+  bumpAchievement,
+  refreshAchievements,
   showConfirm,
   renderTestList,
   statusLabel,
+  createLoadingState,
+  setBusy,
 };
