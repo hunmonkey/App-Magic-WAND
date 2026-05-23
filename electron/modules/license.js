@@ -12,18 +12,17 @@ const path = require("path");
 
 // ──────────────────────────────────────────────────────────────
 // 앱에 내장되는 검증용 공개키.
-// 재훈 님이 `node tools/keygen/generate-keys.js` 실행 후 생성된
+// 황재훈 님이 `node tools/keygen/generate-keys.js` 실행 후 생성된
 // tools/keygen/public.pem 의 내용을 아래에 그대로 붙여넣으세요.
 const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAuKxxpHmTlVqDmVOOQspet/iIlZWHQ2HrmZhe9lJb02A=
 -----END PUBLIC KEY-----`;
 
-// 상태 저장 변조 방지용 비밀값 (코드 보호로 가려짐)
-const STATE_SECRET = "mw-state-2f9c1a7b40e84d6f-do-not-share";
-
 const GRACE_SEC = 600; // 시계 오차 허용치(10분). 이보다 더 과거여야 위반으로 셈.
 const LICENSE_FILE = "magicwand.lic";
 const STATE_FILE = ".mwstate";
+const SECRET_FILE = ".mwsecret";
+let stateSecretCache = "";
 
 const sec = () => Math.floor(Date.now() / 1000);
 
@@ -73,19 +72,52 @@ function applyClockCheck(state, now) {
 }
 
 // ── 상태 봉인/개봉 (HMAC으로 변조 감지)
-function sealState(state) {
+function sealState(app, state) {
   const d = JSON.stringify(state);
-  const m = crypto.createHmac("sha256", STATE_SECRET).update(d).digest("hex");
+  const m = crypto.createHmac("sha256", loadStateSecret(app)).update(d).digest("hex");
   return JSON.stringify({ d, m });
 }
-function openState(raw) {
+function openState(app, raw) {
   try {
     const { d, m } = JSON.parse(raw);
-    const calc = crypto.createHmac("sha256", STATE_SECRET).update(d).digest("hex");
+    const calc = crypto.createHmac("sha256", loadStateSecret(app)).update(d).digest("hex");
     if (calc !== m) return null;
     return JSON.parse(d);
   } catch {
     return null;
+  }
+}
+
+function secretLocations(app) {
+  return stateLocations(app).map((loc) => path.join(path.dirname(loc), SECRET_FILE));
+}
+
+function loadStateSecret(app) {
+  if (stateSecretCache) return stateSecretCache;
+
+  for (const loc of secretLocations(app)) {
+    try {
+      const secret = fs.readFileSync(loc, "utf8").trim();
+      if (/^[a-f0-9]{64}$/i.test(secret)) {
+        stateSecretCache = secret;
+        saveStateSecret(app, secret);
+        return secret;
+      }
+    } catch {}
+  }
+
+  const secret = crypto.randomBytes(32).toString("hex");
+  stateSecretCache = secret;
+  saveStateSecret(app, secret);
+  return secret;
+}
+
+function saveStateSecret(app, secret) {
+  for (const loc of secretLocations(app)) {
+    try {
+      fs.mkdirSync(path.dirname(loc), { recursive: true });
+      fs.writeFileSync(loc, secret);
+    } catch {}
   }
 }
 
@@ -109,7 +141,7 @@ function loadState(app) {
   const merged = { lastSeen: 0, strikes: 0, locked: false };
   for (const loc of stateLocations(app)) {
     try {
-      const s = openState(fs.readFileSync(loc, "utf8"));
+      const s = openState(app, fs.readFileSync(loc, "utf8"));
       if (!s) continue;
       merged.lastSeen = Math.max(merged.lastSeen, s.lastSeen || 0);
       merged.strikes = Math.max(merged.strikes, s.strikes || 0);
@@ -120,7 +152,7 @@ function loadState(app) {
 }
 
 function saveState(app, state) {
-  const sealed = sealState(state);
+  const sealed = sealState(app, state);
   for (const loc of stateLocations(app)) {
     try {
       fs.mkdirSync(path.dirname(loc), { recursive: true });

@@ -11,10 +11,10 @@
 
 ## 0. 사용자 정보 및 호칭 규칙
 
-- **사용자명**: 재훈 님 (황재훈)
+- **사용자명**: 황재훈 님
 - **이메일**: hunmonkey1@gmail.com
 - **GitHub**: hunmonkey (https://github.com/hunmonkey/)
-- **⭐ 호칭 규칙**: 항상 "재훈 님"으로 존칭 사용
+- **⭐ 호칭 규칙**: 항상 "황재훈 님"으로 존칭 사용
 
 ---
 
@@ -136,7 +136,7 @@ Magic WAND처럼 Electron 포터블 exe를 만드는 프로젝트에서는 아�
    - `private.pem`은 정품키를 찍어내는 도장 같은 파일입니다. 절대 배포하거나 GitHub에 올리지 마세요.
 
 3. 배포에 포함하면 안 되는 파일
-   - `tools/keygen/`, `tools/keygen/private.pem`, `Rule_PW.txt`, 개발용 `.env`, 임시 데이터(`data/`)는 배포하거나 GitHub에 올리지 않습니다.
+   - `tools/keygen/`, `tools/keygen/private.pem`, `Rule_PW.txt`, 개발용 `.env`, 임시 데이터(`data/`), 라이선스 상태 파일(`.mwstate`, `.mwsecret`)은 배포하거나 GitHub에 올리지 않습니다.
    - 앱 실행에 필요한 보조 도구만 `extraResources`에 넣습니다. 현재 기준은 `tools/hardware-probe`, `tools/smartctl`, `tools/yara`입니다.
    - `tools` 폴더 전체를 통째로 넣으면 개발용 키 발급 도구까지 배포될 수 있으므로 피하세요.
 

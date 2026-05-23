@@ -646,6 +646,13 @@
       config.gateway = document.querySelector("#ctrlGateway").value.trim();
       config.dns     = [dns1, dns2].filter(Boolean).join(",");
     }
+    const modeLabel = isDhcp ? "DHCP 자동" : `고정 IP ${config.ip || ""}`;
+    const ok = await ui.showConfirm(
+      `${adapterName} 설정을 ${modeLabel}(으)로 변경할까요? 변경 중 네트워크 연결이 일시적으로 끊길 수 있습니다.`,
+      { confirmText: "설정 적용", danger: false }
+    );
+    if (!ok) return;
+
     applyIpBtn.disabled    = true;
     applyIpBtn.textContent = "적용 중...";
     try {
