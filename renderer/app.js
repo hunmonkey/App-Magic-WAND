@@ -45,7 +45,7 @@ let quitConfirmed = false;
 window.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
   await loadRecords();
-  await refreshNetworkInfo();
+  setOverviewIdle();
 });
 
 function bindEvents() {
@@ -317,11 +317,22 @@ async function refreshNetworkInfo() {
   }
 }
 
+function setOverviewIdle() {
+  elements.publicIpValue.textContent = "확인 전";
+  elements.pcNameValue.textContent = "확인 전";
+  elements.primaryIpValue.textContent = "확인 전";
+  elements.networkRangeValue.textContent = "확인 전";
+  elements.pcInfoBody.innerHTML = "";
+  elements.pcInfoBody.append(createEmptyState("새로고침 버튼을 눌러 네트워크 정보를 확인하세요."));
+}
+
 function setOverviewLoading() {
   elements.publicIpValue.textContent = "확인 중";
   elements.pcNameValue.textContent = "확인 중";
   elements.primaryIpValue.textContent = "확인 중";
   elements.networkRangeValue.textContent = "확인 중";
+  elements.pcInfoBody.innerHTML = "";
+  elements.pcInfoBody.append(createEmptyState("네트워크 정보를 확인하는 중입니다."));
 }
 
 function setOverviewFailed() {

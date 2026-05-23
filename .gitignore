@@ -50,8 +50,8 @@ logs/
 *.swp
 *.swo
 
-# Magic WAND local data
-data/*.json
+# Magic WAND local data (실행 중 생성되는 로컬 데이터 전체 제외)
+data/
 
 # Node/Electron
 node_modules/

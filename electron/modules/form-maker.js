@@ -191,7 +191,7 @@ function buildHtmlDocument(title, bodyHtml) {
   body { margin: 0; background: #edf2f7; color: #17202a; font-family: "Malgun Gothic", "맑은 고딕", sans-serif; }
   .sheet { max-width: 780px; margin: 24px auto; padding: 56px 60px; background: #fff; box-shadow: 0 1px 8px rgba(16, 32, 51, 0.18); line-height: 1.6; }
   .sheet table { border-collapse: collapse; margin: 8px 0; }
-  .sheet td, .sheet th { border: 1px solid #99a7b8; padding: 6px 10px; }
+  .sheet td, .sheet th { border: 1px solid #99a7b8; padding: 6px 10px; word-break: break-word; overflow-wrap: anywhere; }
   .sheet img { max-width: 100%; }
   @media print { body { background: #fff; } .sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; } }
 </style>
@@ -224,7 +224,8 @@ async function saveDocument(event, payload) {
     return { canceled: true };
   }
 
-  await fs.writeFile(result.filePath, buildHtmlDocument(title, body), "utf-8");
+  // 일부 프로그램이 UTF-8을 EUC-KR로 잘못 인식하지 않도록 BOM을 붙여 내보낸다.
+  await fs.writeFile(result.filePath, "﻿" + buildHtmlDocument(title, body), "utf-8");
   return { canceled: false, filePath: result.filePath };
 }
 

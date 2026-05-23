@@ -18,14 +18,13 @@
 
   let shares = [];
   let selectedName = "";
-  let loaded = false;
+
+  const emptyMessage = document.querySelector("#shareEmptyMessage");
+  emptyMessage.textContent = "새로고침 버튼을 눌러 공유 폴더 목록을 불러오세요.";
+  tableWrap.classList.add("empty");
 
   menu.addEventListener("click", () => {
     ui.switchPage("#sharePage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadShares();
-    }
   });
 
   refreshBtn.addEventListener("click", loadShares);
@@ -87,11 +86,16 @@
 
   async function loadShares() {
     refreshBtn.disabled = true;
+    emptyMessage.textContent = "공유 폴더 목록을 불러오는 중입니다.";
+    tableBody.innerHTML = "";
+    tableWrap.classList.add("empty");
     try {
       const result = await window.magicWand.share.list();
       shares = result.shares || [];
+      emptyMessage.textContent = "공유 중인 폴더가 없습니다.";
       renderTable();
     } catch (err) {
+      emptyMessage.textContent = "공유 중인 폴더가 없습니다.";
       ui.showToast(`공유 목록 조회 실패: ${err.message}`);
     } finally {
       refreshBtn.disabled = false;

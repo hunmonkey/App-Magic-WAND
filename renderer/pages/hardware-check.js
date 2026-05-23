@@ -27,6 +27,7 @@
   saveButton.addEventListener("click", saveText);
 
   setRunning(false);
+  renderStatusMessage("검사시작 버튼을 눌러 하드웨어를 점검하세요.");
 
   async function runCheck() {
     const currentRunId = runId + 1;

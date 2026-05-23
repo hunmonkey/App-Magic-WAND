@@ -16,14 +16,11 @@
 
   let printers = [];
   let selectedName = "";
-  let loaded = false;
+
+  listEl.append(emptyState("새로고침 버튼을 눌러 프린터 목록을 불러오세요."));
 
   menu.addEventListener("click", () => {
     ui.switchPage("#printerPage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadPrinters();
-    }
   });
 
   refreshBtn.addEventListener("click", loadPrinters);

@@ -26,22 +26,18 @@
   const eraseDriveBtn = document.querySelector("#eraseDriveBtn");
   const eraseStatus = document.querySelector("#eraseStatus");
 
-  let loaded = false;
   let foundKey = "";
   let eraseTarget = "";
   let erasing = false;
 
   menu.addEventListener("click", () => {
     ui.switchPage("#securityPage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadStatus();
-      loadUsers();
-      loadDrives();
-    }
   });
 
-  refreshBtn.addEventListener("click", loadStatus);
+  refreshBtn.addEventListener("click", () => {
+    loadStatus();
+    loadDrives();
+  });
   usersRefreshBtn.addEventListener("click", loadUsers);
   browseBtn.addEventListener("click", pickFolder);
   hideBtn.addEventListener("click", () => setHidden(true));
@@ -56,6 +52,19 @@
   bindToolButtons(page);
 
   renderKeyMessage("'찾기' 버튼을 눌러 제품 키를 조회하세요.");
+  renderActivationMessage("새로고침 버튼을 눌러 정품 인증·암호화 상태를 확인하세요.");
+  bitlockerEl.append(emptyState("새로고침 버튼을 눌러 드라이브 암호화를 확인하세요."));
+  userListEl.append(emptyState("새로고침 버튼을 눌러 사용자 계정을 불러오세요."));
+  initDriveSelectMessage();
+
+  function initDriveSelectMessage() {
+    eraseDriveSelect.innerHTML = "";
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "정품·암호화 새로고침 후 표시됩니다";
+    eraseDriveSelect.append(opt);
+    eraseDriveBtn.disabled = true;
+  }
 
   async function loadStatus() {
     refreshBtn.disabled = true;

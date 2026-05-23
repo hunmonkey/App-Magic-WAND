@@ -14,6 +14,7 @@
             <div class="menu-heading">PC 관리</div>
             <div class="menu-sublist">
               <button id="systemInfoMenu" class="menu-link sub-link active" type="button">기초 정보</button>
+              <button id="integratedCheckMenu" class="menu-link sub-link" type="button">통합 점검 리포트</button>
               <button id="checkMenu" class="menu-link sub-link" type="button">점검 : HW,SW</button>
               <button id="controlPanelMenu" class="menu-link sub-link" type="button">점검 : Network</button>
               <button id="printerMenu" class="menu-link sub-link" type="button">점검 : Printer</button>
@@ -360,7 +361,7 @@
               <div class="diag-action-row">
                 <button id="netDiagBtn" type="button">점검 시작</button>
               </div>
-              <div id="netDiagResults" class="net-diag-results"></div>
+              <div id="netDiagResults" class="net-diag-results"><p class="muted-text">「점검 시작」 버튼을 눌러 네트워크 장애를 점검하세요.</p></div>
             </section>
 
           </div>
@@ -741,6 +742,45 @@
           </div>
         </section>
 
+        <section id="integratedCheckPage" class="page">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">통합 점검 리포트</p>
+                <p class="muted-text">여러 점검을 한 번에 실행하고 결과를 증빙 문서로 저장합니다.</p>
+              </div>
+              <div class="ic-header-actions">
+                <button id="icStartButton" type="button">통합 점검</button>
+                <button id="icSaveButton" type="button" disabled>증빙 저장</button>
+              </div>
+            </div>
+
+            <div class="ic-info-grid">
+              <label class="ic-field"><span>점검일</span><input id="icDate" type="text" readonly /></label>
+              <label class="ic-field"><span>고객·부서</span><input id="icCustomer" type="text" autocomplete="off" /></label>
+              <label class="ic-field"><span>자산번호</span><input id="icAssetTag" type="text" autocomplete="off" /></label>
+              <label class="ic-field"><span>점검자</span><input id="icInspector" type="text" autocomplete="off" /></label>
+            </div>
+
+            <div class="ic-options">
+              <span class="ic-options-label">점검 항목</span>
+              <label class="ic-check"><input type="checkbox" id="icOptSpec" checked /><span>PC 사양</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptActivation" checked /><span>OS·정품</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptUsers" checked /><span>사용자 계정</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptNetwork" checked /><span>네트워크</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptHardware" checked /><span>하드웨어 점검</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptSoftware" checked /><span>설치 SW</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptThreat" checked /><span>위험 SW</span></label>
+              <label class="ic-check"><input type="checkbox" id="icOptShare" checked /><span>공유 폴더</span></label>
+            </div>
+
+            <div id="icScroll" class="ic-scroll">
+              <div id="icProgress"></div>
+              <div id="icResults"></div>
+            </div>
+          </section>
+        </section>
+
         <section id="futurePage" class="page">
           <section class="panel future-panel">
             <h1>개발 중입니다</h1>
@@ -771,5 +811,6 @@
     <script src="./pages/security.js"></script>
     <script src="./pages/form-maker.js"></script>
     <script src="./pages/form-manager.js"></script>
+    <script src="./pages/integrated-check.js"></script>
   </body>
 </html>
