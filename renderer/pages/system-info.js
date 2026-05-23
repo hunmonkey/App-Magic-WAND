@@ -232,7 +232,7 @@
   }
 
   async function uninstallSoftware(item, button) {
-    const ok = window.confirm(`${item.name} 제거를 시작할까요?`);
+    const ok = await ui.showConfirm(`${item.name} 제거를 시작할까요?`, { confirmText: "제거" });
     if (!ok) {
       return;
     }

@@ -265,8 +265,8 @@
     }
   }
 
-  function newDocument() {
-    if (!isEmpty() && !window.confirm("현재 내용을 비우고 새 문서를 시작할까요?")) {
+  async function newDocument() {
+    if (!isEmpty() && !(await ui.showConfirm("현재 내용을 비우고 새 문서를 시작할까요?", { confirmText: "새 문서", danger: false }))) {
       return;
     }
     sheet.innerHTML = "";

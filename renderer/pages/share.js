@@ -130,7 +130,7 @@
 
   async function removeShare() {
     if (!selectedName) return;
-    const ok = window.confirm(`공유 "${selectedName}"을(를) 중지할까요? (폴더와 파일은 삭제되지 않습니다.)`);
+    const ok = await ui.showConfirm(`공유 "${selectedName}"을(를) 중지할까요? (폴더와 파일은 삭제되지 않습니다.)`, { confirmText: "공유 중지" });
     if (!ok) return;
     removeBtn.disabled = true;
     try {

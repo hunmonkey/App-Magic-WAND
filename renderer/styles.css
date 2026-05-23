@@ -58,6 +58,13 @@
   --amber-soft: #fff2d8;
   --red: #b42318;
   --red-soft: #fdecea;
+  /* 확장 색상 — 기존 팔레트로 표현되지 않던 보조색 (2026-05-23 변수화) */
+  --text-strong: #334155;    /* 라벨·표 헤더 등 보조 본문 글자 */
+  --text-detail: #405064;    /* 진단·상세 설명 글자 */
+  --input-border: #bdc8d6;   /* 입력칸 테두리 */
+  --btn-border: #a9b7c9;     /* 버튼·셀렉트 테두리 */
+  --surface-muted: #f8fafc;  /* 버튼·중립 셀 배경 */
+  --disabled-text: #9aa5b1;  /* 비활성 글자 */
 }
 
 * {
@@ -90,10 +97,10 @@ textarea {
 button,
 select {
   min-height: 38px;
-  border: 1px solid #a9b7c9;
+  border: 1px solid var(--btn-border);
   border-radius: 8px;
   color: var(--text);
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 button {
@@ -108,18 +115,18 @@ button:hover:not(:disabled) {
 
 button:disabled,
 select:disabled {
-  color: #9aa5b1;
+  color: var(--disabled-text);
   cursor: not-allowed;
 }
 
 input,
 textarea {
   width: 100%;
-  border: 1px solid #bdc8d6;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   outline: none;
   color: var(--text);
-  background: #ffffff;
+  background: var(--surface);
 }
 
 input {
@@ -138,6 +145,13 @@ select:focus,
 textarea:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
+}
+
+button:focus-visible,
+select:focus-visible,
+.menu-link:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
 }
 
 .app-shell {
@@ -308,7 +322,7 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #334155;
+  color: var(--text-strong);
   font-size: 12px;
   font-weight: 400;
 }
@@ -522,7 +536,7 @@ textarea:focus {
 
 .diagnostic-item p {
   margin: 6px 0 0;
-  color: #405064;
+  color: var(--text-detail);
   line-height: 1.4;
 }
 
@@ -537,7 +551,7 @@ textarea:focus {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 6px 10px;
-  color: #334155;
+  color: var(--text-strong);
   background: var(--surface-soft);
   font-size: 12px;
   font-weight: 400;
@@ -565,7 +579,7 @@ textarea:focus {
 .address-cell.free {
   border-color: #d5dde8;
   color: #738195;
-  background: #f8fafc;
+  background: var(--surface-muted);
 }
 
 .address-cell.used {
@@ -656,8 +670,8 @@ th {
   position: sticky;
   top: 0;
   z-index: 1;
-  color: #334155;
-  background: #f7fafc;
+  color: var(--text-strong);
+  background: var(--surface-soft);
   font-size: 12px;
   font-weight: 700;
 }
@@ -912,7 +926,7 @@ tbody tr.selected {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .threat-target-header {
@@ -1001,7 +1015,7 @@ tbody tr.selected {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .threat-progress-item > div {
@@ -1076,7 +1090,7 @@ tbody tr.selected {
 
 .threat-detail {
   margin: 4px 0 0;
-  color: #405064;
+  color: var(--text-detail);
   font-size: 12px;
   line-height: 1.4;
   word-break: break-all;
@@ -1437,7 +1451,7 @@ tbody tr.selected {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #334155;
+  color: var(--text-strong);
   font-size: 12px;
   font-weight: 400;
 }
@@ -1485,7 +1499,7 @@ tbody tr.selected {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #334155;
+  color: var(--text-strong);
   font-size: 12px;
   font-weight: 400;
   max-width: 360px;
@@ -1653,7 +1667,7 @@ tbody tr.selected {
   flex-direction: column;
   gap: 6px;
   margin-top: 6px;
-  color: #334155;
+  color: var(--text-strong);
 }
 
 /* Form maker page */
@@ -1709,7 +1723,7 @@ tbody tr.selected {
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid #a9b7c9;
+  border: 1px solid var(--btn-border);
   border-radius: 6px;
   background: none;
   cursor: pointer;
@@ -1804,7 +1818,7 @@ tbody tr.selected {
 
 #fmSheet:empty::before {
   content: "여기에 문서를 작성하세요.";
-  color: #9aa5b1;
+  color: var(--disabled-text);
 }
 
 .fm-sheet table {
@@ -1859,7 +1873,7 @@ tbody tr.selected {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #334155;
+  color: var(--text-strong);
   font-size: 12px;
 }
 
@@ -1906,7 +1920,7 @@ tbody tr.selected {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #334155;
+  color: var(--text-strong);
   white-space: nowrap;
 }
 

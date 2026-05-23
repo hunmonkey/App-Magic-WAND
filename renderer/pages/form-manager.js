@@ -194,7 +194,7 @@
   async function deleteDoc() {
     const meta = selectedDoc();
     if (!meta) return;
-    if (!window.confirm(`'${meta.title || "(제목 없음)"}' 문서를 삭제할까요?`)) {
+    if (!(await ui.showConfirm(`'${meta.title || "(제목 없음)"}' 문서를 삭제할까요?`, { confirmText: "삭제" }))) {
       return;
     }
     try {

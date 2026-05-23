@@ -37,6 +37,11 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
   - `threat-scan.js`: 실행 중 프로세스·시작 프로그램·설치 SW 키워드, 사용자 지정 검사대상 폴더, Microsoft Defender, YARA 룰 기반 위험 소프트웨어 점검
   - `control-panel.js`: 네트워크 어댑터 DHCP/고정 IP 설정 변경, 컴퓨터 이름 변경 (관리자 권한 필요)
   - `windows-tools.js`: 제어판, 네트워크 연결, 장치 및 프린터, 프로그램 제거/변경, CMD 바로가기 실행
+  - `printer.js`: 프린터 목록 조회, 기본 프린터 설정, 테스트 인쇄, 대기열/스풀러 관리
+  - `share.js`: 폴더 공유 등록/중지, 공유 목록 조회
+  - `security.js`: 정품 인증·CD-KEY·BitLocker 상태, 로컬 사용자 계정, 파일 숨김 처리
+  - `secure-erase.js`: 파일·폴더·드라이브 복구 불가 영구 삭제 (0 덮기 / DoD 3회)
+  - `form-maker.js`: 양식지(증빙 문서) 보관함 저장/불러오기/관리
 - `renderer/index.html`: 앱 화면 구조
 - `renderer/styles.css`: 앱 디자인
 - `renderer/app.js`: 페이지 전환(라우팅), IP 목록 관리, 검색, 공용 함수(switchPage, showToast)
@@ -45,6 +50,9 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
   - `hardware-check.js`: 하드웨어점검 화면 동작
   - `threat-scan.js`: 의심프로그램 화면 동작
   - `control-panel.js`: 네트워크 설정 화면 동작 (어댑터 IP·컴퓨터 이름 변경)
+  - `printer.js`, `share.js`, `security.js`: 점검 : Printer/Share/Security 화면 동작
+  - `form-maker.js`, `form-manager.js`: 양식지 제작·관리 화면 동작
+  - `integrated-check.js`: 통합 점검 리포트 화면 동작 (여러 점검을 모아 증빙 문서로 저장)
 - `tools/`: 별도 설치 없이 앱에 포함할 보조 실행 파일 위치
   - `tools/smartctl/`: SMART 상세 진단용 `smartctl.exe`와 `drivedb.h` 위치
   - `tools/hardware-probe/`: LibreHardwareMonitor 기반 센서 보조 진단 스크립트와 DLL 위치
@@ -59,9 +67,10 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 - IP 대역 스캔은 PC와 네트워크 장비에 부담을 주지 않도록 기본 최대 254개 주소까지만 조사합니다.
 - 앱은 진짜 전체화면 모드가 아니라 일반 창을 최대화해서 시작합니다. 상단 메뉴바와 창 버튼을 유지합니다.
 - 왼쪽 사이드메뉴는 `PC 관리`, `증빙 관리`, `프로그램 종료` 순서로 구성합니다.
-  - `PC 관리`: `기초 정보`, `점검 : HW,SW`, `점검 : Network`, `점검 : Printer`, `점검 : Share`, `점검 : Security`
-  - `증빙 관리`: `양식지 관리`, `증빙`
-  - `점검 : Printer`, `점검 : Share`, `점검 : Security`, `양식지 관리`, `증빙`은 클릭 시 `개발 중입니다` 안내 페이지를 보여주는 추후 개발 예정 항목입니다.
+  - `PC 관리`: `기초 정보`, `통합 점검 리포트`, `점검 : HW,SW`, `점검 : Network`, `점검 : Printer`, `점검 : Share`, `점검 : Security`
+  - `증빙 관리`: `양식지 제작`, `양식지 관리`, `증빙`
+  - 현재 `증빙` 항목만 클릭 시 `개발 중입니다` 안내 페이지를 보여주는 추후 개발 예정 항목입니다.
+  - `점검 : Printer`, `점검 : Share`, `점검 : Security`, `통합 점검 리포트`, `양식지 제작`, `양식지 관리`는 실제 기능으로 구현되었습니다.
 - 기능별 모듈 구조를 따릅니다. 새 기능은 `electron/modules/`에 모듈 파일을 만들어
   `register(ipcMain)`를 내보낸 뒤 `main.js`의 `registerIpcHandlers`에 등록합니다.
   화면은 `renderer/pages/`에 파일을 추가하고 `index.html`에 메뉴/페이지/스크립트를 더합니다.

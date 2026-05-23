@@ -32,6 +32,10 @@ const elements = {
   quitDialog: document.querySelector("#quitDialog"),
   quitConfirmButton: document.querySelector("#quitConfirmButton"),
   quitCancelButton: document.querySelector("#quitCancelButton"),
+  confirmDialog: document.querySelector("#confirmDialog"),
+  confirmDialogTitle: document.querySelector("#confirmDialogTitle"),
+  confirmOkButton: document.querySelector("#confirmOkButton"),
+  confirmCancelButton: document.querySelector("#confirmCancelButton"),
   toast: document.querySelector("#toast"),
 };
 
@@ -41,6 +45,7 @@ let selectedInterfaceId = "";
 let networkInfo = null;
 let toastTimer = null;
 let quitConfirmed = false;
+let confirmResolve = null;
 
 window.addEventListener("DOMContentLoaded", async () => {
   bindEvents();
@@ -64,8 +69,20 @@ function bindEvents() {
       hideQuitDialog();
     }
   });
+  elements.confirmOkButton.addEventListener("click", () => closeConfirm(true));
+  elements.confirmCancelButton.addEventListener("click", () => closeConfirm(false));
+  elements.confirmDialog.addEventListener("click", (event) => {
+    if (event.target === elements.confirmDialog) {
+      closeConfirm(false);
+    }
+  });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !elements.quitDialog.hidden) {
+    if (event.key !== "Escape") {
+      return;
+    }
+    if (!elements.confirmDialog.hidden) {
+      closeConfirm(false);
+    } else if (!elements.quitDialog.hidden) {
       hideQuitDialog();
     }
   });
@@ -129,6 +146,30 @@ function confirmQuit() {
   window.magicWand.app.quit();
 }
 
+function showConfirm(message, options = {}) {
+  const { confirmText = "확인", danger = true } = options;
+  elements.confirmDialogTitle.textContent = message;
+  elements.confirmOkButton.textContent = confirmText;
+  elements.confirmOkButton.classList.toggle("danger-action", danger);
+  elements.confirmDialog.hidden = false;
+  elements.confirmOkButton.focus();
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+  });
+}
+
+function closeConfirm(result) {
+  if (elements.confirmDialog.hidden) {
+    return;
+  }
+  elements.confirmDialog.hidden = true;
+  if (confirmResolve) {
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    resolve(result);
+  }
+}
+
 async function loadRecords() {
   try {
     records = await window.magicWand.ipRecords.load();
@@ -162,7 +203,7 @@ async function addRecord() {
   }
 
   records.push(record);
-  if (await saveRecords("IP가 추가되었습니다.")) {
+  if (await saveRecords("등록 완료")) {
     clearForm();
   }
 }
@@ -185,7 +226,7 @@ async function updateRecord() {
   }
 
   records[selectedIndex] = record;
-  if (await saveRecords("IP가 수정되었습니다.")) {
+  if (await saveRecords("수정 완료")) {
     clearForm();
   }
 }
@@ -197,13 +238,13 @@ async function deleteRecord() {
   }
 
   const record = records[selectedIndex];
-  const ok = window.confirm(`${record.name} (${record.ipAddress}) 항목을 삭제할까요?`);
+  const ok = await showConfirm(`${record.name} (${record.ipAddress}) 항목을 삭제할까요?`, { confirmText: "삭제" });
   if (!ok) {
     return;
   }
 
   records.splice(selectedIndex, 1);
-  if (await saveRecords("IP가 삭제되었습니다.")) {
+  if (await saveRecords("삭제 완료")) {
     clearForm();
   }
 }
@@ -618,6 +659,7 @@ function showToast(message) {
 window.MagicWand = {
   switchPage,
   showToast,
+  showConfirm,
   renderTestList,
   statusLabel,
 };
