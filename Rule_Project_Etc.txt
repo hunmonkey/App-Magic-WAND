@@ -17,7 +17,7 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 1. 핵심 기술 스택
 ------------------------------------------------------------
 - Desktop App: Electron + HTML/CSS/JavaScript
-- Local Data: JSON file (`data/ip_records.json`) for the development stage
+- Local Data: portable JSON files under hidden `MagicWAND_Data/` beside the executable
 - Packaging: TBD (later: Electron Builder or similar Windows .exe packaging)
 - Legacy Prototype: Python + PySide6 files remain under `src/magic_wand/` for reference until migration is complete.
 
@@ -43,6 +43,7 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
   - `secure-erase.js`: 파일·폴더·드라이브 복구 불가 영구 삭제 (0 덮기 / DoD 3회)
   - `form-maker.js`: 양식지(증빙 문서) 보관함 저장/불러오기/관리
   - `file-tools.js`: 파일·폴더·아이콘 선택, ZIP 압축 백업, 작업 진행 상태·취소, 네트워크 드라이브 전송, 저장 경로·웹 바로가기 세트 관리, 아이콘 지정 웹 바로가기 생성
+  - `admin-work.js`: 요청 접수, 업무 체크리스트, 거래처, 비품/소모품 수불, 구매 진행, 계약 만료, 빠른 메모 등 행정 업무 대장 저장
 - `renderer/index.html`: 앱 화면 구조
 - `renderer/styles.css`: 앱 디자인
 - `renderer/app.js`: 페이지 전환(라우팅), IP 목록 관리, 검색, 공용 함수(switchPage, showToast)
@@ -56,15 +57,21 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
   - `label-maker.js`: 장비/IP 라벨지 미리보기·인쇄, 라벨 규격 직접 입력 화면 동작
   - `integrated-check.js`: 통합 점검 리포트 화면 동작 (여러 점검을 모아 증빙 문서로 저장)
   - `file-tools.js`, `web-shortcut.js`: 파일 백업/전송, 저장 경로 관리, 아이콘 포함 웹 바로가기 세트 저장·불러오기 화면 동작
+  - `admin-work.js`: 행정 상황판, 거래처/구매/수불/계약 대장, 문서 초안 생성 화면 동작
 - `tools/`: 별도 설치 없이 앱에 포함할 보조 실행 파일 위치
   - `tools/smartctl/`: SMART 상세 진단용 `smartctl.exe`와 `drivedb.h` 위치
   - `tools/hardware-probe/`: LibreHardwareMonitor 기반 센서 보조 진단 스크립트와 DLL 위치
   - `tools/yara/`: 위험 소프트웨어 점검용 YARA 실행 파일과 보조 탐지 룰 위치
-- `data/`: 실행 중 생성되는 로컬 데이터 저장 위치
+- `MagicWAND_Data/`: 포터블 실행파일 옆에 자동 생성되는 숨김 로컬 데이터/정품키 저장 위치
+- `data/`: 예전 개발 단계에서 쓰던 로컬 데이터 위치. 새 저장 코드는 새 폴더가 비어 있을 때만 이전 자료 복사용으로 참조한다.
 
 3. 아키텍처 특이사항 (주의)
 ------------------------------------------------------------
 - 첫 단계는 복잡한 DB 없이 JSON 파일로 저장합니다.
+- Magic WAND는 포터블 프로그램입니다. 겉으로 보이는 파일은 exe 하나를 원칙으로 하며, 저장이 필요한 자료와 정품키는 exe 파일 내부나 `%APPDATA%`가 아니라 실행파일 옆 숨김 폴더 `MagicWAND_Data/`에 저장합니다.
+- `MagicWAND_Data/`는 Windows에서 숨김 속성으로 자동 처리합니다. 자료 파일을 새로 추가할 때는 직접 경로를 만들지 말고 `electron/core/portable-data.js`의 공용 함수를 사용합니다.
+- 정품키 파일은 `MagicWAND_Data/magicwand.lic`, 인증 상태 파일은 `MagicWAND_Data/.mwstate`, 인증 보호 파일은 `MagicWAND_Data/.mwsecret`에 둡니다. 예전 방식처럼 exe 옆에 `magicwand.lic`가 있으면 실행 시 숨김 폴더로 옮겨 연동합니다.
+- 기존 버전의 `%APPDATA%\Magic WAND` 또는 개발용 `data/`에 남은 JSON 자료는 새 위치에 자료가 없을 때만 자동 복사합니다. 새 자료를 저장한 뒤에는 `MagicWAND_Data/`를 기준으로 판단합니다.
 - IP 목록 기능을 기반으로 이후 네트워크 스캔, 장비 상태 확인, 내보내기 기능 등을 단계적으로 추가합니다.
 - Electron 전환 중에는 Python/PySide6 버전을 즉시 삭제하지 않고, 새 Electron 앱이 안정화된 뒤 정리합니다.
 - IP 대역 스캔은 PC와 네트워크 장비에 부담을 주지 않도록 기본 최대 254개 주소까지만 조사합니다.
@@ -72,6 +79,7 @@ Magic WAND - 프로젝트 아키텍처 및 폴더 구조 가이드
 - 왼쪽 사이드메뉴는 `PC 관리`, `문서 관리`, `업무 도구`, `프로그램 종료` 순서로 구성합니다.
   - `PC 관리`: `기초 정보`, `통합 점검 리포트`, `점검 : HW,SW`, `점검 : Network`, `점검 : Printer`, `점검 : Share`, `점검 : Security`
   - `문서 관리`: `양식지 제작`, `양식지 관리`, `라벨지 생성`
+  - `행정 업무`: `행정 대장`
   - `업무 도구`: `파일 백업/전송`, `웹 바로가기`
   - `점검 : Network`에는 와이파이·공유기 찾기 기능을 통합합니다.
   - `점검 : Printer`, `점검 : Share`, `점검 : Security`, `통합 점검 리포트`, `양식지 제작`, `양식지 관리`, `라벨지 생성`, `파일 백업/전송`, `웹 바로가기`는 실제 기능으로 구현되었습니다.

@@ -3,6 +3,8 @@ const childProcess = require("child_process");
 const fs = require("fs/promises");
 const path = require("path");
 
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
+
 const jobs = new Map();
 
 function psQuote(value) {
@@ -31,24 +33,11 @@ function dateStamp() {
   ].join("");
 }
 
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getSettingsPath() {
-  return path.join(getDataDir(), "file_tools_settings.json");
-}
-
-async function ensureDataDir() {
-  await fs.mkdir(getDataDir(), { recursive: true });
-}
+const SETTINGS_FILE = "file_tools_settings.json";
 
 async function loadSettings() {
   try {
-    const text = await fs.readFile(getSettingsPath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, SETTINGS_FILE), "utf-8");
     return normalizeSettings(JSON.parse(text));
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -60,8 +49,7 @@ async function loadSettings() {
 
 async function saveSettings(settings) {
   const normalized = normalizeSettings(settings);
-  await ensureDataDir();
-  await fs.writeFile(getSettingsPath(), JSON.stringify(normalized, null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, SETTINGS_FILE), JSON.stringify(normalized, null, 2), "utf-8");
   return normalized;
 }
 

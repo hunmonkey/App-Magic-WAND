@@ -10,6 +10,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
+const { ensureDataDirSync, getDataFilePath, getDataRoot } = require("../core/portable-data");
+
 // ──────────────────────────────────────────────────────────────
 // 앱에 내장되는 검증용 공개키.
 // 황재훈 님이 `node tools/keygen/generate-keys.js` 실행 후 생성된
@@ -88,14 +90,32 @@ function openState(app, raw) {
   }
 }
 
-function secretLocations(app) {
-  return stateLocations(app).map((loc) => path.join(path.dirname(loc), SECRET_FILE));
+function uniquePaths(paths) {
+  const seen = new Set();
+  return paths.filter((loc) => {
+    const key = path.resolve(loc).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function samePath(left, right) {
+  return path.resolve(left).toLowerCase() === path.resolve(right).toLowerCase();
+}
+
+function secretReadLocations(app) {
+  return stateReadLocations(app).map((loc) => path.join(path.dirname(loc), SECRET_FILE));
+}
+
+function secretWriteLocations(app) {
+  return stateWriteLocations(app).map((loc) => path.join(path.dirname(loc), SECRET_FILE));
 }
 
 function loadStateSecret(app) {
   if (stateSecretCache) return stateSecretCache;
 
-  for (const loc of secretLocations(app)) {
+  for (const loc of secretReadLocations(app)) {
     try {
       const secret = fs.readFileSync(loc, "utf8").trim();
       if (/^[a-f0-9]{64}$/i.test(secret)) {
@@ -113,7 +133,7 @@ function loadStateSecret(app) {
 }
 
 function saveStateSecret(app, secret) {
-  for (const loc of secretLocations(app)) {
+  for (const loc of secretWriteLocations(app)) {
     try {
       fs.mkdirSync(path.dirname(loc), { recursive: true });
       fs.writeFileSync(loc, secret);
@@ -121,25 +141,30 @@ function saveStateSecret(app, secret) {
   }
 }
 
-// ── 상태 저장 위치 (여러 곳에 분산 → 한 곳 지워도 다른 곳에서 복원)
-function stateLocations(app) {
-  const locs = [];
+// ── 상태 저장은 숨김 데이터 폴더에만 쓰고, 예전 위치는 읽어서 한 번 이어받는다.
+function stateWriteLocations(app) {
+  return [path.join(ensureDataDirSync(app), STATE_FILE)];
+}
+
+function stateReadLocations(app) {
+  const writeLocs = stateWriteLocations(app);
+  const legacyLocs = [];
   const portableDir = getPortableDir();
   if (portableDir) {
-    locs.push(path.join(portableDir, STATE_FILE));
+    legacyLocs.push(path.join(portableDir, STATE_FILE));
   }
   try {
-    locs.push(path.join(path.dirname(process.execPath), STATE_FILE));
+    legacyLocs.push(path.join(path.dirname(process.execPath), STATE_FILE));
   } catch {}
   try {
-    locs.push(path.join(app.getPath("userData"), STATE_FILE));
+    legacyLocs.push(path.join(app.getPath("userData"), STATE_FILE));
   } catch {}
-  return locs;
+  return uniquePaths([...writeLocs, ...legacyLocs]);
 }
 
 function loadState(app) {
   const merged = { lastSeen: 0, strikes: 0, locked: false };
-  for (const loc of stateLocations(app)) {
+  for (const loc of stateReadLocations(app)) {
     try {
       const s = openState(app, fs.readFileSync(loc, "utf8"));
       if (!s) continue;
@@ -153,7 +178,7 @@ function loadState(app) {
 
 function saveState(app, state) {
   const sealed = sealState(app, state);
-  for (const loc of stateLocations(app)) {
+  for (const loc of stateWriteLocations(app)) {
     try {
       fs.mkdirSync(path.dirname(loc), { recursive: true });
       fs.writeFileSync(loc, sealed);
@@ -161,20 +186,57 @@ function saveState(app, state) {
   }
 }
 
-// ── 정품키 파일 찾기 (포터블 exe 옆 → userData → 리소스)
-function findLicense(app) {
-  const cands = [
-    path.join(path.dirname(process.execPath), LICENSE_FILE),
-    path.join(app.getPath("userData"), LICENSE_FILE),
-  ];
+function legacyLicenseLocations(app) {
+  const locs = [];
+  const dataPath = getDataFilePath(app, LICENSE_FILE);
+  locs.push(path.join(getDataRoot(app), LICENSE_FILE));
   const portableDir = getPortableDir();
   if (portableDir) {
-    cands.unshift(path.join(portableDir, LICENSE_FILE));
+    locs.push(path.join(portableDir, LICENSE_FILE));
   }
-  if (process.resourcesPath) cands.push(path.join(process.resourcesPath, LICENSE_FILE));
-  for (const c of cands) {
+  try {
+    locs.push(path.join(app.getPath("userData"), LICENSE_FILE));
+  } catch {}
+  if (process.resourcesPath) locs.push(path.join(process.resourcesPath, LICENSE_FILE));
+  return uniquePaths(locs).filter((loc) => !samePath(loc, dataPath));
+}
+
+function shouldMoveLegacyLicense(app, loc) {
+  const dirs = [getDataRoot(app), getPortableDir()].filter(Boolean);
+  return dirs.some((dir) => samePath(path.dirname(loc), dir));
+}
+
+function placeLicenseInDataDir(app) {
+  const dataPath = getDataFilePath(app, LICENSE_FILE);
+  ensureDataDirSync(app);
+  try {
+    if (fs.existsSync(dataPath)) return dataPath;
+  } catch {}
+
+  for (const loc of legacyLicenseLocations(app)) {
     try {
-      if (fs.existsSync(c)) return fs.readFileSync(c, "utf8");
+      if (!fs.existsSync(loc)) continue;
+      try {
+        if (shouldMoveLegacyLicense(app, loc)) {
+          fs.renameSync(loc, dataPath);
+        } else {
+          fs.copyFileSync(loc, dataPath);
+        }
+      } catch {
+        fs.copyFileSync(loc, dataPath);
+      }
+      if (fs.existsSync(dataPath)) return dataPath;
+    } catch {}
+  }
+  return "";
+}
+
+// ── 정품키 파일 찾기 (숨김 MagicWAND_Data 우선, 예전 위치는 한 번 옮겨서 연동)
+function findLicense(app) {
+  const licensePath = placeLicenseInDataDir(app);
+  if (licensePath) {
+    try {
+      return fs.readFileSync(licensePath, "utf8");
     } catch {}
   }
   return null;

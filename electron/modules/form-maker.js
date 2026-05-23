@@ -2,6 +2,11 @@ const { app, BrowserWindow, dialog } = require("electron");
 const fs = require("fs/promises");
 const path = require("path");
 
+const { ensureDataSubdir, getDataSubdirPath, getLegacyFilePath, migrateLegacySubdir } = require("../core/portable-data");
+
+const STORE_DIR = "form_documents";
+const LEGACY_FILE = "form_documents.json";
+
 function getDateStamp() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -9,17 +14,11 @@ function getDateStamp() {
 // 문서가 많아질 것을 대비해, 본문은 문서별 .html 파일에 저장하고
 // 목록은 가벼운 index.json(메타데이터만)으로 따로 관리한다.
 function getStoreDir() {
-  if (app.isPackaged) {
-    return path.join(app.getPath("userData"), "form_documents");
-  }
-  return path.join(app.getAppPath(), "data", "form_documents");
+  return getDataSubdirPath(app, STORE_DIR);
 }
 
-function getLegacyFilePath() {
-  if (app.isPackaged) {
-    return path.join(app.getPath("userData"), "form_documents.json");
-  }
-  return path.join(app.getAppPath(), "data", "form_documents.json");
+function getLegacyDocumentsFilePath() {
+  return getLegacyFilePath(app, LEGACY_FILE);
 }
 
 function getIndexPath() {
@@ -48,7 +47,7 @@ function normalizeEntry(entry) {
 }
 
 async function ensureDir() {
-  await fs.mkdir(getStoreDir(), { recursive: true });
+  await ensureDataSubdir(app, STORE_DIR);
 }
 
 async function readIndex() {
@@ -72,6 +71,8 @@ async function writeIndex(list) {
 
 // 이전 단일 파일(form_documents.json)이 있으면 문서별 파일 구조로 한 번 이전한다.
 async function migrateLegacy() {
+  await migrateLegacySubdir(app, STORE_DIR);
+
   try {
     await fs.access(getIndexPath());
     return;
@@ -81,7 +82,7 @@ async function migrateLegacy() {
 
   let text;
   try {
-    text = await fs.readFile(getLegacyFilePath(), "utf-8");
+    text = await fs.readFile(getLegacyDocumentsFilePath(), "utf-8");
   } catch {
     return;
   }
@@ -109,7 +110,7 @@ async function migrateLegacy() {
     });
   }
   await fs.writeFile(getIndexPath(), JSON.stringify(index, null, 2), "utf-8");
-  await fs.rename(getLegacyFilePath(), `${getLegacyFilePath()}.bak`).catch(() => {});
+  await fs.rename(getLegacyDocumentsFilePath(), `${getLegacyDocumentsFilePath()}.bak`).catch(() => {});
 }
 
 async function listDocs() {

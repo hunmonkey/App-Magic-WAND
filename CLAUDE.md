@@ -122,6 +122,12 @@
 
 Magic WAND처럼 Electron 포터블 exe를 만드는 프로젝트에서는 아래 순서를 지키세요.
 
+#### 포터블 데이터 저장 규칙
+- Magic WAND는 설치형 프로그램이 아니라 포터블 실행파일입니다. 겉으로 보이는 파일은 exe 하나를 원칙으로 하고, 저장이 필요한 자료와 정품키는 실행파일 옆의 `MagicWAND_Data/` 폴더에 저장해야 합니다.
+- `MagicWAND_Data/` 폴더는 기본적으로 숨김 속성으로 처리합니다. 사용자가 exe와 이 숨김 폴더를 함께 옮기면 자료와 정품 인증 상태도 함께 이동되는 구조로 유지합니다.
+- 새 저장 기능을 추가할 때는 각 모듈에서 직접 `%APPDATA%`, `data/`, `app.getPath("userData")`를 만들지 말고 `electron/core/portable-data.js`의 공용 함수를 사용합니다.
+- 기존 버전의 `%APPDATA%\Magic WAND` 또는 개발용 `data/` 자료는 새 위치가 비어 있을 때만 자동 복사합니다. 새 자료를 저장한 뒤에는 `MagicWAND_Data/`를 기준으로 봅니다.
+
 1. 빌드 전 기본 확인
    - 먼저 `npm.cmd run check`를 실행해 문법 오류가 없는지 확인합니다.
    - 그다음 `npm.cmd run dist`로 포터블 exe를 만듭니다.
@@ -129,14 +135,15 @@ Magic WAND처럼 Electron 포터블 exe를 만드는 프로젝트에서는 아�
    - `author is missed in package.json`, `DEP0190`, `build/build/icon.png path doesn't exist`처럼 빌드는 성공하고 경고만 남는 메시지는 실패로 단정하지 말고 최종 exit code와 생성 파일을 확인합니다.
 
 2. 정품키 파일 동봉 규칙
-   - 정품키 기능이 켜진 배포본은 exe 파일만으로 실행되지 않을 수 있습니다.
-   - `MagicWand-0.1.0-portable.exe`와 `magicwand.lic`는 같은 폴더에 함께 배포해야 합니다.
-   - 압축 해제형 `dist/win-unpacked/Magic WAND.exe`를 테스트할 때는 `dist/win-unpacked/magicwand.lic`도 함께 둡니다.
+   - 정품키 기능이 켜진 배포본은 exe 옆 숨김 폴더 `MagicWAND_Data/` 안의 `magicwand.lic`를 사용합니다.
+   - 배포할 때 겉으로 보이는 파일은 `MagicWand-0.1.0-portable.exe` 하나를 원칙으로 합니다. `magicwand.lic`, `.mwstate`, `.mwsecret`은 `MagicWAND_Data/` 안에 둡니다.
+   - 예전 방식처럼 exe 옆에 `magicwand.lic`가 있으면 앱 실행 시 `MagicWAND_Data/magicwand.lic`로 옮겨서 연동합니다.
+   - 압축 해제형 `dist/win-unpacked/Magic WAND.exe`를 테스트할 때는 `dist/win-unpacked/MagicWAND_Data/magicwand.lic`에 둡니다.
    - 잠금 화면에 `설정 필요`, `검증용 공개키가 들어 있지 않습니다`가 나오면 앱 고장이 아니라 `electron/modules/license.js`의 공개키가 비어 있거나, 공개키 삽입 전의 오래된 exe를 실행한 것입니다. `tools/keygen/generate-keys.js`로 키쌍을 만들고 `public.pem`만 앱에 심은 뒤 다시 빌드하세요.
    - `private.pem`은 정품키를 찍어내는 도장 같은 파일입니다. 절대 배포하거나 GitHub에 올리지 마세요.
 
 3. 배포에 포함하면 안 되는 파일
-   - `tools/keygen/`, `tools/keygen/private.pem`, `Rule_PW.txt`, 개발용 `.env`, 임시 데이터(`data/`), 라이선스 상태 파일(`.mwstate`, `.mwsecret`)은 배포하거나 GitHub에 올리지 않습니다.
+   - `tools/keygen/`, `tools/keygen/private.pem`, `Rule_PW.txt`, 개발용 `.env`, 임시 데이터(`data/`, `MagicWAND_Data/`), 라이선스 상태 파일(`.mwstate`, `.mwsecret`)은 배포하거나 GitHub에 올리지 않습니다.
    - 앱 실행에 필요한 보조 도구만 `extraResources`에 넣습니다. 현재 기준은 `tools/hardware-probe`, `tools/smartctl`, `tools/yara`입니다.
    - `tools` 폴더 전체를 통째로 넣으면 개발용 키 발급 도구까지 배포될 수 있으므로 피하세요.
 
@@ -153,7 +160,7 @@ Magic WAND처럼 Electron 포터블 exe를 만드는 프로젝트에서는 아�
    - `Get-Item dist/MagicWand-0.1.0-portable.exe`로 새 생성 시간 확인
    - `dist/win-unpacked/resources/tools/keygen`이 없는지 확인
    - 정품키 상태가 `ok-needs-login`으로 평가되는지 확인
-   - 사용자에게는 exe 단독이 아니라 `MagicWAND 실행 파일 + magicwand.lic`를 같은 폴더에 두라고 안내합니다.
+   - 사용자에게는 겉으로 보이는 파일은 exe 하나이며, 자료와 정품키는 숨김 `MagicWAND_Data/` 폴더에 들어간다고 안내합니다.
 
 
 ## 7. 프로젝트 고유 UI/UX 디자인 원칙 (Design & Aesthetic Rules)

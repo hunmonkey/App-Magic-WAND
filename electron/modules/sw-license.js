@@ -1,17 +1,8 @@
 const { app } = require("electron");
 const fs = require("fs/promises");
-const path = require("path");
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getFilePath() {
-  return path.join(getDataDir(), "sw_licenses.json");
-}
+const DATA_FILE = "sw_licenses.json";
 
 function makeId() {
   return `swlic-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -34,7 +25,7 @@ function normalize(entry) {
 
 async function list() {
   try {
-    const text = await fs.readFile(getFilePath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, DATA_FILE), "utf-8");
     const arr = JSON.parse(text);
     return Array.isArray(arr) ? arr.map(normalize) : [];
   } catch (error) {
@@ -46,8 +37,7 @@ async function list() {
 }
 
 async function writeAll(items) {
-  await fs.mkdir(getDataDir(), { recursive: true });
-  await fs.writeFile(getFilePath(), JSON.stringify(items.map(normalize), null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, DATA_FILE), JSON.stringify(items.map(normalize), null, 2), "utf-8");
 }
 
 async function save(payload) {

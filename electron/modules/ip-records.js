@@ -1,13 +1,13 @@
 const { app } = require("electron");
 const fs = require("fs/promises");
-const path = require("path");
 
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 const { isIPv4 } = require("./network");
 
 function register(ipcMain) {
   ipcMain.handle("records:load", async () => {
     try {
-      const text = await fs.readFile(getDataFilePath(), "utf-8");
+      const text = await fs.readFile(await getDataFileForRead(app, "ip_records.json"), "utf-8");
       const records = JSON.parse(text);
       return Array.isArray(records) ? records.map(normalizeRecord) : [];
     } catch (error) {
@@ -20,19 +20,10 @@ function register(ipcMain) {
 
   ipcMain.handle("records:save", async (_event, records) => {
     const cleanRecords = Array.isArray(records) ? records.map(normalizeRecord) : [];
-    const filePath = getDataFilePath();
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    const filePath = await getDataFileForWrite(app, "ip_records.json");
     await fs.writeFile(filePath, JSON.stringify(cleanRecords, null, 2), "utf-8");
     return cleanRecords;
   });
-}
-
-function getDataFilePath() {
-  if (app.isPackaged) {
-    return path.join(app.getPath("userData"), "ip_records.json");
-  }
-
-  return path.join(app.getAppPath(), "data", "ip_records.json");
 }
 
 function normalizeRecord(record) {

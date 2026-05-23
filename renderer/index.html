@@ -42,6 +42,13 @@
           </div>
 
           <div class="menu-group">
+            <button class="menu-heading" type="button" aria-expanded="true">행정 업무</button>
+            <div class="menu-sublist">
+              <button id="adminWorkMenu" class="menu-link sub-link" type="button">행정 대장</button>
+            </div>
+          </div>
+
+          <div class="menu-group">
             <button class="menu-heading" type="button" aria-expanded="true">업무 도구</button>
             <div class="menu-sublist">
               <button id="fileToolsMenu" class="menu-link sub-link" type="button">파일 백업/전송</button>
@@ -934,6 +941,435 @@
           </section>
         </section>
 
+        <section id="adminWorkPage" class="page">
+          <div class="admin-work-layout">
+            <section class="panel admin-work-side">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">행정 업무</p>
+                  <p class="muted-text">요청, 체크리스트, 비품, 계약, 메모를 한곳에서 관리합니다.</p>
+                </div>
+              </div>
+              <div class="admin-stat-grid">
+                <div><span>미완료 요청</span><strong id="adminStatOpen">0</strong></div>
+                <div><span>오늘까지</span><strong id="adminStatDue">0</strong></div>
+                <div><span>부족 비품</span><strong id="adminStatSupply">0</strong></div>
+                <div><span>만료 임박</span><strong id="adminStatContract">0</strong></div>
+                <div><span>구매 진행</span><strong id="adminStatPurchase">0</strong></div>
+                <div><span>거래처</span><strong id="adminStatVendor">0</strong></div>
+              </div>
+              <div class="admin-tab-list" role="tablist" aria-label="행정 업무 분류">
+                <button class="admin-tab-button active" type="button" data-admin-tab="overview">상황판</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="vendors">거래처</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="supplies">비품·수불</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="purchases">구매 진행</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="contracts">계약·만료</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="requests">요청 접수</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="checklists">업무 체크리스트</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="notes">빠른 메모</button>
+                <button class="admin-tab-button" type="button" data-admin-tab="documents">문서 초안</button>
+              </div>
+            </section>
+
+            <div class="admin-work-main">
+              <section class="panel admin-tab-panel active" data-admin-panel="overview">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">행정 상황판</p>
+                    <p class="muted-text">오늘 먼저 봐야 할 요청, 재고, 구매, 계약을 한 화면에 모읍니다.</p>
+                  </div>
+                </div>
+                <div class="admin-dashboard-grid">
+                  <section>
+                    <strong>처리할 요청</strong>
+                    <div id="adminDashUrgentList" class="admin-dashboard-list"></div>
+                  </section>
+                  <section>
+                    <strong>부족 비품</strong>
+                    <div id="adminDashStockList" class="admin-dashboard-list"></div>
+                  </section>
+                  <section>
+                    <strong>구매 진행</strong>
+                    <div id="adminDashPurchaseList" class="admin-dashboard-list"></div>
+                  </section>
+                  <section>
+                    <strong>만료 예정 계약</strong>
+                    <div id="adminDashContractList" class="admin-dashboard-list"></div>
+                  </section>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="vendors">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">거래처 간편 대장</p>
+                    <p class="muted-text">구매와 비품 입고에 자주 쓰는 업체 정보를 관리합니다.</p>
+                  </div>
+                </div>
+                <form id="adminVendorForm" class="admin-form-grid">
+                  <label>거래처명<input id="adminVendorName" type="text" autocomplete="off"></label>
+                  <label>사업자번호<input id="adminVendorBusinessNumber" type="text" autocomplete="off"></label>
+                  <label>담당자<input id="adminVendorContact" type="text" autocomplete="off"></label>
+                  <label>연락처<input id="adminVendorPhone" type="text" autocomplete="off"></label>
+                  <label>주요 품목<input id="adminVendorItems" type="text" autocomplete="off"></label>
+                  <label>평가
+                    <select id="adminVendorRating">
+                      <option>보통</option>
+                      <option>우수</option>
+                      <option>주의</option>
+                    </select>
+                  </label>
+                  <label>최근 구매일<input id="adminVendorRecentDate" type="date"></label>
+                  <label>사용 여부
+                    <select id="adminVendorActive">
+                      <option value="true">사용</option>
+                      <option value="false">중지</option>
+                    </select>
+                  </label>
+                  <label class="wide">메모<textarea id="adminVendorMemo"></textarea></label>
+                  <div class="tool-actions wide">
+                    <button type="submit">저장</button>
+                    <button id="adminVendorClearBtn" type="button">비우기</button>
+                    <button id="adminVendorDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                  </div>
+                </form>
+                <div id="adminVendorWrap" class="table-wrap admin-table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>거래처</th><th>담당자/연락처</th><th>주요 품목</th><th>평가</th><th>최근 구매</th><th>상태</th></tr>
+                    </thead>
+                    <tbody id="adminVendorBody"></tbody>
+                  </table>
+                  <p class="empty-message">등록된 거래처가 없습니다.</p>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="requests">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">요청 접수 대장</p>
+                    <p class="muted-text">전산 요청을 접수하고 처리 상태를 남깁니다.</p>
+                  </div>
+                </div>
+                <form id="adminRequestForm" class="admin-form-grid">
+                  <label>요청 제목<input id="adminRequestTitle" type="text" autocomplete="off"></label>
+                  <label>요청자/부서<input id="adminRequestRequester" type="text" autocomplete="off"></label>
+                  <label>구분
+                    <select id="adminRequestType">
+                      <option>장애</option>
+                      <option>설치</option>
+                      <option>권한</option>
+                      <option>문서</option>
+                      <option>기타</option>
+                    </select>
+                  </label>
+                  <label>우선순위
+                    <select id="adminRequestPriority">
+                      <option>일반</option>
+                      <option>높음</option>
+                      <option>긴급</option>
+                    </select>
+                  </label>
+                  <label>상태
+                    <select id="adminRequestStatus">
+                      <option>접수</option>
+                      <option>처리 중</option>
+                      <option>보류</option>
+                      <option>완료</option>
+                    </select>
+                  </label>
+                  <label>처리 예정일<input id="adminRequestDue" type="date"></label>
+                  <label class="wide">요청 내용<textarea id="adminRequestDetail"></textarea></label>
+                  <label class="wide">처리 결과<textarea id="adminRequestResult"></textarea></label>
+                  <div class="tool-actions wide">
+                    <button type="submit">저장</button>
+                    <button id="adminRequestClearBtn" type="button">비우기</button>
+                    <button id="adminRequestDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                  </div>
+                </form>
+                <div id="adminRequestWrap" class="table-wrap admin-table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>요청</th><th>요청자/구분</th><th>상태</th><th>우선순위</th><th>예정일</th></tr>
+                    </thead>
+                    <tbody id="adminRequestBody"></tbody>
+                  </table>
+                  <p class="empty-message">저장된 요청이 없습니다.</p>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="checklists">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">업무 체크리스트</p>
+                    <p class="muted-text">반복 업무를 빠짐없이 처리하도록 표준 절차를 만듭니다.</p>
+                  </div>
+                </div>
+                <form id="adminChecklistForm" class="admin-form-grid compact-form">
+                  <label>템플릿
+                    <select id="adminChecklistTemplate">
+                      <option value="newPc">신규 PC 지급</option>
+                      <option value="returnPc">퇴사자 PC 회수</option>
+                      <option value="printer">프린터 설치</option>
+                      <option value="share">공유폴더 생성</option>
+                    </select>
+                  </label>
+                  <label>업무명<input id="adminChecklistTitle" type="text" autocomplete="off"></label>
+                  <label>담당자<input id="adminChecklistOwner" type="text" autocomplete="off"></label>
+                  <label>기한<input id="adminChecklistDue" type="date"></label>
+                  <div class="tool-actions">
+                    <button type="submit">체크리스트 만들기</button>
+                  </div>
+                </form>
+                <div id="adminChecklistList" class="admin-checklist-list">
+                  <p class="empty-inline">아직 체크리스트가 없습니다.</p>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="supplies">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">비품·소모품 수불</p>
+                    <p class="muted-text">품목 기준정보와 입고·출고 이력을 함께 관리합니다.</p>
+                  </div>
+                </div>
+                <div class="admin-supply-grid">
+                  <section class="admin-subpanel">
+                    <strong>품목 기준정보</strong>
+                    <form id="adminSupplyForm" class="admin-form-grid">
+                      <label>품목코드<input id="adminSupplyCode" type="text" autocomplete="off"></label>
+                      <label>품목명<input id="adminSupplyName" type="text" autocomplete="off"></label>
+                      <label>분류
+                        <select id="adminSupplyCategory">
+                          <option>소모품</option>
+                          <option>비품</option>
+                          <option>케이블</option>
+                          <option>저장장치</option>
+                          <option>기타</option>
+                        </select>
+                      </label>
+                      <label>단위<input id="adminSupplyUnit" type="text" value="개" autocomplete="off"></label>
+                      <label>단가<input id="adminSupplyUnitPrice" type="number" min="0" value="0"></label>
+                      <label>주 거래처<select id="adminSupplyVendor"></select></label>
+                      <label>현재 수량<input id="adminSupplyQty" type="number" min="0" value="0"></label>
+                      <label>최소 수량<input id="adminSupplyMin" type="number" min="0" value="0"></label>
+                      <label>보관 위치<input id="adminSupplyLocation" type="text" autocomplete="off"></label>
+                      <label class="wide">메모<textarea id="adminSupplyMemo"></textarea></label>
+                      <div class="tool-actions wide">
+                        <button type="submit">저장</button>
+                        <button id="adminSupplyClearBtn" type="button">비우기</button>
+                        <button id="adminSupplyDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                      </div>
+                    </form>
+                  </section>
+                  <section class="admin-subpanel">
+                    <strong>입고·출고 기록</strong>
+                    <form id="adminSupplyLogForm" class="admin-form-grid compact-form">
+                      <label>품목<select id="adminSupplyLogSupply"></select></label>
+                      <label>일자<input id="adminSupplyLogDate" type="date"></label>
+                      <label>유형
+                        <select id="adminSupplyLogType">
+                          <option value="in">입고</option>
+                          <option value="out">출고</option>
+                        </select>
+                      </label>
+                      <label>수량<input id="adminSupplyLogQty" type="number" min="1" value="1"></label>
+                      <label>처리자<input id="adminSupplyLogHandler" type="text" autocomplete="off"></label>
+                      <label>거래처<select id="adminSupplyLogVendor"></select></label>
+                      <label>단가<input id="adminSupplyLogUnitCost" type="number" min="0" value="0"></label>
+                      <label>사유<input id="adminSupplyLogReason" type="text" autocomplete="off"></label>
+                      <label class="wide">메모<input id="adminSupplyLogMemo" type="text" autocomplete="off"></label>
+                      <div class="tool-actions wide">
+                        <button type="submit">수불 기록</button>
+                      </div>
+                    </form>
+                  </section>
+                </div>
+                <div class="admin-supply-tables">
+                  <div id="adminSupplyWrap" class="table-wrap admin-table-wrap">
+                    <table>
+                      <thead>
+                        <tr><th>품목</th><th>분류</th><th>수량</th><th>거래처/위치</th><th>단가</th></tr>
+                      </thead>
+                      <tbody id="adminSupplyBody"></tbody>
+                    </table>
+                    <p class="empty-message">등록된 비품이 없습니다.</p>
+                  </div>
+                  <div id="adminSupplyLogWrap" class="table-wrap admin-table-wrap">
+                    <table>
+                      <thead>
+                        <tr><th>일자</th><th>품목</th><th>유형</th><th>수량</th><th>사유/처리자</th><th>거래처/메모</th></tr>
+                      </thead>
+                      <tbody id="adminSupplyLogBody"></tbody>
+                    </table>
+                    <p class="empty-message">입출고 이력이 없습니다.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="purchases">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">구매 요청·견적·입고</p>
+                    <p class="muted-text">필요 품목 요청부터 견적 비교, 발주, 입고까지 진행 상태를 기록합니다.</p>
+                  </div>
+                </div>
+                <form id="adminPurchaseForm" class="admin-form-grid">
+                  <label>구매 제목<input id="adminPurchaseTitle" type="text" autocomplete="off"></label>
+                  <label>요청자/부서<input id="adminPurchaseRequester" type="text" autocomplete="off"></label>
+                  <label>상태
+                    <select id="adminPurchaseStatus">
+                      <option>요청</option>
+                      <option>견적</option>
+                      <option>발주</option>
+                      <option>입고 완료</option>
+                      <option>반려</option>
+                    </select>
+                  </label>
+                  <label>품목명<input id="adminPurchaseItemName" type="text" autocomplete="off"></label>
+                  <label>수량<input id="adminPurchaseQty" type="number" min="1" value="1"></label>
+                  <label>단위<input id="adminPurchaseUnit" type="text" value="개" autocomplete="off"></label>
+                  <label>희망 납기<input id="adminPurchaseNeededDate" type="date"></label>
+                  <label>연결 비품<select id="adminPurchaseSupply"></select></label>
+                  <label>선택 업체<select id="adminPurchaseSelectedVendor"></select></label>
+                  <label class="wide">구매 사유<textarea id="adminPurchaseReason"></textarea></label>
+                  <div class="admin-quote-grid wide">
+                    <strong>견적 비교</strong>
+                    <label>업체 1<select id="adminPurchaseQuoteVendor1"></select></label>
+                    <label>금액 1<input id="adminPurchaseQuoteAmount1" type="number" min="0"></label>
+                    <label>납기 1<input id="adminPurchaseQuoteDays1" type="number" min="0"></label>
+                    <label>비고 1<input id="adminPurchaseQuoteNote1" type="text" autocomplete="off"></label>
+                    <label>업체 2<select id="adminPurchaseQuoteVendor2"></select></label>
+                    <label>금액 2<input id="adminPurchaseQuoteAmount2" type="number" min="0"></label>
+                    <label>납기 2<input id="adminPurchaseQuoteDays2" type="number" min="0"></label>
+                    <label>비고 2<input id="adminPurchaseQuoteNote2" type="text" autocomplete="off"></label>
+                    <label>업체 3<select id="adminPurchaseQuoteVendor3"></select></label>
+                    <label>금액 3<input id="adminPurchaseQuoteAmount3" type="number" min="0"></label>
+                    <label>납기 3<input id="adminPurchaseQuoteDays3" type="number" min="0"></label>
+                    <label>비고 3<input id="adminPurchaseQuoteNote3" type="text" autocomplete="off"></label>
+                  </div>
+                  <div class="tool-actions wide">
+                    <button type="submit">저장</button>
+                    <button id="adminPurchaseClearBtn" type="button">비우기</button>
+                    <button id="adminPurchaseDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                  </div>
+                </form>
+                <div id="adminPurchaseWrap" class="table-wrap admin-table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>구매</th><th>수량/요청자</th><th>상태</th><th>추천 견적</th><th>희망 납기</th></tr>
+                    </thead>
+                    <tbody id="adminPurchaseBody"></tbody>
+                  </table>
+                  <p class="empty-message">등록된 구매 건이 없습니다.</p>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="contracts">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">계약·만료 알림</p>
+                    <p class="muted-text">유지보수, 도메인, 인증서, 서비스 계약 만료일을 관리합니다.</p>
+                  </div>
+                </div>
+                <form id="adminContractForm" class="admin-form-grid">
+                  <label>계약명<input id="adminContractName" type="text" autocomplete="off"></label>
+                  <label>업체<input id="adminContractVendor" type="text" autocomplete="off"></label>
+                  <label>분류
+                    <select id="adminContractType">
+                      <option>유지보수</option>
+                      <option>도메인</option>
+                      <option>인증서</option>
+                      <option>서비스</option>
+                      <option>기타</option>
+                    </select>
+                  </label>
+                  <label>시작일<input id="adminContractStart" type="date"></label>
+                  <label>만료일<input id="adminContractExpire" type="date"></label>
+                  <label>담당자<input id="adminContractOwner" type="text" autocomplete="off"></label>
+                  <label>금액/비용<input id="adminContractAmount" type="text" autocomplete="off"></label>
+                  <label>관련 파일 경로<input id="adminContractFilePath" type="text" autocomplete="off"></label>
+                  <label class="check-row">
+                    <input id="adminContractAutoRenew" type="checkbox">
+                    <span>자동연장 계약</span>
+                  </label>
+                  <label class="wide">메모<textarea id="adminContractMemo"></textarea></label>
+                  <div class="tool-actions wide">
+                    <button type="submit">저장</button>
+                    <button id="adminContractClearBtn" type="button">비우기</button>
+                    <button id="adminContractDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                  </div>
+                </form>
+                <div id="adminContractWrap" class="table-wrap admin-table-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>계약</th><th>업체/분류</th><th>만료일</th><th>담당자/연장</th><th>금액/파일/메모</th></tr>
+                    </thead>
+                    <tbody id="adminContractBody"></tbody>
+                  </table>
+                  <p class="empty-message">등록된 계약이 없습니다.</p>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="notes">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">빠른 메모·히스토리</p>
+                    <p class="muted-text">장비, 부서, 업무별 특이사항을 짧게 남깁니다.</p>
+                  </div>
+                </div>
+                <div class="admin-note-grid">
+                  <form id="adminNoteForm" class="admin-form-grid note-form">
+                    <label>제목<input id="adminNoteTitle" type="text" autocomplete="off"></label>
+                    <label>관련 대상<input id="adminNoteRelated" type="text" autocomplete="off"></label>
+                    <label class="wide">내용<textarea id="adminNoteBody"></textarea></label>
+                    <div class="tool-actions wide">
+                      <button type="submit">저장</button>
+                      <button id="adminNoteClearBtn" type="button">비우기</button>
+                      <button id="adminNoteDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                    </div>
+                  </form>
+                  <div id="adminNoteList" class="admin-note-list">
+                    <p class="empty-inline">아직 저장된 메모가 없습니다.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="panel admin-tab-panel" data-admin-panel="documents">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">행정 문서 초안</p>
+                    <p class="muted-text">반복되는 확인서와 보고서 문구를 빠르게 만듭니다.</p>
+                  </div>
+                </div>
+                <div class="admin-document-grid">
+                  <form id="adminDocumentForm" class="admin-form-grid">
+                    <label>문서 종류
+                      <select id="adminDocumentType">
+                        <option value="handover">자산 인수인계서</option>
+                        <option value="return">장비 반납 확인서</option>
+                        <option value="done">업무 처리 완료 보고서</option>
+                        <option value="purchase">소모품 구매 요청서</option>
+                        <option value="expire">계약 만료 알림</option>
+                      </select>
+                    </label>
+                    <label>부서/고객<input id="adminDocumentDept" type="text" autocomplete="off"></label>
+                    <label>대상자/담당자<input id="adminDocumentPerson" type="text" autocomplete="off"></label>
+                    <label class="wide">자산/계약/품목<input id="adminDocumentAsset" type="text" autocomplete="off"></label>
+                    <label class="wide">주요 내용<textarea id="adminDocumentWork"></textarea></label>
+                    <label class="wide">비고<textarea id="adminDocumentMemo"></textarea></label>
+                    <div class="tool-actions wide">
+                      <button type="submit">초안 생성</button>
+                      <button id="adminDocumentCopyBtn" type="button" disabled>복사</button>
+                    </div>
+                  </form>
+                  <textarea id="adminDocumentOutput" class="admin-document-output" readonly></textarea>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
         <section id="fileToolsPage" class="page">
           <div class="work-tool-grid">
             <section class="panel work-tool-panel">
@@ -1505,5 +1941,6 @@
     <script src="./pages/asset.js"></script>
     <script src="./pages/remote.js"></script>
     <script src="./pages/health.js"></script>
+    <script src="./pages/admin-work.js"></script>
   </body>
 </html>

@@ -170,6 +170,10 @@ contextBridge.exposeInMainWorld("magicWand", {
       return () => ipcRenderer.removeListener("remote:result", listener);
     },
   },
+  adminWork: {
+    load: () => ipcRenderer.invoke("adminWork:load"),
+    save: (payload) => ipcRenderer.invoke("adminWork:save", payload),
+  },
   license: {
     status: () => ipcRenderer.invoke("license:status"),
     login: (account, password) => ipcRenderer.invoke("license:login", { account, password }),

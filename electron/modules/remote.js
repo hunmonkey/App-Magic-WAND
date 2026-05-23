@@ -1,21 +1,10 @@
 const { app } = require("electron");
 const fs = require("fs/promises");
-const path = require("path");
 
+const { getDataFileForRead } = require("../core/portable-data");
 const { execFileAsync, runPowerShell, mapWithConcurrency } = require("../core/run-command");
 
 const ACTIONS = new Set(["ping", "winrm", "inventory"]);
-
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getAssetPath() {
-  return path.join(getDataDir(), "assets.json");
-}
 
 function normalizeAsset(entry) {
   return {
@@ -30,7 +19,7 @@ function normalizeAsset(entry) {
 
 async function loadTargets() {
   try {
-    const text = await fs.readFile(getAssetPath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, "assets.json"), "utf-8");
     const list = JSON.parse(text);
     const targets = (Array.isArray(list) ? list : [])
       .map(normalizeAsset)

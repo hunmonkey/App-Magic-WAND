@@ -3,6 +3,7 @@ const fsSync = require("fs");
 const fs = require("fs/promises");
 const path = require("path");
 
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 const { execFileAsync, runPowerShell } = require("../core/run-command");
 
 const TOOLS_DIR = app.isPackaged
@@ -14,20 +15,8 @@ const SENSOR_HELPER_SCRIPT = path.join(TOOLS_DIR, "hardware-probe", "MagicWandHa
 // 건강 점수 자체는 화면(renderer)에서 기존 점검 API를 모아 계산한다.
 // 이 모듈은 그 결과 스냅샷을 저장/불러오기/삭제만 담당한다.
 // 스냅샷은 전·후 비교(Before/After)와 점수 추세 양쪽에 함께 쓰인다.
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getFilePath() {
-  return path.join(getDataDir(), "health_snapshots.json");
-}
-
-function getBootHistoryPath() {
-  return path.join(getDataDir(), "boot_history.json");
-}
+const SNAPSHOT_FILE = "health_snapshots.json";
+const BOOT_HISTORY_FILE = "boot_history.json";
 
 function makeId() {
   return `snap-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -54,7 +43,7 @@ function normalize(entry) {
 
 async function list() {
   try {
-    const text = await fs.readFile(getFilePath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, SNAPSHOT_FILE), "utf-8");
     const arr = JSON.parse(text);
     return Array.isArray(arr) ? arr.map(normalize) : [];
   } catch (error) {
@@ -66,8 +55,7 @@ async function list() {
 }
 
 async function writeAll(arr) {
-  await fs.mkdir(getDataDir(), { recursive: true });
-  await fs.writeFile(getFilePath(), JSON.stringify(arr, null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, SNAPSHOT_FILE), JSON.stringify(arr, null, 2), "utf-8");
 }
 
 async function add(payload) {
@@ -129,7 +117,7 @@ $events | ConvertTo-Json -Depth 4
 }
 
 async function mergeBootHistory(entries) {
-  const existing = await readJsonArray(getBootHistoryPath());
+  const existing = await readJsonArray(await getDataFileForRead(app, BOOT_HISTORY_FILE));
   const map = new Map();
   for (const entry of [...existing.map(normalizeBootEntry), ...entries]) {
     if (entry.time && entry.durationMs > 0) {
@@ -139,8 +127,7 @@ async function mergeBootHistory(entries) {
   const history = [...map.values()]
     .sort((left, right) => new Date(right.time).getTime() - new Date(left.time).getTime())
     .slice(0, 50);
-  await fs.mkdir(getDataDir(), { recursive: true });
-  await fs.writeFile(getBootHistoryPath(), JSON.stringify(history, null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, BOOT_HISTORY_FILE), JSON.stringify(history, null, 2), "utf-8");
   return history;
 }
 

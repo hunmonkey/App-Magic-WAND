@@ -1,17 +1,8 @@
 const { app, Notification } = require("electron");
 const fs = require("fs/promises");
-const path = require("path");
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getFilePath() {
-  return path.join(getDataDir(), "ui_settings.json");
-}
+const DATA_FILE = "ui_settings.json";
 
 function defaults() {
   return {
@@ -30,7 +21,7 @@ function normalize(value) {
 
 async function get() {
   try {
-    const text = await fs.readFile(getFilePath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, DATA_FILE), "utf-8");
     return normalize(JSON.parse(text));
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -42,8 +33,7 @@ async function get() {
 
 async function save(settings) {
   const normalized = normalize(settings);
-  await fs.mkdir(getDataDir(), { recursive: true });
-  await fs.writeFile(getFilePath(), JSON.stringify(normalized, null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, DATA_FILE), JSON.stringify(normalized, null, 2), "utf-8");
   return normalized;
 }
 

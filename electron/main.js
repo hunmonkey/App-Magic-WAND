@@ -25,6 +25,7 @@ const netMonitor = require("./modules/net-monitor");
 const uiSettings = require("./modules/ui-settings");
 const achievements = require("./modules/achievements");
 const remote = require("./modules/remote");
+const adminWork = require("./modules/admin-work");
 const license = require("./modules/license");
 
 let mainWindow = null;
@@ -151,6 +152,7 @@ function registerIpcHandlers() {
   uiSettings.register(ipcMain);
   achievements.register(ipcMain);
   remote.register(ipcMain);
+  adminWork.register(ipcMain);
 
   ipcMain.on("app:quit", () => {
     app.quit();

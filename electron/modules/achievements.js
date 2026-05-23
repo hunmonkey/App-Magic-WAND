@@ -1,6 +1,6 @@
 const { app } = require("electron");
 const fs = require("fs/promises");
-const path = require("path");
+const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 
 const BADGES = [
   { id: "first-check", label: "첫 점검", description: "점검을 처음 완료했습니다.", test: (s) => s.checksDone >= 1 },
@@ -11,16 +11,7 @@ const BADGES = [
   { id: "night-owl", label: "야간 점검", description: "늦은 시간에도 꼼꼼히 점검했습니다.", test: (s) => s.nightRuns >= 1 },
 ];
 
-function getDataDir() {
-  if (app.isPackaged) {
-    return app.getPath("userData");
-  }
-  return path.join(app.getAppPath(), "data");
-}
-
-function getFilePath() {
-  return path.join(getDataDir(), "achievements.json");
-}
+const DATA_FILE = "achievements.json";
 
 function initialState() {
   return {
@@ -50,7 +41,7 @@ function normalize(value) {
 
 async function readState() {
   try {
-    const text = await fs.readFile(getFilePath(), "utf-8");
+    const text = await fs.readFile(await getDataFileForRead(app, DATA_FILE), "utf-8");
     return normalize(JSON.parse(text));
   } catch (error) {
     if (error.code === "ENOENT") {
@@ -61,8 +52,7 @@ async function readState() {
 }
 
 async function writeState(state) {
-  await fs.mkdir(getDataDir(), { recursive: true });
-  await fs.writeFile(getFilePath(), JSON.stringify(state, null, 2), "utf-8");
+  await fs.writeFile(await getDataFileForWrite(app, DATA_FILE), JSON.stringify(state, null, 2), "utf-8");
 }
 
 function applyBadges(state) {
