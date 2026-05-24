@@ -206,6 +206,13 @@ select:focus-visible,
   gap: 4px;
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.side-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .menu-group {
@@ -219,10 +226,15 @@ select:focus-visible,
 }
 
 .menu-heading {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
   padding: 7px 8px 3px;
   color: #93c5fd;
   font-size: 12px;
   font-weight: 700;
+  text-align: left;
 }
 
 .menu-sublist {
@@ -232,6 +244,10 @@ select:focus-visible,
 }
 
 .menu-link {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 6px;
   width: 100%;
   min-height: 32px;
   padding: 0 8px;
@@ -245,7 +261,22 @@ select:focus-visible,
 }
 
 .menu-link.sub-link {
-  padding-left: 18px;
+  padding-left: 10px;
+}
+
+.menu-heading::before,
+.menu-link::before {
+  content: attr(data-icon);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  color: currentColor;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.86;
 }
 
 .menu-link:hover:not(:disabled) {
@@ -323,6 +354,10 @@ select:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.record-form select {
+  width: 100%;
 }
 
 .record-form label,
@@ -1882,6 +1917,37 @@ tbody tr.selected {
   margin-top: auto;
 }
 
+.printer-driver-panel {
+  gap: 8px;
+}
+
+.printer-driver-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.printer-driver-search input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.printer-driver-list {
+  flex: 1;
+  min-height: 140px;
+  overflow: auto;
+}
+
+.printer-driver-list .tool-card {
+  cursor: pointer;
+}
+
+.printer-driver-list .tool-card-head strong {
+  min-width: 0;
+}
+
 /* Share page */
 .share-path-row {
   display: flex;
@@ -2106,6 +2172,31 @@ tbody tr.selected {
 
 .asset-right .list-panel {
   min-height: 0;
+  padding: 18px;
+}
+
+#assetPage .asset-list-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#assetPage .asset-search-field {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+#assetPage .asset-search-field span {
+  flex: none;
+}
+
+#assetPage .asset-search-field input {
+  width: clamp(180px, 28vw, 520px);
+}
+
+#assetPage .asset-table-wrap table {
+  min-width: 820px;
 }
 
 .asset-detail-panel {
@@ -2683,11 +2774,25 @@ tbody tr.selected {
   white-space: nowrap;
 }
 
-.ic-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px 18px;
+.ic-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
+}
+
+.ic-info-grid {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 8px 18px;
+  align-items: center;
+}
+
+.ic-report-actions {
+  justify-content: flex-end;
+  margin-left: auto;
 }
 
 .ic-field {
@@ -2704,13 +2809,25 @@ tbody tr.selected {
 }
 
 .ic-info-grid input {
-  flex: 1;
-  width: auto;
+  flex: none;
+  width: 180px;
   min-width: 0;
-  padding: 8px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.ic-field:nth-child(1) input {
+  width: 230px;
+}
+
+.ic-field:nth-child(2) input {
+  width: 240px;
+}
+
+.ic-field:nth-child(3) input {
+  width: 210px;
 }
 
 .ic-info-grid input[readonly] {
@@ -3039,9 +3156,10 @@ tbody tr.selected {
 
 /* 메뉴 제목이 button으로 바뀌어 전역 버튼 스타일을 초기화한다. */
 .menu-heading {
-  display: flex;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
+  column-gap: 6px;
   width: 100%;
   min-height: 0;
   border: none;
@@ -3078,7 +3196,7 @@ tbody tr.selected {
 /* PC 성능 점검 레이아웃 */
 .health-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 440px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 6px;
   height: 100%;
@@ -3098,6 +3216,12 @@ tbody tr.selected {
 }
 .health-score-panel > .panel-header {
   width: 100%;
+}
+.health-score-panel .panel-header .muted-text,
+.health-widget-panel .panel-header .muted-text {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 .health-widget-panel {
   display: flex;
@@ -3171,13 +3295,19 @@ tbody tr.selected {
 }
 .health-snapshot-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
   width: 100%;
   margin-top: 8px;
 }
+.health-snapshot-actions button {
+  flex: 0 0 auto;
+  padding: 0 10px;
+}
 .health-snapshot-actions select {
-  flex: 1 1 120px;
+  flex: 0 1 150px;
+  min-width: 0;
 }
 .health-breakdown {
   display: flex;

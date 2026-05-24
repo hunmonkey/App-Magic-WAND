@@ -7,6 +7,7 @@
   const customerInput = document.querySelector("#icCustomer");
   const assetTagInput = document.querySelector("#icAssetTag");
   const inspectorInput = document.querySelector("#icInspector");
+  const refreshButton = document.querySelector("#icRefreshButton");
   const startButton = document.querySelector("#icStartButton");
   const printButton = document.querySelector("#icPrintButton");
   const saveButton = document.querySelector("#icSaveButton");
@@ -48,11 +49,23 @@
     ui.switchPage("#integratedCheckPage", menu);
   });
 
+  refreshButton.addEventListener("click", refreshReport);
   startButton.addEventListener("click", runAll);
   printButton.addEventListener("click", () => {
     ui.exportPdf({ defaultFileName: buildTitle() });
   });
   saveButton.addEventListener("click", saveReport);
+
+  function refreshReport() {
+    if (running) return;
+    dateInput.value = new Date().toLocaleString("ko-KR");
+    lastReport = null;
+    progress.innerHTML = "";
+    results.innerHTML = "";
+    printButton.disabled = true;
+    saveButton.disabled = true;
+    ui.showToast("통합 점검 리포트를 새로고침했습니다.");
+  }
 
   async function runAll() {
     if (running) return;
@@ -341,6 +354,7 @@
 
   function setRunning(isRunning) {
     running = isRunning;
+    refreshButton.disabled = isRunning;
     startButton.disabled = isRunning;
     printButton.disabled = isRunning || !lastReport;
     saveButton.disabled = isRunning || !lastReport;

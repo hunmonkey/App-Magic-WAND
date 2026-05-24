@@ -17,18 +17,12 @@
   const progressFill = document.querySelector("#driverProgressFill");
   const progressText = document.querySelector("#driverProgressText");
 
-  let loaded = false;
   let exporting = false;
   let currentJobId = "";
   let lastDestination = "";
 
-  menu.addEventListener("click", async () => {
+  menu.addEventListener("click", () => {
     ui.switchPage("#driverPage", menu);
-    if (!loaded) {
-      loaded = true;
-      await setDefaultDestination();
-      await loadDrivers();
-    }
   });
 
   window.magicWand.driver.onProgress((payload) => {
@@ -44,6 +38,7 @@
       window.magicWand.fileTools.openPath(lastDestination).catch((error) => ui.showToast(`폴더 열기 실패: ${error.message}`));
     }
   });
+  tableWrap.classList.add("empty");
 
   async function setDefaultDestination() {
     try {
@@ -101,6 +96,9 @@
 
   async function exportDrivers() {
     if (exporting) return;
+    if (!destInput.value.trim()) {
+      await setDefaultDestination();
+    }
     const destinationDir = destInput.value.trim();
     if (!destinationDir) {
       ui.showToast("저장할 폴더를 선택해 주세요.");

@@ -44,7 +44,6 @@
   let monitorPoints = [];
 
   initGrid();
-  renderConfigMessage("새로고침 버튼을 눌러 네트워크 어댑터 정보를 불러오세요.");
 
   menu.addEventListener("click", () => {
     ui.switchPage("#controlPanelPage", menu);

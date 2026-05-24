@@ -42,8 +42,6 @@
 
   renderTargetSummary();
   setRunning(false);
-  renderFolderTreeMessage("검사대상 폴더의 새로고침 버튼을 눌러 폴더 트리를 불러오세요.");
-  list.append(createIdleMessage("검사시작 버튼을 눌러 위험 소프트웨어를 점검하세요."));
 
   async function runScan() {
     const currentRunId = runId + 1;
@@ -362,13 +360,6 @@
     empty.className = "threat-folder-empty";
     empty.textContent = message;
     folderTree.append(empty);
-  }
-
-  function createIdleMessage(message) {
-    const empty = document.createElement("p");
-    empty.className = "empty-inline";
-    empty.textContent = message;
-    return empty;
   }
 
   function getVisibleNodes() {

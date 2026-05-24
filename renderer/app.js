@@ -147,6 +147,7 @@ function switchPage(pageSelector, menuButton) {
       link.classList.toggle("active", link === menuButton);
     }
   });
+  window.MagicWandMenu?.activate(menuButton);
 }
 
 function createCommandPalette() {

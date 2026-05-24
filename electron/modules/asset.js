@@ -5,10 +5,12 @@ const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-da
 // 자산 대장은 form-maker처럼 파일을 나눌 만큼 무겁지 않으므로
 // ip-records와 같은 단일 JSON 배열로 보관한다.
 const DATA_FILE = "assets.json";
+const ASSET_TYPES = new Set(["pc", "monitor", "printer", "other"]);
 
 function normalize(entry) {
   return {
     id: String(entry?.id ?? "").trim() || makeId(),
+    type: normalizeType(entry?.type),
     assetTag: String(entry?.assetTag ?? "").trim(),
     name: String(entry?.name ?? "").trim(),
     ip: String(entry?.ip ?? "").trim(),
@@ -20,6 +22,11 @@ function normalize(entry) {
     memo: String(entry?.memo ?? "").trim(),
     updatedAt: String(entry?.updatedAt ?? "").trim(),
   };
+}
+
+function normalizeType(type) {
+  const value = String(type ?? "").trim();
+  return ASSET_TYPES.has(value) ? value : "pc";
 }
 
 function makeId() {

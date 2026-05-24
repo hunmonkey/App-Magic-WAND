@@ -9,17 +9,13 @@
   const tableBody = document.querySelector("#startupTableBody");
   const tableWrap = document.querySelector(".startup-table-wrap");
 
-  let loaded = false;
   let busy = false;
 
   menu.addEventListener("click", () => {
     ui.switchPage("#startupPage", menu);
-    if (!loaded) {
-      loaded = true;
-      refresh();
-    }
   });
   refreshBtn.addEventListener("click", refresh);
+  tableWrap.classList.add("empty");
 
   async function refresh() {
     if (busy) return;

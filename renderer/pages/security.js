@@ -23,6 +23,7 @@
   const erasePickFolderBtn = document.querySelector("#erasePickFolderBtn");
   const eraseRunBtn = document.querySelector("#eraseRunBtn");
   const eraseDriveSelect = document.querySelector("#eraseDriveSelect");
+  const eraseDriveRefreshBtn = document.querySelector("#eraseDriveRefreshBtn");
   const eraseDriveBtn = document.querySelector("#eraseDriveBtn");
   const eraseStatus = document.querySelector("#eraseStatus");
 
@@ -32,7 +33,6 @@
 
   menu.addEventListener("click", () => {
     ui.switchPage("#securityPage", menu);
-    loadDrives();
   });
 
   refreshBtn.addEventListener("click", loadStatus);
@@ -45,6 +45,7 @@
   erasePickFileBtn.addEventListener("click", () => pickErase("file"));
   erasePickFolderBtn.addEventListener("click", () => pickErase("folder"));
   eraseRunBtn.addEventListener("click", runErasePath);
+  eraseDriveRefreshBtn.addEventListener("click", loadDrives);
   eraseDriveBtn.addEventListener("click", runEraseDrive);
   window.magicWand.secureErase.onProgress(renderEraseProgress);
   bindToolButtons(page);
@@ -53,7 +54,7 @@
   renderActivationMessage("새로고침 버튼을 눌러 정품 인증·암호화 상태를 확인하세요.");
   bitlockerEl.append(emptyState("새로고침 버튼을 눌러 드라이브 암호화를 확인하세요."));
   userListEl.append(emptyState("새로고침 버튼을 눌러 사용자 계정을 불러오세요."));
-  setDrivePlaceholder("드라이브 목록을 불러오는 중입니다");
+  setDrivePlaceholder("목록 조회 버튼을 눌러 확인하세요");
 
   function setDrivePlaceholder(text) {
     eraseDriveSelect.innerHTML = "";
@@ -365,6 +366,7 @@
     erasePickFileBtn.disabled = on;
     erasePickFolderBtn.disabled = on;
     eraseRunBtn.disabled = on || !eraseTarget;
+    eraseDriveRefreshBtn.disabled = on;
     eraseDriveBtn.disabled = on || !eraseDriveSelect.value;
     keyFindBtn.disabled = on;
     if (text) setEraseStatus(text);

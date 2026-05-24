@@ -13,16 +13,15 @@
   const softwareRefresh = document.querySelector("#softwareRefresh");
   const softwareTableBody = document.querySelector("#softwareTableBody");
 
-  let loaded = false;
   let softwareItems = [];
 
   menu.addEventListener("click", () => {
     ui.switchPage("#systemInfoPage", menu);
-    loadOnce();
   });
 
   hardwareGroups.textContent = "새로고침 버튼을 눌러 PC 사양을 불러오세요.";
-  renderSoftwareMessage("새로고침 버튼을 눌러 설치 프로그램 목록을 불러오세요.");
+  hardwareSaveText.disabled = true;
+  softwareSaveText.disabled = true;
 
   hardwareRefresh.addEventListener("click", loadHardware);
   hardwareSaveText.addEventListener("click", saveHardwareText);
@@ -31,16 +30,6 @@
   });
   softwareSaveText.addEventListener("click", saveSoftwareText);
   softwareRefresh.addEventListener("click", loadSoftware);
-
-  function loadOnce() {
-    if (loaded) {
-      return;
-    }
-
-    loaded = true;
-    loadHardware();
-    loadSoftware();
-  }
 
   async function loadHardware() {
     hardwareRefresh.disabled = true;

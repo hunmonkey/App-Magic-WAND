@@ -53,6 +53,9 @@ contextBridge.exposeInMainWorld("magicWand", {
     clearQueue: (name) => ipcRenderer.invoke("printer:clearQueue", name),
     setDefault: (name) => ipcRenderer.invoke("printer:setDefault", name),
     restartSpooler: () => ipcRenderer.invoke("printer:restartSpooler"),
+    listDrivers: (query) => ipcRenderer.invoke("printer:listDrivers", query),
+    installDriver: (payload) => ipcRenderer.invoke("printer:installDriver", payload),
+    openDriverStore: () => ipcRenderer.invoke("printer:openDriverStore"),
   },
   share: {
     list: () => ipcRenderer.invoke("share:list"),

@@ -14,7 +14,6 @@
 
   const FIX_TOKEN = "recovery-fix-confirmed";
 
-  let loaded = false;
   let busy = false;
   let volumes = [];
   let selectedLetter = "";
@@ -22,14 +21,13 @@
 
   menu.addEventListener("click", () => {
     ui.switchPage("#recoveryPage", menu);
-    if (!loaded) {
-      loaded = true;
-      refresh();
-    }
   });
   refreshBtn.addEventListener("click", refresh);
   scanBtn.addEventListener("click", () => runCheck("scan"));
   fixBtn.addEventListener("click", confirmFix);
+
+  volumeList.append(empty("새로고침 버튼을 눌러 USB/SD 목록을 불러오세요."));
+  selectedBox.append(row("선택", "USB/SD 목록을 먼저 불러오세요."));
 
   async function refresh() {
     if (busy) return;

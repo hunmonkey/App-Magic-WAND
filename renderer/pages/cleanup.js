@@ -15,18 +15,13 @@
   const progressFill = document.querySelector("#cleanupProgressFill");
   const progressText = document.querySelector("#cleanupProgressText");
 
-  let loaded = false;
   let scanning = false;
   let running = false;
   let scanItems = [];
   let currentJobId = "";
 
-  menu.addEventListener("click", async () => {
+  menu.addEventListener("click", () => {
     ui.switchPage("#cleanupPage", menu);
-    if (!loaded) {
-      loaded = true;
-      await scan();
-    }
   });
 
   api.onProgress((payload) => {

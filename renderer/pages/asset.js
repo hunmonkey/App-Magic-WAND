@@ -6,6 +6,7 @@
   const api = window.magicWand.asset;
   const form = document.querySelector("#assetForm");
   const fields = {
+    type: document.querySelector("#assetType"),
     assetTag: document.querySelector("#assetTag"),
     name: document.querySelector("#assetName"),
     ip: document.querySelector("#assetIp"),
@@ -30,6 +31,12 @@
   let assets = [];
   let selectedId = null;
   let loaded = false;
+  const ASSET_TYPES = {
+    pc: "PC",
+    monitor: "모니터",
+    printer: "프린터",
+    other: "기타 전산장비",
+  };
 
   menu.addEventListener("click", () => {
     ui.switchPage("#assetPage", menu);
@@ -78,6 +85,7 @@
       return null;
     }
     return {
+      type: normalizeAssetType(fields.type.value),
       assetTag: fields.assetTag.value.trim(),
       name,
       ip: fields.ip.value.trim(),
@@ -133,6 +141,7 @@
   function clearForm() {
     selectedId = null;
     form.reset();
+    fields.type.value = "pc";
     clearDetail();
     renderTable();
   }
@@ -141,6 +150,7 @@
     selectedId = id;
     const asset = assets.find((item) => item.id === id);
     if (!asset) return;
+    fields.type.value = normalizeAssetType(asset.type);
     fields.assetTag.value = asset.assetTag || "";
     fields.name.value = asset.name || "";
     fields.ip.value = asset.ip || "";
@@ -156,10 +166,6 @@
 
   function clearDetail() {
     detailBody.innerHTML = "";
-    const empty = document.createElement("p");
-    empty.className = "empty-inline";
-    empty.textContent = "목록에서 자산을 선택하세요.";
-    detailBody.append(empty);
   }
 
   // 선택한 자산의 정보를 한 카드로 모아 보여준다. (사용자 입력값은 textContent로만 넣어 안전하게 처리)
@@ -184,6 +190,7 @@
 
     card.append(
       buildInfoGrid([
+        ["종류", assetTypeLabel(asset.type)],
         ["IP 주소", asset.ip],
         ["위치", asset.location],
         ["담당자", asset.owner],
@@ -203,15 +210,18 @@
 
     const actions = document.createElement("div");
     actions.className = "asset-detail-actions";
-    const checkBtn = document.createElement("button");
-    checkBtn.type = "button";
-    checkBtn.textContent = "이 자산으로 통합 점검";
-    checkBtn.addEventListener("click", () => startCheckForAsset(asset));
+    if (normalizeAssetType(asset.type) === "pc") {
+      const checkBtn = document.createElement("button");
+      checkBtn.type = "button";
+      checkBtn.textContent = "이 자산으로 통합 점검";
+      checkBtn.addEventListener("click", () => startCheckForAsset(asset));
+      actions.append(checkBtn);
+    }
     const pdfBtn = document.createElement("button");
     pdfBtn.type = "button";
     pdfBtn.textContent = "PDF 저장";
     pdfBtn.addEventListener("click", () => saveAssetPdf(asset));
-    actions.append(checkBtn, pdfBtn);
+    actions.append(pdfBtn);
     card.append(actions);
 
     detailBody.append(card);
@@ -291,7 +301,7 @@
     const keyword = searchInput.value.trim().toLowerCase();
     const visible = assets.filter((asset) => {
       if (!keyword) return true;
-      return [asset.assetTag, asset.name, asset.ip, asset.location, asset.owner, asset.memo]
+      return [assetTypeLabel(asset.type), asset.assetTag, asset.name, asset.ip, asset.spec, asset.location, asset.owner, asset.memo]
         .join(" ")
         .toLowerCase()
         .includes(keyword);
@@ -305,6 +315,7 @@
         row.classList.add("selected");
       }
       row.append(
+        createCell(assetTypeLabel(asset.type)),
         createCell(asset.assetTag),
         createCell(asset.name),
         createCell(asset.ip),
@@ -376,6 +387,7 @@
         window.magicWand.network.scan(),
       ]);
       const primary = net.primaryInterface || (net.privateInterfaces || [])[0] || {};
+      fields.type.value = "pc";
       if (net.pcName && !fields.name.value.trim()) fields.name.value = net.pcName;
       if (primary.privateIp && !fields.ip.value.trim()) fields.ip.value = primary.privateIp;
       const spec = buildSpecSummary(hw.groups || []);
@@ -407,5 +419,13 @@
       }
     }
     return found.slice(0, 3).join(" / ");
+  }
+
+  function normalizeAssetType(type) {
+    return ASSET_TYPES[type] ? type : "pc";
+  }
+
+  function assetTypeLabel(type) {
+    return ASSET_TYPES[normalizeAssetType(type)];
   }
 })();

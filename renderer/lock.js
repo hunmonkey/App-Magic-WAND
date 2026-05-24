@@ -22,7 +22,7 @@
         renderLogin(status);
         break;
       case "no-license":
-        renderInfo("정품키 없음", "정품키 파일(magicwand.lic)을 찾을 수 없습니다. 프로그램 폴더에 정품키를 넣은 뒤 다시 실행해 주세요.");
+        renderInfo("정품키 없음", "정품키 파일(magicwand.lic)을 찾을 수 없습니다. 실행파일 옆 숨김 폴더 MagicWAND_Data 안에 넣은 뒤 다시 실행해 주세요.");
         break;
       case "invalid":
         renderInfo("정품키 오류", "정품키가 올바르지 않습니다. 발급한 정품키 파일이 맞는지 확인해 주세요.");

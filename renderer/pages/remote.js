@@ -23,7 +23,6 @@
   };
 
   let targets = [];
-  let loaded = false;
   let running = false;
   let currentJobId = "";
 
@@ -36,16 +35,15 @@
 
   menu.addEventListener("click", () => {
     ui.switchPage("#remotePage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadTargets();
-    }
   });
 
   elements.refreshBtn.addEventListener("click", loadTargets);
   elements.selectAllBtn.addEventListener("click", () => setAllTargets(true));
   elements.clearBtn.addEventListener("click", () => setAllTargets(false));
   elements.runBtn.addEventListener("click", runRemoteJob);
+
+  elements.targetList.append(createEmptyState("새로고침 버튼을 눌러 대상 PC 목록을 불러오세요."));
+  updateButtons();
 
   async function loadTargets() {
     setRunning(false);
