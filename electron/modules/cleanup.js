@@ -5,6 +5,8 @@ const path = require("path");
 const { runPowerShell } = require("../core/run-command");
 
 const DELETE_TOKEN = "cleanup-confirmed";
+const DETAIL_LIMIT = 12;
+const PROGRESS_INTERVAL_MS = 180;
 
 function envPath(name, fallback = "") {
   return String(process.env[name] || fallback || "").trim();
@@ -120,29 +122,47 @@ function browserCacheRoots(local, roaming) {
   return roots;
 }
 
-async function scanTargets(targetIds = []) {
+async function scanTargets(payload = [], event = null) {
+  const { targetIds, jobId } = normalizeScanPayload(payload);
   const wanted = idSet(targetIds);
   const targets = makeTargets().filter((target) => !wanted || wanted.has(target.id));
   const result = [];
+  const progress = createProgressReporter(event, jobId);
 
-  for (const target of targets) {
-    const counters = { bytes: 0, files: 0, folders: 0, errors: 0 };
+  for (const [index, target] of targets.entries()) {
+    const counters = { bytes: 0, files: 0, folders: 0, errors: 0, samples: [], failures: [] };
+    const rootPaths = [...(target.roots || []), ...(target.files || [])].filter(Boolean);
+    progress({
+      phase: "scan",
+      percent: scanPercent(index, targets.length),
+      message: `${target.label} 스캔을 시작합니다.`,
+      currentPath: rootPaths[0] || "",
+    }, true);
     for (const root of target.roots || []) {
-      await scanPath(root, counters);
+      await scanPath(root, counters, { progress, target, index, total: targets.length });
     }
     for (const file of target.files || []) {
-      await scanPath(file, counters);
+      await scanPath(file, counters, { progress, target, index, total: targets.length });
     }
     result.push({
       id: target.id,
       label: target.label,
       description: target.description,
+      roots: rootPaths,
+      samples: counters.samples,
+      failures: counters.failures,
       bytes: counters.bytes,
       files: counters.files,
       folders: counters.folders,
       errors: counters.errors,
       defaultSelected: target.defaultSelected,
     });
+    progress({
+      phase: "scan",
+      percent: scanPercent(index + 1, targets.length),
+      message: `${target.label} 스캔을 마쳤습니다.`,
+      currentPath: rootPaths[0] || "",
+    }, true);
   }
 
   return {
@@ -151,14 +171,25 @@ async function scanTargets(targetIds = []) {
   };
 }
 
-async function scanPath(targetPath, counters) {
+async function scanPath(targetPath, counters, context = {}) {
   const safePath = String(targetPath || "").trim();
   if (!safePath) return;
+  const { progress, target, index = 0, total = 1 } = context;
+
+  progress?.({
+    phase: "scan",
+    percent: scanPercent(index, total),
+    message: `${target?.label || "정리 대상"} 스캔 중입니다.`,
+    currentPath: safePath,
+  });
 
   let stats;
   try {
     stats = await fs.lstat(safePath);
-  } catch {
+  } catch (error) {
+    if (!isMissingError(error)) {
+      rememberFailure(counters, safePath, error, "접근 실패");
+    }
     return;
   }
 
@@ -169,6 +200,7 @@ async function scanPath(targetPath, counters) {
   if (stats.isFile()) {
     counters.files += 1;
     counters.bytes += stats.size;
+    rememberSample(counters, safePath, "file", stats.size);
     return;
   }
 
@@ -177,16 +209,17 @@ async function scanPath(targetPath, counters) {
   }
 
   counters.folders += 1;
+  rememberSample(counters, safePath, "folder", 0);
   let entries;
   try {
     entries = await fs.readdir(safePath);
-  } catch {
-    counters.errors += 1;
+  } catch (error) {
+    rememberFailure(counters, safePath, error, "폴더 열기 실패");
     return;
   }
 
   for (const entry of entries) {
-    await scanPath(path.join(safePath, entry), counters);
+    await scanPath(path.join(safePath, entry), counters, context);
   }
 }
 
@@ -209,7 +242,7 @@ async function runCleanup(event, payload = {}) {
   let done = 0;
   const details = [];
 
-  for (const target of selected) {
+  for (const [index, target] of selected.entries()) {
     done += 1;
     sendProgress(event, {
       jobId: payload.jobId,
@@ -219,7 +252,12 @@ async function runCleanup(event, payload = {}) {
       message: `${target.label} 정리 중입니다.`,
     });
 
-    const detail = await cleanTarget(target);
+    const detail = await cleanTarget(target, {
+      event,
+      jobId: payload.jobId,
+      index,
+      total: selected.length,
+    });
     details.push({ id: target.id, label: target.label, ...detail });
   }
 
@@ -240,58 +278,85 @@ async function runCleanup(event, payload = {}) {
   };
 }
 
-async function cleanTarget(target) {
+async function cleanTarget(target, context = {}) {
   if (target.kind === "recycle") {
-    await runPowerShell("Clear-RecycleBin -Force -ErrorAction SilentlyContinue", 60000).catch(() => "");
-    return { removed: 0, failed: 0 };
+    const recyclePath = (target.roots || []).find(Boolean) || "휴지통";
+    reportCleanupProgress(context, target, recyclePath);
+    try {
+      await runPowerShell("Clear-RecycleBin -Force -ErrorAction Stop", 60000);
+      return { removed: 1, failed: 0, removedItems: [pathDetail(recyclePath, "휴지통 비우기 완료")], failedItems: [] };
+    } catch (error) {
+      return { removed: 0, failed: 1, removedItems: [], failedItems: [pathDetail(recyclePath, describeError(error, "휴지통 비우기 실패"))] };
+    }
   }
 
   let removed = 0;
   let failed = 0;
+  const removedItems = [];
+  const failedItems = [];
 
   for (const file of target.files || []) {
+    reportCleanupProgress(context, target, file);
     if (!isSafeFile(file, target)) {
       failed += 1;
+      addDetail(failedItems, pathDetail(file, "허용되지 않은 파일"));
       continue;
     }
     try {
       await fs.rm(file, { force: true, maxRetries: 2, retryDelay: 120 });
       removed += 1;
-    } catch {
+      addDetail(removedItems, pathDetail(file, "삭제 완료"));
+    } catch (error) {
       failed += 1;
+      addDetail(failedItems, pathDetail(file, describeError(error, "삭제 실패")));
     }
   }
 
   for (const root of target.roots || []) {
-    const result = await cleanChildren(root);
+    const result = await cleanChildren(root, target, context);
     removed += result.removed;
     failed += result.failed;
+    appendDetails(removedItems, result.removedItems);
+    appendDetails(failedItems, result.failedItems);
   }
 
-  return { removed, failed };
+  return { removed, failed, removedItems, failedItems };
 }
 
-async function cleanChildren(root) {
-  assertSafeRoot(root);
+async function cleanChildren(root, cleanupTarget, context = {}) {
+  try {
+    assertSafeRoot(root);
+  } catch (error) {
+    return { removed: 0, failed: 1, removedItems: [], failedItems: [pathDetail(root, describeError(error, "안전 확인 실패"))] };
+  }
+
   let entries;
   try {
     entries = await fs.readdir(root);
-  } catch {
-    return { removed: 0, failed: 0 };
+  } catch (error) {
+    if (isMissingError(error)) {
+      return { removed: 0, failed: 0, removedItems: [], failedItems: [] };
+    }
+    return { removed: 0, failed: 1, removedItems: [], failedItems: [pathDetail(root, describeError(error, "폴더 열기 실패"))] };
   }
 
   let removed = 0;
   let failed = 0;
+  const removedItems = [];
+  const failedItems = [];
   for (const entry of entries) {
-    const target = path.join(root, entry);
+    const childPath = path.join(root, entry);
+    reportCleanupProgress(context, cleanupTarget, childPath);
     try {
-      await fs.rm(target, { recursive: true, force: true, maxRetries: 2, retryDelay: 120 });
+      await fs.rm(childPath, { recursive: true, force: true, maxRetries: 2, retryDelay: 120 });
       removed += 1;
-    } catch {
+      addDetail(removedItems, pathDetail(childPath, "삭제 완료"));
+    } catch (error) {
       failed += 1;
+      addDetail(failedItems, pathDetail(childPath, describeError(error, "삭제 실패")));
     }
   }
-  return { removed, failed };
+  return { removed, failed, removedItems, failedItems };
 }
 
 function idSet(values) {
@@ -299,6 +364,118 @@ function idSet(values) {
     return null;
   }
   return new Set(values.map((value) => String(value || "").trim()).filter(Boolean));
+}
+
+function normalizeScanPayload(payload) {
+  if (Array.isArray(payload)) {
+    return { targetIds: payload, jobId: "" };
+  }
+  return {
+    targetIds: Array.isArray(payload?.targetIds) ? payload.targetIds : [],
+    jobId: cleanText(payload?.jobId),
+  };
+}
+
+function createProgressReporter(event, jobId) {
+  let lastSent = 0;
+  return (payload, force = false) => {
+    if (!jobId) return;
+    const now = Date.now();
+    if (!force && now - lastSent < PROGRESS_INTERVAL_MS) {
+      return;
+    }
+    lastSent = now;
+    sendProgress(event, { jobId, ...payload });
+  };
+}
+
+function scanPercent(index, total) {
+  if (!total) return 0;
+  return Math.min(95, Math.max(1, Math.round((index / total) * 95)));
+}
+
+function rememberSample(counters, targetPath, type, bytes = 0) {
+  if (counters.samples.length >= DETAIL_LIMIT) return;
+  counters.samples.push(pathDetail(targetPath, type === "file" ? formatByteLabel(bytes) : "폴더"));
+}
+
+function rememberFailure(counters, targetPath, error, fallback) {
+  counters.errors += 1;
+  addDetail(counters.failures, pathDetail(targetPath, describeError(error, fallback)));
+}
+
+function addDetail(list, item) {
+  if (Array.isArray(list) && list.length < DETAIL_LIMIT) {
+    list.push(item);
+  }
+}
+
+function appendDetails(target, items = []) {
+  for (const item of items) {
+    addDetail(target, item);
+  }
+}
+
+function pathDetail(targetPath, note = "") {
+  const text = String(targetPath || "").trim();
+  return {
+    name: path.basename(text) || text,
+    path: text,
+    note,
+  };
+}
+
+function reportCleanupProgress(context, target, currentPath) {
+  const now = Date.now();
+  if (now - (context.lastProgressAt || 0) < PROGRESS_INTERVAL_MS) {
+    return;
+  }
+  context.lastProgressAt = now;
+  sendProgress(context.event, {
+    jobId: context.jobId,
+    targetId: target?.id,
+    phase: "running",
+    percent: Math.max(5, Math.round(((context.index || 0) / Math.max(1, context.total || 1)) * 95)),
+    message: `${target?.label || "정리 대상"} 처리 중입니다.`,
+    currentPath,
+  });
+}
+
+function describeError(error, fallback = "실패") {
+  const code = error?.code || "";
+  if (code === "EACCES" || code === "EPERM") return "권한 부족 또는 보호된 파일";
+  if (code === "EBUSY") return "다른 프로그램이 사용 중";
+  if (code === "ENOENT" || code === "ENOTDIR") return "이미 없거나 경로 없음";
+  if (code === "ENOTEMPTY") return "폴더가 비어 있지 않음";
+
+  const message = cleanText(error?.message);
+  if (message) {
+    if (/access is denied|denied|unauthorized|permission/i.test(message)) return "권한 부족";
+    if (/used by another process|being used|in use/i.test(message)) return "다른 프로그램이 사용 중";
+    return message.split(/\r?\n/)[0].slice(0, 120);
+  }
+  return fallback;
+}
+
+function isMissingError(error) {
+  return error?.code === "ENOENT" || error?.code === "ENOTDIR";
+}
+
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+function formatByteLabel(bytes) {
+  const value = Number(bytes) || 0;
+  if (value < 1024) return `${value} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let size = value / 1024;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+  return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[index]}`;
 }
 
 function assertSafeRoot(root) {
@@ -327,7 +504,7 @@ function sendProgress(event, payload) {
 }
 
 function register(ipcMain) {
-  ipcMain.handle("cleanup:scan", (_event, targetIds) => scanTargets(targetIds));
+  ipcMain.handle("cleanup:scan", (event, payload) => scanTargets(payload, event));
   ipcMain.handle("cleanup:run", (event, payload) => runCleanup(event, payload));
 }
 

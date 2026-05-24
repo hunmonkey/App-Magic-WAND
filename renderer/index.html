@@ -49,7 +49,7 @@
           </div>
 
           <div class="menu-group collapsed">
-            <button class="menu-heading" type="button" aria-expanded="false" data-icon="⌘">업무 도구</button>
+            <button class="menu-heading" type="button" aria-expanded="false" data-icon="⌘">부가기능</button>
             <div class="menu-sublist">
               <button id="fileToolsMenu" class="menu-link sub-link" type="button" data-icon="⇪">파일 백업/전송</button>
               <button id="webShortcutMenu" class="menu-link sub-link" type="button" data-icon="◎">웹 바로가기</button>
@@ -502,17 +502,23 @@
                   <p class="muted-text">보관함 드라이버와 Windows 내장 드라이버를 설치합니다.</p>
                 </div>
               </div>
-              <div class="printer-driver-search">
-                <input id="printerDriverSearch" type="text" placeholder="모델명 입력: HP M404, SL-C513W, Brother HL" autocomplete="off" />
-                <button id="printerDriverSearchBtn" type="button">드라이버 조회</button>
+              <div class="printer-driver-picker">
+                <label>제조사
+                  <select id="printerMakerSelect"></select>
+                </label>
+                <label>모델
+                  <select id="printerModelSelect" disabled></select>
+                </label>
+              </div>
+              <div class="printer-driver-tools">
+                <button id="printerDriverRefreshBtn" type="button">드라이버 목록 새로고침</button>
                 <button id="printerDriverFolderBtn" type="button">보관함 열기</button>
               </div>
               <div id="printerDriverList" class="tool-list printer-driver-list"></div>
               <div class="tool-actions">
-                <button id="printerDriverInstallBtn" type="button" disabled>선택 드라이버 설치</button>
-                <button id="printerBuiltinInstallBtn" type="button">내장 드라이버 설치</button>
+                <button id="printerDriverInstallBtn" type="button" disabled>선택 모델 설치</button>
                 <button type="button" data-windows-tool="printers">장치 및 프린터 열기</button>
-                <button type="button" data-windows-tool="printerTroubleshoot">프린터 문제 해결사</button>
+                <button id="printerManufacturerHomeBtn" type="button">제조사 홈페이지</button>
                 <button id="printerSpoolerBtn" type="button">인쇄 스풀러 재시작</button>
               </div>
               <p class="caution-text small-caution">스풀러 재시작과 드라이버 설치에는 관리자 권한이 필요할 수 있습니다.</p>
@@ -1494,7 +1500,6 @@
                 <p class="muted-text">아이콘을 선택하지 않으면 기본 브라우저 아이콘을 사용합니다.</p>
                 <div class="tool-actions">
                   <button id="shortcutAddBtn" type="submit">목록에 추가</button>
-                  <button id="shortcutSampleBtn" type="button">예시 넣기</button>
                 </div>
               </form>
               <label>
@@ -1631,8 +1636,8 @@
                     <th>이름</th>
                     <th>위치</th>
                     <th>실행 명령</th>
-                    <th>상태</th>
-                    <th class="startup-action-col"></th>
+                    <th class="startup-status-col">상태</th>
+                    <th class="startup-action-col">동작</th>
                   </tr>
                 </thead>
                 <tbody id="startupTableBody"></tbody>

@@ -1921,17 +1921,32 @@ tbody tr.selected {
   gap: 8px;
 }
 
-.printer-driver-search {
+.printer-driver-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+  gap: 6px;
+  align-items: end;
+  margin-top: 6px;
+}
+
+.printer-driver-picker label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-strong);
+  font-size: 12px;
+}
+
+.printer-driver-picker select {
+  width: 100%;
+  min-width: 0;
+}
+
+.printer-driver-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  margin-top: 6px;
-}
-
-.printer-driver-search input {
-  flex: 1 1 180px;
-  min-width: 0;
 }
 
 .printer-driver-list {
@@ -2017,8 +2032,38 @@ tbody tr.selected {
   margin-top: 6px;
 }
 
-.startup-action-col {
+.startup-table-wrap table {
+  table-layout: fixed;
+  min-width: 980px;
+}
+
+.startup-table-wrap th:nth-child(1),
+.startup-table-wrap td:nth-child(1) {
+  width: 14%;
+}
+
+.startup-table-wrap th:nth-child(2),
+.startup-table-wrap td:nth-child(2) {
+  width: 9%;
+}
+
+.startup-table-wrap th:nth-child(3),
+.startup-table-wrap td:nth-child(3) {
+  width: auto;
+}
+
+.startup-status-col,
+.startup-table-wrap td:nth-child(4) {
   width: 84px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.startup-action-col,
+.startup-table-wrap td:nth-child(5) {
+  width: 86px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .startup-toggle-btn {
@@ -2646,6 +2691,11 @@ tbody tr.selected {
   padding: 0 8px;
 }
 
+.shortcut-set-panel select {
+  flex-basis: 100%;
+  padding-right: 32px;
+}
+
 .progress-box {
   display: grid;
   gap: 6px;
@@ -2690,6 +2740,8 @@ tbody tr.selected {
   margin: 0;
   color: var(--muted);
   font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .path-list,
@@ -3521,6 +3573,67 @@ tbody tr.selected {
   color: var(--blue);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.cleanup-path-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e3e9f0;
+}
+
+.cleanup-path-section.fail {
+  padding: 8px;
+  border: 1px solid rgba(180, 35, 24, 0.3);
+  border-radius: 6px;
+  background: var(--red-soft);
+}
+
+.cleanup-path-section b {
+  display: block;
+  color: var(--text-strong);
+  font-size: 11px;
+}
+
+.cleanup-path-list {
+  display: grid;
+  gap: 5px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cleanup-path-list li {
+  min-width: 0;
+}
+
+.cleanup-path-list code {
+  display: block;
+  margin-top: 2px;
+  padding: 4px 6px;
+  color: var(--text-detail);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.cleanup-path-list small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.cleanup-path-section.fail .cleanup-path-list small {
+  color: var(--red);
+}
+
+.cleanup-path-more {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .remote-result-card.ok {

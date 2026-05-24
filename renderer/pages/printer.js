@@ -13,25 +13,32 @@
   const clearBtn = document.querySelector("#printerClearBtn");
   const queueBtn = document.querySelector("#printerQueueBtn");
   const spoolerBtn = document.querySelector("#printerSpoolerBtn");
-  const driverSearchInput = document.querySelector("#printerDriverSearch");
-  const driverSearchBtn = document.querySelector("#printerDriverSearchBtn");
+  const makerSelect = document.querySelector("#printerMakerSelect");
+  const modelSelect = document.querySelector("#printerModelSelect");
+  const driverRefreshBtn = document.querySelector("#printerDriverRefreshBtn");
   const driverFolderBtn = document.querySelector("#printerDriverFolderBtn");
   const driverListEl = document.querySelector("#printerDriverList");
   const driverInstallBtn = document.querySelector("#printerDriverInstallBtn");
-  const builtinInstallBtn = document.querySelector("#printerBuiltinInstallBtn");
+  const manufacturerHomeBtn = document.querySelector("#printerManufacturerHomeBtn");
   const driverStatusEl = document.querySelector("#printerDriverStatus");
 
   let printers = [];
   let selectedName = "";
   let driverPackages = [];
+  let selectedMaker = "";
   let selectedDriverId = "";
   let installingDriver = false;
+  let driverCatalogLoaded = false;
+  const PREFERRED_MAKERS = ["Samsung", "LG", "HP", "Brother", "Canon", "Epson", "Fuji", "Xerox", "Ricoh", "Kyocera", "Microsoft", "Hancom"];
 
   listEl.append(emptyState("새로고침 버튼을 눌러 프린터 목록을 불러오세요."));
-  driverListEl.append(emptyState("모델명을 입력하거나 보관함 전체를 조회하세요."));
+  resetDriverPicker("드라이버 목록을 새로고침하면 제조사와 모델을 선택할 수 있습니다.");
 
   menu.addEventListener("click", () => {
     ui.switchPage("#printerPage", menu);
+    if (!driverCatalogLoaded) {
+      loadDriverPackages();
+    }
   });
 
   refreshBtn.addEventListener("click", loadPrinters);
@@ -40,16 +47,18 @@
   clearBtn.addEventListener("click", clearQueue);
   queueBtn.addEventListener("click", () => openTool("printers"));
   spoolerBtn.addEventListener("click", restartSpooler);
-  driverSearchBtn.addEventListener("click", loadDriverPackages);
-  driverSearchInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      loadDriverPackages();
-    }
-  });
+  driverRefreshBtn.addEventListener("click", loadDriverPackages);
+  makerSelect.addEventListener("input", handleMakerChange);
+  makerSelect.addEventListener("change", handleMakerChange);
+  modelSelect.addEventListener("change", () => selectDriverPackage(modelSelect.value));
   driverFolderBtn.addEventListener("click", openDriverStore);
   driverInstallBtn.addEventListener("click", installSelectedDriver);
-  builtinInstallBtn.addEventListener("click", installBuiltinDriver);
+  manufacturerHomeBtn.addEventListener("click", openManufacturerHome);
   bindToolButtons(page);
+
+  function handleMakerChange() {
+    selectMaker(makerSelect.value);
+  }
 
   async function loadPrinters() {
     refreshBtn.disabled = true;
@@ -217,37 +226,139 @@
   }
 
   async function loadDriverPackages() {
+    selectedMaker = "";
     selectedDriverId = "";
     driverInstallBtn.disabled = true;
-    driverSearchBtn.disabled = true;
-    ui.setBusy(driverSearchBtn, true);
+    manufacturerHomeBtn.disabled = false;
+    driverRefreshBtn.disabled = true;
+    ui.setBusy(driverRefreshBtn, true);
+    makerSelect.disabled = true;
+    modelSelect.disabled = true;
     driverListEl.innerHTML = "";
-    driverListEl.append(ui.createLoadingState("프린터 드라이버를 찾는 중입니다."));
-    driverStatusEl.textContent = "PrinterDriver 보관함과 Windows 등록 드라이버를 확인하는 중입니다.";
+    driverListEl.append(ui.createLoadingState("프린터 드라이버 목록을 만드는 중입니다."));
+    driverStatusEl.textContent = "제조사와 모델 목록을 새로 만드는 중입니다.";
     try {
-      const result = await window.magicWand.printer.listDrivers(driverSearchInput.value.trim());
-      driverPackages = result.drivers || [];
-      renderDriverPackages();
-      driverStatusEl.textContent = `보관함 ${result.localCount || 0}개, Windows 등록 ${result.windowsCount || 0}개 중 ${driverPackages.length}개를 표시했습니다.`;
+      const result = await window.magicWand.printer.listDrivers("");
+      driverPackages = normalizeDriverPackages(result.drivers || []);
+      driverCatalogLoaded = true;
+      renderMakerOptions();
+      modelSelect.innerHTML = "";
+      modelSelect.append(option("", "제조사를 먼저 선택하세요"));
+      modelSelect.disabled = true;
+      driverListEl.innerHTML = "";
+      driverListEl.append(emptyState("제조사를 선택하세요."));
+      driverStatusEl.textContent = `보관함 ${result.localCount || 0}개, Windows ${result.windowsCount || 0}개 모델을 불러왔습니다. 제조사를 선택하세요.`;
     } catch (err) {
       driverPackages = [];
-      driverListEl.innerHTML = "";
-      driverListEl.append(emptyState(`드라이버 조회 실패: ${err.message}`));
+      driverCatalogLoaded = false;
+      resetDriverPicker(`드라이버 조회 실패: ${err.message}`);
       driverStatusEl.textContent = "드라이버 조회에 실패했습니다.";
     } finally {
-      driverSearchBtn.disabled = false;
-      ui.setBusy(driverSearchBtn, false);
+      driverRefreshBtn.disabled = false;
+      ui.setBusy(driverRefreshBtn, false);
+      makerSelect.disabled = !driverCatalogLoaded;
     }
+  }
+
+  function normalizeDriverPackages(drivers) {
+    return drivers
+      .filter((driver) => driver && driver.model)
+      .map((driver) => ({
+        ...driver,
+        manufacturer: manufacturerOf(driver),
+      }))
+      .sort((a, b) => {
+        const maker = a.manufacturer.localeCompare(b.manufacturer, "ko-KR");
+        if (maker) return maker;
+        return String(a.model).localeCompare(String(b.model), "ko-KR");
+      });
+  }
+
+  function renderMakerOptions() {
+    makerSelect.innerHTML = "";
+    makerSelect.append(option("", "제조사 선택"));
+    const found = unique(driverPackages.map((driver) => driver.manufacturer))
+      .filter((maker) => driversForMaker(maker).length > 0);
+    const makers = found.sort((a, b) => {
+      const aIndex = PREFERRED_MAKERS.indexOf(a);
+      const bIndex = PREFERRED_MAKERS.indexOf(b);
+      if (aIndex !== -1 || bIndex !== -1) {
+        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      }
+      return a.localeCompare(b, "ko-KR");
+    });
+    for (const maker of makers) {
+      const count = driversForMaker(maker).length;
+      makerSelect.append(option(maker, `${maker} (${count})`));
+    }
+    if (!makers.length) {
+      makerSelect.append(option("", "표시할 제조사 없음"));
+    }
+  }
+
+  function resetDriverPicker(message) {
+    makerSelect.innerHTML = "";
+    makerSelect.append(option("", "제조사 선택"));
+    modelSelect.innerHTML = "";
+    modelSelect.append(option("", "모델 선택"));
+    modelSelect.disabled = true;
+    manufacturerHomeBtn.disabled = false;
+    driverListEl.innerHTML = "";
+    driverListEl.append(emptyState(message));
+    driverStatusEl.textContent = message;
+  }
+
+  function selectMaker(maker) {
+    selectedMaker = maker;
+    selectedDriverId = "";
+    renderModelOptions();
+    renderDriverPackages();
+    driverInstallBtn.disabled = true;
+    manufacturerHomeBtn.disabled = false;
+    if (!maker) {
+      driverStatusEl.textContent = "제조사를 선택하면 설치 가능한 모델이 표시됩니다.";
+      return;
+    }
+    const count = driversForMaker(maker).length;
+    driverStatusEl.textContent = count
+      ? `${maker} 모델 ${count}개를 찾았습니다. 모델을 선택하세요.`
+      : `${maker} 모델을 찾지 못했습니다. 보관함에 해당 제조사 드라이버 파일을 넣은 뒤 새로고침하세요.`;
+  }
+
+  function renderModelOptions() {
+    modelSelect.innerHTML = "";
+    if (!selectedMaker) {
+      modelSelect.append(option("", "제조사를 먼저 선택하세요"));
+      modelSelect.disabled = true;
+      return;
+    }
+    const drivers = driversForMaker(selectedMaker);
+    if (!drivers.length) {
+      modelSelect.append(option("", "등록된 모델 없음"));
+      modelSelect.disabled = true;
+      return;
+    }
+    modelSelect.append(option("", "모델 선택"));
+    for (const driver of drivers) {
+      modelSelect.append(option(driver.id, `${driver.model} · ${driver.sourceLabel || "드라이버"}`));
+    }
+    modelSelect.disabled = false;
   }
 
   function renderDriverPackages() {
     driverListEl.innerHTML = "";
-    if (!driverPackages.length) {
-      driverListEl.append(emptyState("표시할 드라이버가 없습니다."));
+    if (!selectedMaker) {
+      driverListEl.append(emptyState("제조사를 선택하세요."));
       driverInstallBtn.disabled = true;
       return;
     }
-    for (const driver of driverPackages) {
+    const drivers = driversForMaker(selectedMaker);
+    if (!drivers.length) {
+      driverListEl.append(emptyState("선택한 제조사에 표시할 모델이 없습니다."));
+      driverInstallBtn.disabled = true;
+      return;
+    }
+    for (const driver of drivers) {
       const card = document.createElement("article");
       card.className = "tool-card";
       if (driver.id === selectedDriverId) card.classList.add("active");
@@ -257,7 +368,7 @@
       const name = document.createElement("strong");
       name.textContent = driver.model || driver.fileName || "모델명 확인 안 됨";
       const badge = document.createElement("span");
-      badge.className = `tool-badge ${driver.source === "inf" ? "ok" : driver.source === "installer" ? "warn" : "muted"}`;
+      badge.className = `tool-badge ${driverSourceClass(driver)}`;
       badge.textContent = driver.sourceLabel || "드라이버";
       head.append(name, badge);
 
@@ -273,8 +384,15 @@
 
   function selectDriverPackage(id) {
     selectedDriverId = id;
+    if (modelSelect.value !== id) {
+      modelSelect.value = id;
+    }
     renderDriverPackages();
     driverInstallBtn.disabled = installingDriver || !selectedDriverId;
+    const selected = selectedDriver();
+    if (selected) {
+      driverStatusEl.textContent = `${selected.manufacturer} ${selected.model} 드라이버를 선택했습니다.`;
+    }
   }
 
   function driverMeta(driver) {
@@ -304,22 +422,30 @@
     }
   }
 
+  async function openManufacturerHome() {
+    const maker = selectedMaker || makerSelect.value;
+    manufacturerHomeBtn.disabled = true;
+    ui.setBusy(manufacturerHomeBtn, true);
+    try {
+      await window.magicWand.printer.openManufacturerHome(maker);
+      driverStatusEl.textContent = maker
+        ? `${maker} 드라이버 다운로드 센터를 열었습니다.`
+        : "제조사 드라이버 다운로드 모음 페이지를 열었습니다.";
+    } catch (err) {
+      ui.showToast(`제조사 홈페이지 열기 실패: ${err.message}`);
+    } finally {
+      ui.setBusy(manufacturerHomeBtn, false);
+      manufacturerHomeBtn.disabled = false;
+    }
+  }
+
   async function installSelectedDriver() {
-    const selected = driverPackages.find((driver) => driver.id === selectedDriverId);
+    const selected = selectedDriver();
     if (!selected) {
-      ui.showToast("설치할 드라이버를 먼저 선택해 주세요.");
+      ui.showToast("설치할 제조사와 모델을 먼저 선택해 주세요.");
       return;
     }
     await installDriver(selected, driverInstallBtn);
-  }
-
-  async function installBuiltinDriver() {
-    const model = driverSearchInput.value.trim();
-    if (!model) {
-      ui.showToast("Windows 내장 드라이버로 설치할 모델명을 입력해 주세요.");
-      return;
-    }
-    await installDriver({ source: "windows", model }, builtinInstallBtn);
   }
 
   async function installDriver(payload, button) {
@@ -359,13 +485,80 @@
   }
 
   function setDriverInstallBusy(isBusy, busyButton) {
-    [driverSearchBtn, driverFolderBtn, driverInstallBtn, builtinInstallBtn].forEach((btn) => {
+    [driverRefreshBtn, driverFolderBtn, driverInstallBtn, manufacturerHomeBtn].forEach((btn) => {
       btn.disabled = isBusy;
       ui.setBusy(btn, btn === busyButton && isBusy);
     });
+    makerSelect.disabled = isBusy || !driverCatalogLoaded;
+    modelSelect.disabled = isBusy || !selectedMaker || driversForMaker(selectedMaker).length === 0;
+    manufacturerHomeBtn.disabled = isBusy;
     if (!isBusy) {
       driverInstallBtn.disabled = !selectedDriverId;
     }
+  }
+
+  function selectedDriver() {
+    return driverPackages.find((driver) => driver.id === selectedDriverId);
+  }
+
+  function driversForMaker(maker) {
+    const key = makerKey(maker);
+    if (!key) return [];
+    return driverPackages.filter((driver) => makerKey(driver.manufacturer) === key);
+  }
+
+  function manufacturerOf(driver) {
+    const text = `${driver.manufacturer || ""} ${driver.model || ""} ${driver.fileName || ""}`.toLowerCase();
+    const manufacturer = cleanText(driver.manufacturer);
+    if (text.includes("samsung") || text.includes("삼성")) return "Samsung";
+    if (text.includes("brother")) return "Brother";
+    if (text.includes("hewlett") || /\bhp\b/.test(text)) return "HP";
+    if (text.includes("canon")) return "Canon";
+    if (text.includes("epson")) return "Epson";
+    if (text.includes("xerox")) return "Xerox";
+    if (text.includes("fuji")) return "Fuji";
+    if (text.includes("ricoh")) return "Ricoh";
+    if (text.includes("kyocera")) return "Kyocera";
+    if (text.includes("microsoft")) return "Microsoft";
+    if (text.includes("hancom")) return "Hancom";
+    if (text.includes("teamviewer")) return "TeamViewer";
+    if (text.includes("lg")) return "LG";
+    return manufacturer || "기타";
+  }
+
+  function cleanText(value) {
+    return String(value || "").trim();
+  }
+
+  function makerKey(value) {
+    return cleanText(value).toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function driverSourceClass(driver) {
+    if (driver.source === "inf") return "ok";
+    if (driver.source === "installer") return "warn";
+    return "muted";
+  }
+
+  function unique(values) {
+    const result = [];
+    const seen = new Set();
+    for (const value of values) {
+      const text = String(value || "").trim();
+      const key = text.toLowerCase();
+      if (text && !seen.has(key)) {
+        result.push(text);
+        seen.add(key);
+      }
+    }
+    return result;
+  }
+
+  function option(value, label) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    return opt;
   }
 
   function statusLabel(status) {

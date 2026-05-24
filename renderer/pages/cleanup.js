@@ -26,7 +26,7 @@
 
   api.onProgress((payload) => {
     if (!payload || payload.jobId !== currentJobId) return;
-    setProgress(payload.percent, payload.message);
+    setProgress(payload.percent, payload.message, payload.currentPath);
   });
 
   scanBtn.addEventListener("click", scan);
@@ -38,17 +38,21 @@
     scanBtn.disabled = true;
     ui.setBusy(scanBtn, true);
     runBtn.disabled = true;
+    currentJobId = `cleanup-scan-${Date.now()}`;
+    setProgress(0, "스캔 준비 중입니다.");
+    status.textContent = "정리 경로를 스캔하는 중입니다.";
     summary.textContent = "용량을 계산하는 중입니다.";
     resultList.innerHTML = "";
     resultList.append(ui.createLoadingState("삭제 없이 스캔만 진행 중입니다."));
 
     try {
       const selected = getSelectedIds();
-      const result = await api.scan();
+      const result = await api.scan({ jobId: currentJobId });
       scanItems = result.targets || [];
       renderTargets(selected);
       renderResults(scanItems);
       summary.textContent = `정리 가능 용량: ${formatBytes(result.totalBytes || 0)}`;
+      status.textContent = "스캔이 끝났습니다. 결과 카드에서 경로와 접근 실패 내용을 확인할 수 있습니다.";
       runBtn.disabled = getSelectedIds().length === 0;
     } catch (error) {
       summary.textContent = "스캔에 실패했습니다.";
@@ -57,6 +61,7 @@
       ui.showToast(`시스템 정리 스캔 실패: ${error.message}`);
     } finally {
       scanning = false;
+      currentJobId = "";
       scanBtn.disabled = false;
       ui.setBusy(scanBtn, false);
     }
@@ -105,6 +110,9 @@
       card.querySelector("strong").textContent = item.label;
       card.querySelector("span").textContent = formatBytes(item.bytes || 0);
       card.querySelector("p").textContent = `파일 ${item.files || 0}개 · 폴더 ${item.folders || 0}개${item.errors ? ` · 접근 실패 ${item.errors}곳` : ""}`;
+      appendPathSection(card, "스캔 경로", item.roots, (value) => ({ path: value, note: "대상 경로" }));
+      appendPathSection(card, "대표 파일/폴더", item.samples);
+      appendPathSection(card, "접근 실패", item.failures, null, "fail");
       resultList.append(card);
     }
   }
@@ -169,17 +177,67 @@
       card.querySelector("strong").textContent = item.label;
       card.querySelector("span").textContent = item.failed ? "일부 실패" : "완료";
       card.querySelector("p").textContent = `처리 ${item.removed || 0}개${item.failed ? ` · 실패 ${item.failed}개` : ""}`;
+      appendPathSection(card, "삭제됨", item.removedItems);
+      appendPathSection(card, "실패", item.failedItems, null, "fail");
       detailList.append(card);
     }
+  }
+
+  function appendPathSection(card, title, items = [], mapper = null, mode = "") {
+    const source = Array.isArray(items) ? items : [];
+    const normalized = source
+      .map((item) => mapper ? mapper(item) : item)
+      .filter((item) => item && item.path)
+      .slice(0, 6);
+    if (!normalized.length) return;
+
+    const box = document.createElement("section");
+    box.className = `cleanup-path-section ${mode}`.trim();
+    const heading = document.createElement("b");
+    heading.textContent = title;
+    const list = document.createElement("ul");
+    list.className = "cleanup-path-list";
+
+    for (const item of normalized) {
+      const row = document.createElement("li");
+      const name = document.createElement("strong");
+      name.textContent = item.name || fileNameOf(item.path);
+      const fullPath = document.createElement("code");
+      fullPath.textContent = item.path;
+      row.append(name, fullPath);
+      if (item.note) {
+        const note = document.createElement("small");
+        note.textContent = item.note;
+        row.append(note);
+      }
+      list.append(row);
+    }
+
+    if (source.length > normalized.length) {
+      const more = document.createElement("li");
+      more.className = "cleanup-path-more";
+      more.textContent = `외 ${source.length - normalized.length}개`;
+      list.append(more);
+    }
+
+    box.append(heading, list);
+    card.append(box);
+  }
+
+  function fileNameOf(targetPath) {
+    return String(targetPath || "").split(/[\\/]/).filter(Boolean).pop() || String(targetPath || "");
   }
 
   function getSelectedIds() {
     return [...targetList.querySelectorAll("input[type='checkbox']:checked")].map((input) => input.value);
   }
 
-  function setProgress(percent, message) {
+  function setProgress(percent, message, currentPath = "") {
     progressBox.hidden = false;
     progressFill.style.width = `${Math.max(0, Math.min(100, Number(percent) || 0))}%`;
+    if (currentPath) {
+      message = `${message || "작업 중입니다."}\n${currentPath}`;
+    }
     progressText.textContent = message || "작업 중입니다.";
   }
 

@@ -9,7 +9,6 @@
   const iconInput = document.querySelector("#shortcutIcon");
   const pickIconBtn = document.querySelector("#shortcutPickIcon");
   const clearIconBtn = document.querySelector("#shortcutClearIcon");
-  const sampleBtn = document.querySelector("#shortcutSampleBtn");
   const folderInput = document.querySelector("#shortcutFolder");
   const pickFolderBtn = document.querySelector("#shortcutPickFolder");
   const setNameInput = document.querySelector("#shortcutSetName");
@@ -40,7 +39,6 @@
     event.preventDefault();
     addShortcut();
   });
-  sampleBtn.addEventListener("click", addSamples);
   pickIconBtn.addEventListener("click", pickIcon);
   clearIconBtn.addEventListener("click", () => {
     iconInput.value = "";
@@ -102,19 +100,6 @@
     nameInput.value = "";
     urlInput.value = "";
     iconInput.value = "";
-    renderList();
-  }
-
-  function addSamples() {
-    [
-      { name: "그룹웨어", url: "https://groupware.example.com", iconPath: "" },
-      { name: "메일", url: "https://mail.example.com", iconPath: "" },
-      { name: "NAS", url: "http://192.168.0.10", iconPath: "" },
-    ].forEach((item) => {
-      if (!shortcuts.some((current) => current.name === item.name && current.url === item.url)) {
-        shortcuts.push(item);
-      }
-    });
     renderList();
   }
 

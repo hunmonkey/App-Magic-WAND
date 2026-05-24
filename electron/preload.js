@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld("magicWand", {
     listDrivers: (query) => ipcRenderer.invoke("printer:listDrivers", query),
     installDriver: (payload) => ipcRenderer.invoke("printer:installDriver", payload),
     openDriverStore: () => ipcRenderer.invoke("printer:openDriverStore"),
+    openManufacturerHome: (manufacturer) => ipcRenderer.invoke("printer:openManufacturerHome", manufacturer),
   },
   share: {
     list: () => ipcRenderer.invoke("share:list"),

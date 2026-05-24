@@ -8,6 +8,7 @@ const { ensureDataSubdir } = require("../core/portable-data");
 
 const TIMEOUT = 20000;
 const DRIVER_STORE_DIR = "PrinterDriver";
+const DRIVER_LINK_PAGE = "_Official_Driver_Links.html";
 const INSTALL_TIMEOUT = 120000;
 const DRIVER_FILE_EXTENSIONS = new Set([".inf", ".exe", ".msi"]);
 const INSTALLER_EXTENSIONS = new Set([".exe", ".msi"]);
@@ -40,6 +41,37 @@ const BRAND_PATTERNS = [
   ["kyocera", "Kyocera"],
   ["ricoh", "Ricoh"],
   ["lexmark", "Lexmark"],
+  ["microsoft", "Microsoft"],
+  ["hancom", "Hancom"],
+  ["teamviewer", "TeamViewer"],
+];
+const MANUFACTURER_DRIVER_URLS = {
+  brother: "https://www.brother-usa.com/brother-support/driver-downloads",
+  canon: "https://sg.canon/en/support/0101227001",
+  epson: "https://www.epson.com/support",
+  fuji: "https://support-fb.fujifilm.com/setupDriverForm.do?d_lang=en&lang_code=en",
+  fujifilm: "https://support-fb.fujifilm.com/setupDriverForm.do?d_lang=en&lang_code=en",
+  hp: "https://support.hp.com/us-en/drivers/printers",
+  kyocera: "https://www.kyoceradocumentsolutions.com/en/support-and-download/",
+  lexmark: "https://support.lexmark.com/en_us/drivers-downloads.html",
+  lg: "https://www.lg.com/us/support/software-firmware-drivers",
+  microsoft: "https://support.microsoft.com/windows/download-and-install-the-latest-printer-drivers-4ff66446-a2ab-b77f-46f4-a6d3fe4bf661",
+  ricoh: "https://www.ricoh.com/support/",
+  samsung: "https://support.hp.com/us-en/drivers/printers",
+  xerox: "https://www.support.xerox.com/en-gb/product/global-printer-driver/downloads?platform=all",
+};
+const MANUFACTURER_DRIVER_LINKS = [
+  ["HP / Samsung", MANUFACTURER_DRIVER_URLS.hp],
+  ["Canon", MANUFACTURER_DRIVER_URLS.canon],
+  ["Brother", MANUFACTURER_DRIVER_URLS.brother],
+  ["Epson", MANUFACTURER_DRIVER_URLS.epson],
+  ["Ricoh", MANUFACTURER_DRIVER_URLS.ricoh],
+  ["Xerox", MANUFACTURER_DRIVER_URLS.xerox],
+  ["Kyocera", MANUFACTURER_DRIVER_URLS.kyocera],
+  ["FUJIFILM", MANUFACTURER_DRIVER_URLS.fujifilm],
+  ["Lexmark", MANUFACTURER_DRIVER_URLS.lexmark],
+  ["LG", MANUFACTURER_DRIVER_URLS.lg],
+  ["Microsoft printer driver help", MANUFACTURER_DRIVER_URLS.microsoft],
 ];
 
 function psQuote(value) {
@@ -212,16 +244,105 @@ async function openDriverStore() {
   return { path: root };
 }
 
+async function openManufacturerHome(manufacturer) {
+  const key = manufacturerKey(manufacturer);
+  if (!key) {
+    const linkPage = await ensureManufacturerLinkPage();
+    const error = await shell.openPath(linkPage);
+    if (error) {
+      throw new Error(error);
+    }
+    return { ok: true, manufacturer: "", url: linkPage };
+  }
+  const url = MANUFACTURER_DRIVER_URLS[key];
+  if (!url) {
+    throw new Error("해당 제조사의 다운로드 센터 주소가 아직 등록되어 있지 않습니다.");
+  }
+  await shell.openExternal(url);
+  return { ok: true, manufacturer: clean(manufacturer), url };
+}
+
+async function ensureManufacturerLinkPage() {
+  const root = await getDriverStoreDir();
+  const target = path.join(root, DRIVER_LINK_PAGE);
+  await fs.writeFile(target, makeManufacturerLinkPage(), "utf8");
+  return target;
+}
+
+function makeManufacturerLinkPage() {
+  const links = MANUFACTURER_DRIVER_LINKS.map(([label, url]) => (
+    `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`
+  )).join("\n        ");
+  return `<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>Magic WAND Printer Driver Links</title>
+    <style>
+      body { margin: 32px; color: #17202a; background: #f7fafc; font-family: "Malgun Gothic", Arial, sans-serif; line-height: 1.6; }
+      main { max-width: 920px; margin: 0 auto; padding: 28px; background: #fff; border: 1px solid #ccd6e2; border-radius: 8px; }
+      h1 { margin: 0 0 8px; font-size: 24px; }
+      p { margin: 0 0 20px; color: #405064; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+      a { display: block; padding: 12px 14px; color: #123f8c; background: #e8f0ff; border: 1px solid #bdc8d6; border-radius: 8px; text-decoration: none; font-weight: 700; }
+      a:hover { border-color: #2563eb; background: #dce9ff; }
+      .note { margin-top: 20px; padding: 12px 14px; background: #fff2d8; border: 1px solid #f0c36a; border-radius: 8px; }
+      code { padding: 2px 5px; background: #edf2f7; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Magic WAND printer driver links</h1>
+      <p>Click one manufacturer at a time, download the driver from the official site, then put it into <code>MagicWAND_Data/PrinterDriver</code>.</p>
+      <section class="grid">
+        ${links}
+      </section>
+      <div class="note">If a driver downloads as a ZIP file, extract it first. Magic WAND finds visible <code>.inf</code>, <code>.exe</code>, and <code>.msi</code> files.</div>
+    </main>
+  </body>
+</html>
+`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function manufacturerKey(value) {
+  const text = normalizeSearch(value);
+  if (!text) return "";
+  if (text.includes("samsung") || text.includes("삼성")) return "samsung";
+  if (text.includes("hewlett") || /\bhp\b/.test(text)) return "hp";
+  if (text.includes("brother")) return "brother";
+  if (text.includes("canon")) return "canon";
+  if (text.includes("epson")) return "epson";
+  if (text.includes("xerox")) return "xerox";
+  if (text.includes("fujifilm")) return "fujifilm";
+  if (text.includes("fuji")) return "fuji";
+  if (text.includes("ricoh")) return "ricoh";
+  if (text.includes("kyocera")) return "kyocera";
+  if (text.includes("lexmark")) return "lexmark";
+  if (text.includes("microsoft")) return "microsoft";
+  if (text.includes("lg")) return "lg";
+  return text;
+}
+
 async function listDriverPackages(query = "") {
   const root = await getDriverStoreDir();
-  const [localDrivers, windowsDrivers] = await Promise.all([
+  const [localDrivers, registeredDrivers, inboxDrivers] = await Promise.all([
     listLocalDriverPackages(root),
     listWindowsPrinterDrivers(),
+    listWindowsInboxPrinterDrivers(),
   ]);
+  const windowsDrivers = mergeWindowsDrivers(registeredDrivers, inboxDrivers);
   const queryText = normalizeSearch(query);
   const drivers = [...localDrivers, ...windowsDrivers]
     .filter((item) => matchesQuery(item, queryText))
-    .slice(0, 300);
+    .slice(0, 2000);
 
   return {
     root,
@@ -390,6 +511,60 @@ async function listWindowsPrinterDrivers() {
     .sort((a, b) => driverSortKey(a).localeCompare(driverSortKey(b), "ko-KR"));
 }
 
+async function listWindowsInboxPrinterDrivers() {
+  if (process.platform !== "win32") {
+    return [];
+  }
+  const infDir = path.join(process.env.SystemRoot || "C:\\Windows", "INF");
+  let entries = [];
+  try {
+    entries = await fs.readdir(infDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const candidates = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => {
+      const lower = name.toLowerCase();
+      return lower === "ntprint.inf" || lower === "ntprint4.inf" || lower.startsWith("prn");
+    })
+    .slice(0, 80);
+
+  const drivers = [];
+  for (const fileName of candidates) {
+    const filePath = path.join(infDir, fileName);
+    const models = await extractInfModels(filePath);
+    for (const model of models.slice(0, 500)) {
+      drivers.push({
+        id: makeDriverId("inbox", fileName, model),
+        source: "inbox",
+        sourceLabel: "Windows 내장",
+        model,
+        manufacturer: detectManufacturer(model, fileName) || "기타",
+        fileName,
+        relativePath: "",
+      });
+    }
+  }
+  return drivers.sort((a, b) => driverSortKey(a).localeCompare(driverSortKey(b), "ko-KR"));
+}
+
+function mergeWindowsDrivers(registeredDrivers, inboxDrivers) {
+  const result = [];
+  const seen = new Set();
+  for (const driver of [...registeredDrivers, ...inboxDrivers]) {
+    const key = normalizeSearch(driver.model);
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    result.push(driver);
+    seen.add(key);
+  }
+  return result;
+}
+
 function matchesQuery(item, queryText) {
   if (!queryText) {
     return true;
@@ -405,7 +580,7 @@ function matchesQuery(item, queryText) {
 }
 
 function driverSortKey(item) {
-  const order = item.source === "inf" ? "0" : item.source === "installer" ? "1" : "2";
+  const order = item.source === "inf" ? "0" : item.source === "installer" ? "1" : item.source === "inbox" ? "2" : "3";
   return `${order}-${item.manufacturer}-${item.model}-${item.relativePath}`;
 }
 
@@ -415,6 +590,9 @@ async function installDriver(payload = {}) {
   }
   const source = clean(payload.source);
   if (source === "windows") {
+    return installWindowsDriver(payload.model);
+  }
+  if (source === "inbox") {
     return installWindowsDriver(payload.model);
   }
   if (source === "inf") {
@@ -532,6 +710,7 @@ function register(ipcMain) {
   ipcMain.handle("printer:listDrivers", (_event, query) => listDriverPackages(query));
   ipcMain.handle("printer:installDriver", (_event, payload) => installDriver(payload));
   ipcMain.handle("printer:openDriverStore", () => openDriverStore());
+  ipcMain.handle("printer:openManufacturerHome", (_event, manufacturer) => openManufacturerHome(manufacturer));
 }
 
 module.exports = {
