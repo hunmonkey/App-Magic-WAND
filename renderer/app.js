@@ -49,6 +49,8 @@ let commandPalette = null;
 let commandInput = null;
 let commandList = null;
 let commandItems = [];
+let menuCommands = [];
+let dataCommands = [];
 let commandActiveIndex = 0;
 let uiSettings = { soundEnabled: true, desktopNotificationEnabled: false };
 let soundContext = null;
@@ -153,7 +155,8 @@ function createCommandPalette() {
   commandPalette.hidden = true;
   commandPalette.innerHTML = `
     <section class="command-box" role="dialog" aria-modal="true">
-      <input id="commandPaletteInput" type="search" autocomplete="off" placeholder="기능 검색" />
+      <label class="command-input-label" for="commandPaletteInput">검색어</label>
+      <input id="commandPaletteInput" type="search" autocomplete="off" />
       <div id="commandPaletteList" class="command-list"></div>
       <div class="command-footer">
         <label><input id="soundToggle" type="checkbox" /> 소리</label>
@@ -180,11 +183,89 @@ function collectCommands() {
     const heading = group.querySelector(".menu-heading")?.textContent?.trim() || "";
     group.querySelectorAll(".menu-link:not(.danger)").forEach((button) => headings.set(button, heading));
   });
-  commandItems = [...document.querySelectorAll(".side-nav .menu-link:not(.danger)")].map((button) => ({
+  menuCommands = [...document.querySelectorAll(".side-nav .menu-link:not(.danger)")].map((button) => ({
     label: button.textContent.trim(),
     group: headings.get(button) || "",
     button,
   }));
+  commandItems = [...menuCommands, ...dataCommands];
+}
+
+// 자산·양식지 문서·빠른 메모를 검색 대상에 추가한다. (제목/이름/태그/메모로 찾아 해당 화면으로 이동)
+// 정품키 등 민감정보는 인덱싱하지 않는다.
+async function loadDataCommands() {
+  const next = [];
+  try {
+    const assets = await window.magicWand.asset.load();
+    for (const asset of assets) {
+      const label = asset.name || asset.assetTag || asset.ip || "(이름 없는 자산)";
+      next.push({
+        label,
+        group: "자산",
+        searchText: [asset.assetTag, asset.name, asset.ip, asset.location, asset.owner, asset.memo].join(" "),
+        run: () => navigateAndSearch("#assetMenu", "#assetSearch", asset.name || asset.assetTag || asset.ip || ""),
+      });
+    }
+  } catch {
+    // 자산을 불러오지 못해도 메뉴 검색은 동작해야 하므로 조용히 넘어간다.
+  }
+  try {
+    const docs = await window.magicWand.formMaker.list();
+    for (const doc of docs) {
+      const label = doc.title || "(제목 없는 문서)";
+      next.push({
+        label,
+        group: "양식지",
+        searchText: doc.title || "",
+        run: () => navigateAndSearch("#formManagerMenu", "#fmgSearch", doc.title || ""),
+      });
+    }
+  } catch {
+    // 양식지 목록 실패도 무시한다.
+  }
+  try {
+    const admin = await window.magicWand.adminWork.load();
+    for (const note of admin.notes || []) {
+      const label = note.title || "(제목 없는 메모)";
+      next.push({
+        label,
+        group: "빠른 메모",
+        searchText: [note.title, note.relatedTo, note.body].join(" "),
+        run: () => navigateAdminNote(note.id),
+      });
+    }
+  } catch {
+    // 행정 메모를 불러오지 못해도 기본 메뉴 검색은 계속 사용할 수 있어야 한다.
+  }
+  dataCommands = next;
+  commandItems = [...menuCommands, ...dataCommands];
+}
+
+// 해당 화면으로 이동한 뒤, 그 화면 검색칸에 키워드를 채워 항목을 바로 찾게 한다.
+function navigateAndSearch(menuSelector, searchSelector, term) {
+  document.querySelector(menuSelector)?.click();
+  if (!searchSelector || !term) {
+    return;
+  }
+  window.setTimeout(() => {
+    const input = document.querySelector(searchSelector);
+    if (input) {
+      input.value = term;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }, 60);
+}
+
+async function navigateAdminNote(noteId) {
+  const menu = document.querySelector("#adminWorkMenu");
+  menu?.click();
+  if (window.AdminWork && typeof window.AdminWork.openNote === "function") {
+    await window.AdminWork.openNote(noteId);
+    return;
+  }
+  window.setTimeout(() => {
+    document.querySelector('[data-admin-tab="notes"]')?.click();
+  }, 60);
 }
 
 function openCommandPalette() {
@@ -198,6 +279,11 @@ function openCommandPalette() {
   updateSettingsToggles();
   renderCommandList();
   commandInput.focus();
+  loadDataCommands().then(() => {
+    if (commandPalette && !commandPalette.hidden) {
+      renderCommandList();
+    }
+  });
 }
 
 function closeCommandPalette() {
@@ -207,8 +293,10 @@ function closeCommandPalette() {
 
 function renderCommandList() {
   const keyword = commandInput.value.trim().toLowerCase();
-  const visible = commandItems.filter((item) => {
-    const text = `${item.group} ${item.label}`.toLowerCase();
+  // 검색어가 없으면 메뉴만 보여주고, 입력하면 자산·문서까지 함께 검색한다.
+  const pool = keyword ? commandItems : menuCommands;
+  const visible = pool.filter((item) => {
+    const text = `${item.group} ${item.label} ${item.searchText || ""}`.toLowerCase();
     return !keyword || text.includes(keyword);
   });
   commandActiveIndex = Math.min(commandActiveIndex, Math.max(0, visible.length - 1));
@@ -256,7 +344,11 @@ function handleCommandPaletteKey(event) {
 
 async function runCommand(item) {
   closeCommandPalette();
-  item.button.click();
+  if (typeof item.run === "function") {
+    await item.run();
+  } else if (item.button) {
+    item.button.click();
+  }
   await bumpAchievement("commandsUsed");
 }
 
@@ -853,6 +945,19 @@ async function notifyComplete(message, options = {}) {
   }
 }
 
+async function exportPdf(options = {}) {
+  try {
+    const result = await window.magicWand.export.toPdf(options);
+    if (!result.canceled) {
+      showToast("PDF 저장 완료");
+    }
+    return result;
+  } catch (error) {
+    showToast(`PDF 저장 실패: ${error.message}`);
+    return { canceled: true, error: error.message };
+  }
+}
+
 function playCompleteSound() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -930,6 +1035,7 @@ window.MagicWand = {
   switchPage,
   showToast,
   notifyComplete,
+  exportPdf,
   bumpAchievement,
   refreshAchievements,
   showConfirm,

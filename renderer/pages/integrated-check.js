@@ -8,6 +8,7 @@
   const assetTagInput = document.querySelector("#icAssetTag");
   const inspectorInput = document.querySelector("#icInspector");
   const startButton = document.querySelector("#icStartButton");
+  const printButton = document.querySelector("#icPrintButton");
   const saveButton = document.querySelector("#icSaveButton");
   const progress = document.querySelector("#icProgress");
   const results = document.querySelector("#icResults");
@@ -48,6 +49,9 @@
   });
 
   startButton.addEventListener("click", runAll);
+  printButton.addEventListener("click", () => {
+    ui.exportPdf({ defaultFileName: buildTitle() });
+  });
   saveButton.addEventListener("click", saveReport);
 
   async function runAll() {
@@ -86,6 +90,7 @@
     addProgress("모든 점검을 완료했습니다.", "「증빙 저장」으로 보관함에 저장할 수 있습니다.");
     renderResults(lastReport);
     setRunning(false);
+    printButton.disabled = false;
     saveButton.disabled = false;
     await ui.notifyComplete("통합 점검을 완료했습니다.", { achievementKey: "checksDone" });
   }
@@ -337,6 +342,7 @@
   function setRunning(isRunning) {
     running = isRunning;
     startButton.disabled = isRunning;
+    printButton.disabled = isRunning || !lastReport;
     saveButton.disabled = isRunning || !lastReport;
     Object.values(options).forEach((el) => { el.disabled = isRunning; });
     headInputs.forEach((el) => { if (el !== dateInput) el.disabled = isRunning; });

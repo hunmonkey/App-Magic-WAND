@@ -179,10 +179,7 @@ select:focus-visible,
   height: 100vh;
   min-height: 720px;
   overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 26%),
-    linear-gradient(315deg, rgba(21, 128, 61, 0.08), transparent 24%),
-    var(--bg);
+  background: var(--bg);
 }
 
 .side-menu {
@@ -191,7 +188,7 @@ select:focus-visible,
   min-height: 0;
   padding: 12px 8px;
   color: #e8eef8;
-  background: linear-gradient(180deg, var(--nav), #0b1624);
+  background: var(--nav);
 }
 
 .section-label {
@@ -782,7 +779,6 @@ tbody tr.selected {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 18px 42px rgba(23, 32, 42, 0.24);
 }
 
 .confirm-dialog h2 {
@@ -854,18 +850,25 @@ tbody tr.selected {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 20px 48px rgba(23, 32, 42, 0.24);
   overflow: hidden;
 }
 
 #commandPaletteInput {
   width: 100%;
-  min-height: 48px;
+  min-height: 40px;
   border: none;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
-  padding: 0 16px;
+  padding: 0 16px 10px;
   font-size: 14px;
+}
+
+.command-input-label {
+  display: block;
+  padding: 12px 16px 4px;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 #commandPaletteInput:focus {
@@ -1933,6 +1936,264 @@ tbody tr.selected {
   color: var(--text-strong);
 }
 
+/* 시작 프로그램 관리 */
+.startup-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.startup-table-wrap {
+  flex: 1;
+  min-height: 0;
+  margin-top: 6px;
+}
+
+.startup-action-col {
+  width: 84px;
+}
+
+.startup-toggle-btn {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.startup-on {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.startup-off {
+  color: var(--muted);
+}
+
+/* USB/SD 복구 */
+.recovery-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.recovery-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.recovery-volume-list {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.recovery-volume-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 70px;
+  padding: 8px;
+  text-align: left;
+}
+
+.recovery-volume-item strong,
+.recovery-volume-item span,
+.recovery-volume-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recovery-volume-item span,
+.recovery-volume-item small {
+  color: var(--muted);
+}
+
+.recovery-volume-item.selected {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+
+/* 파일 이름 일괄 변경 */
+.file-rename-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 6px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.file-rename-form-panel,
+.file-rename-preview-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.file-rename-form-panel {
+  overflow-y: auto;
+}
+
+.fr-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fr-seq-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fr-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.fr-field select {
+  min-height: 32px;
+  padding: 0 8px;
+}
+
+.fr-table-wrap {
+  flex: 1;
+  min-height: 0;
+  margin-top: 6px;
+}
+
+.fr-status-change {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.fr-status-conflict {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.fr-status-none {
+  color: var(--muted);
+}
+
+/* 자산 대장 — 목록 + 상세 카드 우측 구성 */
+.asset-right {
+  display: grid;
+  grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 6px;
+  min-height: 0;
+}
+
+.asset-right .list-panel {
+  min-height: 0;
+}
+
+.asset-detail-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.asset-detail-body {
+  flex: 1;
+  min-height: 0;
+  margin-top: 6px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.asset-detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.asset-detail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.asset-detail-head strong {
+  font-size: 16px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.asset-detail-head span {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.asset-detail-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.asset-detail-info div {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: var(--surface-soft);
+}
+
+.asset-detail-info span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.asset-detail-info strong {
+  display: block;
+  margin-top: 3px;
+  word-break: break-word;
+}
+
+.asset-detail-block span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.asset-detail-block p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.asset-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 /* Form maker page */
 .form-maker {
   display: flex;
@@ -2578,6 +2839,59 @@ tbody tr.selected {
     height: auto;
   }
 
+  /* 통합 점검 리포트: 인쇄/PDF 시 결과 전체가 펼쳐지도록 한다. */
+  #integratedCheckPage.page.active {
+    display: block !important;
+    height: auto;
+  }
+
+  #integratedCheckPage .panel {
+    display: block;
+    overflow: visible;
+    border: none;
+    padding: 0;
+  }
+
+  #integratedCheckPage .ic-scroll {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  #integratedCheckPage .ic-header-actions,
+  #integratedCheckPage .ic-options {
+    display: none !important;
+  }
+
+  #assetPage.page.active {
+    display: block !important;
+    height: auto;
+  }
+
+  #assetPage .page-grid,
+  #assetPage .asset-right {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+
+  #assetPage .record-panel,
+  #assetPage .list-panel,
+  #assetPage .asset-detail-actions {
+    display: none !important;
+  }
+
+  #assetPage .asset-detail-panel,
+  #assetPage .asset-detail-body,
+  #assetPage .asset-detail-card {
+    display: block;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: none;
+    background: #fff;
+  }
+
   .form-maker {
     padding: 0;
     overflow: visible;
@@ -3211,8 +3525,8 @@ tbody tr.selected {
 
 .admin-work-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 6px;
   min-height: 0;
   height: 100%;
 }
@@ -3220,14 +3534,14 @@ tbody tr.selected {
 .admin-work-side,
 .admin-tab-panel {
   min-height: 0;
-  padding: 14px;
+  padding: 18px;
   overflow: hidden;
 }
 
 .admin-work-side {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 6px;
 }
 
 .admin-work-main {
@@ -3239,7 +3553,7 @@ tbody tr.selected {
   display: none;
   height: 100%;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 6px;
 }
 
 .admin-tab-panel.active {
@@ -3247,34 +3561,31 @@ tbody tr.selected {
 }
 
 .admin-tab-panel[data-admin-panel="overview"],
-.admin-tab-panel[data-admin-panel="notes"],
-.admin-tab-panel[data-admin-panel="documents"] {
+.admin-tab-panel[data-admin-panel="notes"] {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
 .admin-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 6px;
   min-height: 0;
 }
 
 .admin-dashboard-grid section,
 .admin-subpanel {
   min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--surface);
+  padding: 0;
+  background: transparent;
 }
 
 .admin-dashboard-grid strong,
 .admin-subpanel > strong,
 .admin-quote-grid > strong {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--text-strong);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .admin-dashboard-list {
@@ -3320,7 +3631,8 @@ tbody tr.selected {
   display: block;
   margin-top: 3px;
   color: var(--text);
-  font-size: 20px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .admin-tab-list {
@@ -3346,7 +3658,7 @@ tbody tr.selected {
 .admin-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .admin-form-grid.compact-form {
@@ -3390,24 +3702,24 @@ tbody tr.selected {
 .admin-supply-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: 10px;
+  gap: 6px;
   min-height: 0;
 }
 
 .admin-supply-tables {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 6px;
   min-height: 0;
 }
 
 .admin-quote-grid {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr 0.7fr minmax(0, 1fr);
-  gap: 8px;
+  gap: 6px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
+  padding: 6px;
   background: var(--surface-soft);
 }
 
@@ -3453,13 +3765,13 @@ tbody tr.selected {
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 10px;
+  padding: 6px;
   background: var(--surface);
 }
 
 .admin-checklist-item {
   border-bottom: 1px solid #e3e9f0;
-  padding: 10px 0;
+  padding: 6px 0;
 }
 
 .admin-checklist-item:first-child {
@@ -3474,13 +3786,13 @@ tbody tr.selected {
 .admin-checklist-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .admin-checklist-head strong {
   min-width: 0;
-  font-size: 13px;
+  font-size: 12px;
   word-break: break-word;
 }
 
@@ -3493,7 +3805,7 @@ tbody tr.selected {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .admin-check-row {
@@ -3509,11 +3821,10 @@ tbody tr.selected {
   min-height: 0;
 }
 
-.admin-note-grid,
-.admin-document-grid {
+.admin-note-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 6px;
   height: 100%;
   min-height: 0;
 }
@@ -3525,7 +3836,7 @@ tbody tr.selected {
   border: 0;
   border-bottom: 1px solid #e3e9f0;
   border-radius: 0;
-  padding: 10px 2px;
+  padding: 6px 2px;
   text-align: left;
   background: transparent;
 }
@@ -3553,11 +3864,4 @@ tbody tr.selected {
 .admin-note-item p {
   margin-top: 6px;
   color: var(--text-detail);
-}
-
-.admin-document-output {
-  height: 100%;
-  min-height: 420px;
-  font-family: Consolas, "Courier New", monospace;
-  line-height: 1.5;
 }

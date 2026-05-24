@@ -25,6 +25,7 @@
   const tableBody = document.querySelector("#assetTableBody");
   const tableWrap = document.querySelector(".asset-table-wrap");
   const countText = document.querySelector("#assetCount");
+  const detailBody = document.querySelector("#assetDetailBody");
 
   let assets = [];
   let selectedId = null;
@@ -132,6 +133,7 @@
   function clearForm() {
     selectedId = null;
     form.reset();
+    clearDetail();
     renderTable();
   }
 
@@ -148,7 +150,141 @@
     fields.purchaseDate.value = asset.purchaseDate || "";
     fields.warrantyEnd.value = asset.warrantyEnd || "";
     fields.memo.value = asset.memo || "";
+    renderDetail(asset);
     renderTable();
+  }
+
+  function clearDetail() {
+    detailBody.innerHTML = "";
+    const empty = document.createElement("p");
+    empty.className = "empty-inline";
+    empty.textContent = "목록에서 자산을 선택하세요.";
+    detailBody.append(empty);
+  }
+
+  // 선택한 자산의 정보를 한 카드로 모아 보여준다. (사용자 입력값은 textContent로만 넣어 안전하게 처리)
+  function renderDetail(asset) {
+    detailBody.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "asset-detail-card";
+
+    const head = document.createElement("div");
+    head.className = "asset-detail-head";
+    const title = document.createElement("strong");
+    title.textContent = asset.name || "(장비명 없음)";
+    const tag = document.createElement("span");
+    tag.textContent = asset.assetTag ? `자산번호 ${asset.assetTag}` : "자산번호 없음";
+    head.append(title, tag);
+    card.append(head);
+
+    const warranty = buildWarrantyBadge(asset.warrantyEnd);
+    if (warranty) {
+      card.append(warranty);
+    }
+
+    card.append(
+      buildInfoGrid([
+        ["IP 주소", asset.ip],
+        ["위치", asset.location],
+        ["담당자", asset.owner],
+        ["구매일", asset.purchaseDate],
+      ]),
+    );
+
+    if (asset.spec) {
+      card.append(buildBlock("사양", asset.spec));
+    }
+    if (asset.memo) {
+      card.append(buildBlock("메모", asset.memo));
+    }
+    if (asset.updatedAt) {
+      card.append(buildBlock("최종 수정", formatDateTime(asset.updatedAt)));
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "asset-detail-actions";
+    const checkBtn = document.createElement("button");
+    checkBtn.type = "button";
+    checkBtn.textContent = "이 자산으로 통합 점검";
+    checkBtn.addEventListener("click", () => startCheckForAsset(asset));
+    const pdfBtn = document.createElement("button");
+    pdfBtn.type = "button";
+    pdfBtn.textContent = "PDF 저장";
+    pdfBtn.addEventListener("click", () => saveAssetPdf(asset));
+    actions.append(checkBtn, pdfBtn);
+    card.append(actions);
+
+    detailBody.append(card);
+  }
+
+  function buildWarrantyBadge(warrantyEnd) {
+    if (!warrantyEnd) return null;
+    const days = daysUntil(warrantyEnd);
+    if (days === null) return null;
+    const badge = document.createElement("span");
+    badge.className = "admin-badge";
+    if (days < 0) {
+      badge.classList.add("bad");
+      badge.textContent = `보증 만료 (${Math.abs(days)}일 지남 · ${warrantyEnd})`;
+    } else if (days <= 30) {
+      badge.classList.add("warn");
+      badge.textContent = `보증 만료 ${days}일 전 (${warrantyEnd})`;
+    } else {
+      badge.classList.add("ok");
+      badge.textContent = `보증 정상 (${days}일 남음 · ${warrantyEnd})`;
+    }
+    return badge;
+  }
+
+  function buildInfoGrid(pairs) {
+    const grid = document.createElement("div");
+    grid.className = "asset-detail-info";
+    for (const [label, value] of pairs) {
+      const cell = document.createElement("div");
+      const span = document.createElement("span");
+      span.textContent = label;
+      const strong = document.createElement("strong");
+      strong.textContent = value || "—";
+      cell.append(span, strong);
+      grid.append(cell);
+    }
+    return grid;
+  }
+
+  function buildBlock(label, value) {
+    const block = document.createElement("div");
+    block.className = "asset-detail-block";
+    const span = document.createElement("span");
+    span.textContent = label;
+    const p = document.createElement("p");
+    p.textContent = value;
+    block.append(span, p);
+    return block;
+  }
+
+  function formatDateTime(iso) {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString("ko-KR");
+  }
+
+  // 통합 점검 화면으로 이동하면서 이 자산의 자산번호·담당자를 미리 채운다.
+  function startCheckForAsset(asset) {
+    document.querySelector("#integratedCheckMenu")?.click();
+    const tagInput = document.querySelector("#icAssetTag");
+    const customerInput = document.querySelector("#icCustomer");
+    if (tagInput) tagInput.value = asset.assetTag || "";
+    if (customerInput && !customerInput.value.trim()) {
+      customerInput.value = asset.owner || asset.location || "";
+    }
+    ui.showToast("통합 점검 화면에 자산 정보를 채웠습니다.");
+  }
+
+  function saveAssetPdf(asset) {
+    const defaultFileName = ["자산 상세", asset.assetTag, asset.name]
+      .filter(Boolean)
+      .join("_");
+    ui.exportPdf({ defaultFileName: defaultFileName || "자산 상세" });
   }
 
   function renderTable() {

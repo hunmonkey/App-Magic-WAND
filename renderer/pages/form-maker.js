@@ -115,7 +115,9 @@
   insertImageBtn.addEventListener("click", () => imageInput.click());
   imageInput.addEventListener("change", handleImage);
 
-  printBtn.addEventListener("click", () => window.print());
+  printBtn.addEventListener("click", () => {
+    ui.exportPdf({ defaultFileName: titleInput.value.trim() || "양식지" });
+  });
   saveBtn.addEventListener("click", saveDocument);
   storeBtn.addEventListener("click", storeToLibrary);
   clearBtn.addEventListener("click", newDocument);
@@ -296,7 +298,7 @@
     open: openDocument,
     print(doc) {
       openDocument(doc);
-      window.print();
+      ui.exportPdf({ defaultFileName: doc?.title || "양식지" });
     },
   };
 

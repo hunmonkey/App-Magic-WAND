@@ -15,6 +15,11 @@ const security = require("./modules/security");
 const secureErase = require("./modules/secure-erase");
 const formMaker = require("./modules/form-maker");
 const fileTools = require("./modules/file-tools");
+const fileRename = require("./modules/file-rename");
+const settingsBackup = require("./modules/settings-backup");
+const winUpdate = require("./modules/win-update");
+const startupApps = require("./modules/startup-apps");
+const recovery = require("./modules/recovery");
 const asset = require("./modules/asset");
 const health = require("./modules/health");
 const cleanup = require("./modules/cleanup");
@@ -142,6 +147,11 @@ function registerIpcHandlers() {
   secureErase.register(ipcMain);
   formMaker.register(ipcMain);
   fileTools.register(ipcMain);
+  fileRename.register(ipcMain);
+  settingsBackup.register(ipcMain);
+  winUpdate.register(ipcMain);
+  startupApps.register(ipcMain);
+  recovery.register(ipcMain);
   asset.register(ipcMain);
   health.register(ipcMain);
   cleanup.register(ipcMain);
@@ -154,9 +164,51 @@ function registerIpcHandlers() {
   remote.register(ipcMain);
   adminWork.register(ipcMain);
 
+  ipcMain.handle("export:pdf", exportPdf);
+
   ipcMain.on("app:quit", () => {
     app.quit();
   });
+}
+
+function sanitizeFileName(value, fallback) {
+  const text = String(value || "").trim() || fallback;
+  return text
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/\s+/g, " ")
+    .slice(0, 90)
+    .trim() || fallback;
+}
+
+async function exportPdf(event, payload = {}) {
+  payload = payload || {};
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) {
+    throw new Error("PDF로 저장할 창을 찾지 못했습니다.");
+  }
+
+  const defaultName = `${sanitizeFileName(payload.defaultFileName, "MagicWAND_문서")}.pdf`;
+  const picked = await dialog.showSaveDialog(win, {
+    title: "PDF 저장",
+    defaultPath: path.join(app.getPath("documents"), defaultName),
+    filters: [{ name: "PDF 문서", extensions: ["pdf"] }],
+  });
+  if (picked.canceled || !picked.filePath) {
+    return { canceled: true };
+  }
+
+  let filePath = picked.filePath;
+  if (path.extname(filePath).toLowerCase() !== ".pdf") {
+    filePath += ".pdf";
+  }
+
+  const data = await win.webContents.printToPDF({
+    printBackground: true,
+    preferCSSPageSize: true,
+    pageSize: "A4",
+  });
+  await fs.promises.writeFile(filePath, data);
+  return { canceled: false, filePath };
 }
 
 function registerLicenseHandlers() {

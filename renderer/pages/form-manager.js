@@ -173,7 +173,7 @@
       const doc = await api.read(meta.id);
       window.FormMaker.print(doc);
     } catch (error) {
-      ui.showToast(`인쇄 준비 실패: ${error.message}`);
+      ui.showToast(`PDF 저장 준비 실패: ${error.message}`);
     }
   }
 

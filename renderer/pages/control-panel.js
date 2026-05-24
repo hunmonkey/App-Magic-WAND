@@ -404,15 +404,20 @@
     drawMonitorChart();
   }
 
+  // 차트 색상은 hex를 직접 쓰지 않고 styles.css의 CSS 변수에서 읽어 한 곳에서 관리한다.
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
   function drawMonitorChart() {
     if (!monitorChart) return;
     const ctx = monitorChart.getContext("2d");
     const width = monitorChart.width;
     const height = monitorChart.height;
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#f8fafc";
+    ctx.fillStyle = cssVar("--surface-soft");
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = "#ccd6e2";
+    ctx.strokeStyle = cssVar("--line");
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i += 1) {
       const y = Math.round((height / 4) * i);
@@ -421,8 +426,8 @@
       ctx.lineTo(width, y);
       ctx.stroke();
     }
-    drawLine(ctx, width, height, monitorPoints.map((point) => point.down), "#2563eb");
-    drawLine(ctx, width, height, monitorPoints.map((point) => point.up), "#15803d");
+    drawLine(ctx, width, height, monitorPoints.map((point) => point.down), cssVar("--blue"));
+    drawLine(ctx, width, height, monitorPoints.map((point) => point.up), cssVar("--green"));
   }
 
   function drawLine(ctx, width, height, values, color) {

@@ -105,6 +105,30 @@ contextBridge.exposeInMainWorld("magicWand", {
       return () => ipcRenderer.removeListener("file-tools:progress", listener);
     },
   },
+  fileRename: {
+    pickFolder: () => ipcRenderer.invoke("fileRename:pickFolder"),
+    preview: (payload) => ipcRenderer.invoke("fileRename:preview", payload),
+    apply: (payload) => ipcRenderer.invoke("fileRename:apply", payload),
+  },
+  settingsBackup: {
+    export: () => ipcRenderer.invoke("settingsBackup:export"),
+    import: (payload) => ipcRenderer.invoke("settingsBackup:import", payload),
+  },
+  winUpdate: {
+    status: () => ipcRenderer.invoke("winUpdate:status"),
+    open: () => ipcRenderer.invoke("winUpdate:open"),
+  },
+  startup: {
+    list: () => ipcRenderer.invoke("startup:list"),
+    toggle: (payload) => ipcRenderer.invoke("startup:toggle", payload),
+  },
+  recovery: {
+    volumes: () => ipcRenderer.invoke("recovery:volumes"),
+    checkFix: (payload) => ipcRenderer.invoke("recovery:checkFix", payload),
+  },
+  export: {
+    toPdf: (payload) => ipcRenderer.invoke("export:pdf", payload),
+  },
   asset: {
     load: () => ipcRenderer.invoke("asset:load"),
     save: (list) => ipcRenderer.invoke("asset:save", list),

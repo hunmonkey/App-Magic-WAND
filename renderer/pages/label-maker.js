@@ -39,7 +39,7 @@
   });
   printBtn.addEventListener("click", () => {
     renderLabels();
-    window.print();
+    ui.exportPdf({ defaultFileName: "라벨지" });
   });
   sampleBtn.addEventListener("click", () => {
     sourceInput.value = [

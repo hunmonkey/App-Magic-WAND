@@ -60,10 +60,6 @@
   const noteClearBtn = document.querySelector("#adminNoteClearBtn");
   const noteList = document.querySelector("#adminNoteList");
 
-  const documentForm = document.querySelector("#adminDocumentForm");
-  const documentOutput = document.querySelector("#adminDocumentOutput");
-  const documentCopyBtn = document.querySelector("#adminDocumentCopyBtn");
-
   const templates = {
     newPc: ["자산번호 확인", "PC 사양 점검", "기본 프로그램 설치", "프린터/공유폴더 연결", "사용자 인수 서명"],
     returnPc: ["사용자 자료 백업", "계정 로그아웃 확인", "저장장치 점검", "관리자 보관 위치 기록", "반납 확인서 작성"],
@@ -73,18 +69,17 @@
 
   let state = emptyState();
   let loaded = false;
+  let loadingPromise = null;
   let selected = { request: "", vendor: "", supply: "", purchase: "", contract: "", note: "" };
 
   menu.addEventListener("click", () => {
     ui.switchPage("#adminWorkPage", menu);
-    if (!loaded) {
-      loaded = true;
-      loadState();
-    }
+    ensureLoaded();
   });
 
   tabs.forEach((button) => {
     button.addEventListener("click", () => switchTab(button.dataset.adminTab));
+    button.addEventListener("keydown", handleTabKeydown);
   });
 
   requestForm.addEventListener("submit", (event) => {
@@ -138,13 +133,35 @@
   noteDeleteBtn.addEventListener("click", deleteNote);
   noteClearBtn.addEventListener("click", clearNoteForm);
 
-  documentForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    generateDocument();
-  });
-  documentCopyBtn.addEventListener("click", copyDocument);
-
   resetSupplyLogForm();
+
+  window.AdminWork = {
+    openNote,
+  };
+
+  async function ensureLoaded() {
+    if (loadingPromise) {
+      await loadingPromise;
+      return;
+    }
+    if (loaded) return;
+    if (!loadingPromise) {
+      loaded = true;
+      loadingPromise = loadState().finally(() => {
+        loadingPromise = null;
+      });
+    }
+    await loadingPromise;
+  }
+
+  async function openNote(id) {
+    ui.switchPage("#adminWorkPage", menu);
+    await ensureLoaded();
+    switchTab("notes");
+    if (id) {
+      selectNote(id);
+    }
+  }
 
   async function loadState() {
     try {
@@ -166,8 +183,33 @@
   }
 
   function switchTab(tabName) {
-    tabs.forEach((button) => button.classList.toggle("active", button.dataset.adminTab === tabName));
-    panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.adminPanel === tabName));
+    tabs.forEach((button) => {
+      const active = button.dataset.adminTab === tabName;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    panels.forEach((panel) => {
+      const active = panel.dataset.adminPanel === tabName;
+      panel.classList.toggle("active", active);
+      panel.hidden = !active;
+    });
+  }
+
+  function handleTabKeydown(event) {
+    if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const list = Array.from(tabs);
+    const index = list.indexOf(event.currentTarget);
+    const nextIndex = event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? list.length - 1
+        : event.key === "ArrowUp"
+          ? Math.max(0, index - 1)
+          : Math.min(list.length - 1, index + 1);
+    const next = list[nextIndex];
+    next.focus();
+    switchTab(next.dataset.adminTab);
   }
 
   function renderAll() {
@@ -904,54 +946,6 @@
       note.querySelector("p").textContent = item.body;
       note.addEventListener("click", () => selectNote(item.id));
       noteList.append(note);
-    }
-  }
-
-  function generateDocument() {
-    const type = value("#adminDocumentType");
-    const dept = value("#adminDocumentDept");
-    const person = value("#adminDocumentPerson");
-    const asset = value("#adminDocumentAsset");
-    const work = value("#adminDocumentWork");
-    const memo = value("#adminDocumentMemo");
-    const today = new Date().toLocaleDateString("ko-KR");
-    const titleMap = {
-      handover: "자산 인수인계서",
-      return: "장비 반납 확인서",
-      done: "업무 처리 완료 보고서",
-      purchase: "소모품 구매 요청서",
-      expire: "계약 만료 알림",
-    };
-    const title = titleMap[type] || "행정 문서";
-    const lines = [
-      `[${title}]`,
-      "",
-      `작성일: ${today}`,
-      `부서/고객: ${dept || "-"}`,
-      `대상자/담당자: ${person || "-"}`,
-      `자산/계약/품목: ${asset || "-"}`,
-      "",
-      "주요 내용",
-      work || "-",
-      "",
-      "비고",
-      memo || "-",
-      "",
-      "확인자: ____________________",
-    ];
-    documentOutput.value = lines.join("\n");
-    documentCopyBtn.disabled = false;
-  }
-
-  async function copyDocument() {
-    if (!documentOutput.value.trim()) return;
-    try {
-      await navigator.clipboard.writeText(documentOutput.value);
-      ui.showToast("문서 초안을 클립보드에 복사했습니다.");
-    } catch {
-      documentOutput.select();
-      document.execCommand("copy");
-      ui.showToast("문서 초안을 복사했습니다.");
     }
   }
 
