@@ -43,6 +43,30 @@
   let lastReport = null;
   let runId = 0;
 
+  const STATUS_TONE_MAP = new Map([
+    ["\uc815\uc0c1", "ok"],
+    ["\uc591\ud638", "ok"],
+    ["\uc88b\uc74c", "ok"],
+    ["\uc548\uc804", "ok"],
+    ["\uc8fc\uc758", "warn"],
+    ["\ud655\uc778 \ud544\uc694", "warn"],
+    ["\uc810\uac80 \ud544\uc694", "warn"],
+    ["\uacbd\uace0", "warn"],
+    ["\uc758\uc2ec", "warn"],
+    ["\uc2ec\uac01", "fail"],
+    ["\ubb38\uc81c", "fail"],
+    ["\uc2e4\ud328", "fail"],
+    ["\uc704\ud5d8", "fail"],
+    ["\uc624\ub958", "fail"],
+    ["\uac15\ud55c \uc758\uc2ec", "fail"],
+  ]);
+
+  const STATUS_BADGE_STYLES = {
+    ok: "display:inline-block;min-width:44px;border:1px solid rgba(21,128,61,.28);border-radius:999px;padding:2px 8px;text-align:center;font-size:12px;font-weight:700;line-height:1.2;color:#15803d;background:#e8f6ee;",
+    warn: "display:inline-block;min-width:44px;border:1px solid rgba(180,83,9,.3);border-radius:999px;padding:2px 8px;text-align:center;font-size:12px;font-weight:700;line-height:1.2;color:#b45309;background:#fff2d8;",
+    fail: "display:inline-block;min-width:44px;border:1px solid rgba(180,35,24,.28);border-radius:999px;padding:2px 8px;text-align:center;font-size:12px;font-weight:700;line-height:1.2;color:#b42318;background:#fdecea;",
+  };
+
   dateInput.value = new Date().toLocaleString("ko-KR");
 
   menu.addEventListener("click", () => {
@@ -60,11 +84,11 @@
     if (running) return;
     dateInput.value = new Date().toLocaleString("ko-KR");
     lastReport = null;
-    progress.innerHTML = "";
-    results.innerHTML = "";
+    progress.replaceChildren();
+    results.replaceChildren();
     printButton.disabled = true;
     saveButton.disabled = true;
-    ui.showToast("통합 점검 리포트를 새로고침했습니다.");
+    ui.showToast("통합 점검을 새로고침했습니다.");
   }
 
   async function runAll() {
@@ -80,27 +104,27 @@
     setRunning(true);
     dateInput.value = new Date().toLocaleString("ko-KR");
     lastReport = { sections: [] };
-    progress.innerHTML = "";
-    results.innerHTML = "";
+    progress.replaceChildren();
+    results.replaceChildren();
     addProgress("통합 점검을 시작합니다.", `${selected.length}개 항목을 순서대로 점검합니다.`);
 
     for (const [, label, collector] of selected) {
       if (currentRunId !== runId) return;
-      addProgress(`${label} 점검 중입니다...`);
+      const progressCard = addProgress(`${label} 검사중입니다.`, "", "running");
       try {
         const section = await collector(currentRunId);
         if (currentRunId !== runId) return;
         lastReport.sections.push(section);
-        addProgress(`${label} 점검을 완료했습니다.`, section.note || "");
+        updateProgress(progressCard, `${label} 완료되었습니다.`, section.note || "", "done");
       } catch (error) {
         if (currentRunId !== runId) return;
         lastReport.sections.push({ title: label, note: `점검 실패: ${error.message}`, blocks: [] });
-        addProgress(`${label} 점검 실패`, error.message);
+        updateProgress(progressCard, `${label} 점검 실패`, error.message, "error");
       }
     }
 
     if (currentRunId !== runId) return;
-    addProgress("모든 점검을 완료했습니다.", "「증빙 저장」으로 보관함에 저장할 수 있습니다.");
+    addProgress("모든 점검을 완료했습니다.", "「증빙 저장」으로 보관함에 저장할 수 있습니다.", "done");
     renderResults(lastReport);
     setRunning(false);
     printButton.disabled = false;
@@ -247,11 +271,11 @@
   // ── 화면 렌더링 ─────────────────────────────────
 
   function renderResults(report) {
-    results.innerHTML = "";
     if (!report.sections.length) {
-      results.append(createIdle("표시할 점검 결과가 없습니다."));
+      results.replaceChildren(createIdle("표시할 점검 결과가 없습니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const section of report.sections) {
       const item = document.createElement("article");
       item.className = "diagnostic-item ok ic-section";
@@ -268,8 +292,9 @@
       for (const block of section.blocks) {
         item.append(renderBlock(block));
       }
-      results.append(item);
+      fragment.append(item);
     }
+    results.replaceChildren(fragment);
   }
 
   function renderBlock(block) {
@@ -311,11 +336,28 @@
     }
     for (const row of block.rows) {
       const tr = document.createElement("tr");
-      for (const v of row) tr.append(cell("td", v));
+      for (const v of row) tr.append(tableCell(v));
       tbody.append(tr);
     }
     table.append(thead, tbody);
     return table;
+  }
+
+  function tableCell(value) {
+    const tone = statusTone(value);
+    if (!tone) return cell("td", value);
+    const td = cell("td", "");
+    td.className = "ic-status-cell";
+    const badge = document.createElement("span");
+    badge.className = `ic-status-badge ic-status-${tone}`;
+    badge.textContent = value == null ? "" : String(value);
+    td.append(badge);
+    return td;
+  }
+
+  function statusTone(value) {
+    const text = String(value == null ? "" : value).trim();
+    return STATUS_TONE_MAP.get(text) || "";
   }
 
   function cell(tag, value) {
@@ -331,12 +373,9 @@
     return p;
   }
 
-  function addProgress(message, detail = "") {
+  function addProgress(message, detail = "", status = "info") {
     const card = document.createElement("article");
-    card.className = "threat-progress-item";
-    if (running) {
-      card.classList.add("busy-card");
-    }
+    card.className = "threat-progress-item ic-progress-item";
     const head = document.createElement("div");
     const strong = document.createElement("strong");
     strong.textContent = message;
@@ -350,6 +389,35 @@
       card.append(p);
     }
     progress.append(card);
+    setProgressStatus(card, status);
+    return card;
+  }
+
+  function updateProgress(card, message, detail = "", status = "info") {
+    if (!card) return;
+    const strong = card.querySelector("strong");
+    const time = card.querySelector("span");
+    if (strong) strong.textContent = message;
+    if (time) time.textContent = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    let detailNode = card.querySelector("p");
+    if (detail) {
+      if (!detailNode) {
+        detailNode = document.createElement("p");
+        card.append(detailNode);
+      }
+      detailNode.textContent = detail;
+    } else if (detailNode) {
+      detailNode.remove();
+    }
+    setProgressStatus(card, status);
+  }
+
+  function setProgressStatus(card, status) {
+    card.classList.remove("ic-progress-running", "ic-progress-done", "ic-progress-error");
+    if (status === "running" || status === "done" || status === "error") {
+      card.classList.add(`ic-progress-${status}`);
+    }
   }
 
   function setRunning(isRunning) {
@@ -397,7 +465,7 @@
 
   function buildReportHtml() {
     const esc = escapeHtml;
-    let html = `<h1>PC 통합 점검 리포트</h1>`;
+    let html = `<h1>PC 통합 점검</h1>`;
     // 머리말: 1줄 제목 / 2줄 내용 (구조파일 형식)
     const headHead = ["점검일", "고객·부서", "자산번호", "점검자", "서명"];
     const headBody = [
@@ -433,10 +501,17 @@
       : "";
     const headRow = `<tr>${block.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>`;
     const bodyRows = block.rows.length
-      ? block.rows.map((r) => `<tr>${r.map((v) => `<td>${esc(v == null ? "" : String(v))}</td>`).join("")}</tr>`).join("")
+      ? block.rows.map((r) => `<tr>${r.map((v) => tableCellHtml(v, esc)).join("")}</tr>`).join("")
       : `<tr><td colspan="${block.head.length}">표시할 내용이 없습니다.</td></tr>`;
     const tableStyle = block.cols ? ' style="table-layout:fixed;width:100%;word-break:break-word"' : "";
     return `<table${tableStyle}>${colgroup}<thead>${headRow}</thead><tbody>${bodyRows}</tbody></table>`;
+  }
+
+  function tableCellHtml(value, esc) {
+    const tone = statusTone(value);
+    const text = esc(value == null ? "" : String(value));
+    if (!tone) return `<td>${text}</td>`;
+    return `<td style="vertical-align:middle"><span style="${STATUS_BADGE_STYLES[tone]}">${text}</span></td>`;
   }
 
   function escapeHtml(value) {

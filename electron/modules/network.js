@@ -1,6 +1,7 @@
 const { shell } = require("electron");
 const dns = require("dns").promises;
 const https = require("https");
+const net = require("net");
 const os = require("os");
 
 const {
@@ -320,21 +321,25 @@ async function runNetworkDiagnostics(interfaceId) {
     });
   }
 
-  const internetIpOk = await pingHost("1.1.1.1", 900);
+  const internetProbe = await checkInternetPath();
+  const dnsResult = await lookupDns("www.google.com");
+  const publicIp = await fetchPublicIp(messages);
+  const internetIpOk = internetProbe.ok || Boolean(publicIp);
   tests.push({
     name: "인터넷 통로 확인",
     status: internetIpOk ? "ok" : "fail",
-    detail: internetIpOk ? "외부 IP 1.1.1.1에 응답이 있습니다." : "외부 IP 1.1.1.1에 응답이 없습니다.",
+    detail: describeInternetProbe(internetProbe, publicIp),
     hint: internetIpOk
-      ? "공유기 밖 인터넷 통로는 열려 있습니다."
-      : "공유기까지는 연결됐지만 외부 인터넷이 차단된 상태입니다. 네트워크 스택 초기화를 시도하거나 공유기 WAN·모뎀·인터넷 회선을 확인해 주세요.",
+      ? internetProbe.pingOk
+        ? "공유기 밖 인터넷 통로는 열려 있습니다."
+        : "인터넷 연결은 확인되었습니다. 다만 외부 서버가 핑 응답을 막을 수 있어 443 포트 연결 또는 공인 IP 조회로 확인했습니다."
+      : "공유기까지는 연결됐지만 외부 인터넷 연결을 확인하지 못했습니다. 네트워크 스택 초기화를 시도하거나 공유기 WAN·모뎀·인터넷 회선을 확인해 주세요.",
     repairs: internetIpOk ? [] : [
       { action: "winsock-reset", label: "네트워크 스택 초기화", interfaceName: target.name },
       { action: "dns-flush",     label: "DNS 캐시 초기화",     interfaceName: target.name },
     ],
   });
 
-  const dnsResult = await lookupDns("www.google.com");
   tests.push({
     name: "DNS 이름 변환 확인",
     status: dnsResult.ok ? "ok" : "fail",
@@ -352,7 +357,6 @@ async function runNetworkDiagnostics(interfaceId) {
     ],
   });
 
-  const publicIp = await fetchPublicIp(messages);
   tests.push({
     name: "공인 IP 확인",
     status: publicIp ? "ok" : "warn",
@@ -593,6 +597,50 @@ async function pingHost(ip, timeoutMs) {
   } catch {
     return false;
   }
+}
+
+async function checkInternetPath() {
+  const [pingOk, tcp443Ok] = await Promise.all([
+    pingHost("1.1.1.1", 900),
+    connectTcp("1.1.1.1", 443, 1800),
+  ]);
+  return {
+    ok: pingOk || tcp443Ok,
+    pingOk,
+    tcp443Ok,
+  };
+}
+
+function connectTcp(host, port, timeoutMs) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    let done = false;
+
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      socket.destroy();
+      resolve(ok);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => finish(true));
+    socket.once("timeout", () => finish(false));
+    socket.once("error", () => finish(false));
+  });
+}
+
+function describeInternetProbe(probe, publicIp) {
+  if (probe.pingOk) {
+    return "외부 IP 1.1.1.1에 핑 응답이 있습니다.";
+  }
+  if (probe.tcp443Ok) {
+    return "외부 IP 1.1.1.1의 HTTPS 통신 포트에 연결되었습니다. 핑 응답은 차단되어 있을 수 있습니다.";
+  }
+  if (publicIp) {
+    return `공인 IP 조회가 성공했습니다. 현재 공인 IP는 ${publicIp}입니다. 핑 응답은 차단되어 있을 수 있습니다.`;
+  }
+  return "외부 IP 1.1.1.1의 핑과 HTTPS 통신 포트 모두 응답이 없습니다.";
 }
 
 async function lookupDns(hostname) {

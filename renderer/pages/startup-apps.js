@@ -10,11 +10,13 @@
   const tableWrap = document.querySelector(".startup-table-wrap");
 
   let busy = false;
+  let startupItems = [];
 
   menu.addEventListener("click", () => {
     ui.switchPage("#startupPage", menu);
   });
   refreshBtn.addEventListener("click", refresh);
+  tableBody.addEventListener("click", handleTableClick);
   tableWrap.classList.add("empty");
 
   async function refresh() {
@@ -35,10 +37,12 @@
   }
 
   function render(items) {
-    tableBody.innerHTML = "";
-    for (const item of items) {
-      tableBody.append(createRow(item));
+    startupItems = items;
+    const fragment = document.createDocumentFragment();
+    for (const [index, item] of items.entries()) {
+      fragment.append(createRow(item, index));
     }
+    tableBody.replaceChildren(fragment);
     tableWrap.classList.toggle("empty", items.length === 0);
     const offCount = items.filter((item) => !item.enabled).length;
     summary.textContent = items.length
@@ -46,14 +50,14 @@
       : "Windows를 켤 때 자동으로 실행되는 프로그램을 켜고 끕니다.";
   }
 
-  function createRow(item) {
+  function createRow(item, index) {
     const row = document.createElement("tr");
     row.append(
       cell(item.name),
       cell(item.scopeLabel),
       cell(item.command),
       statusCell(item),
-      actionCell(item),
+      actionCell(item, index),
     );
     return row;
   }
@@ -71,15 +75,24 @@
     return td;
   }
 
-  function actionCell(item) {
+  function actionCell(item, index) {
     const td = document.createElement("td");
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "startup-toggle-btn";
     btn.textContent = item.enabled ? "끄기" : "켜기";
-    btn.addEventListener("click", () => toggle(item, btn));
+    btn.dataset.index = String(index);
     td.append(btn);
     return td;
+  }
+
+  function handleTableClick(event) {
+    const button = event.target.closest(".startup-toggle-btn[data-index]");
+    if (!button) return;
+    const item = startupItems[Number(button.dataset.index)];
+    if (item) {
+      toggle(item, button);
+    }
   }
 
   async function toggle(item, btn) {

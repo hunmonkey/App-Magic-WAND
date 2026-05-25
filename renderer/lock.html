@@ -6,11 +6,22 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="lock-body">
+    <div class="window-titlebar" role="banner">
+      <span class="window-title">Hwang Jae Hoon</span>
+      <div class="window-controls" aria-label="창 제어">
+        <button class="window-control" type="button" data-window-action="minimize" aria-label="최소화">-</button>
+        <button class="window-control close" type="button" data-window-action="close" aria-label="닫기">&times;</button>
+      </div>
+    </div>
     <main class="lock-card">
-      <h1 class="lock-title">Magic WAND</h1>
+      <div class="lock-brand">
+        <img src="./assets/logo.svg" alt="" aria-hidden="true" />
+        <h1 class="lock-title">Magic WAND</h1>
+      </div>
       <p class="lock-subtitle" id="lockSubtitle">정품키를 확인하는 중입니다.</p>
       <div id="lockContent"></div>
     </main>
+    <script src="window-controls.js"></script>
     <script src="lock.js"></script>
   </body>
 </html>

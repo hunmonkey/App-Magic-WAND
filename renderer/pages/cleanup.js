@@ -31,6 +31,9 @@
 
   scanBtn.addEventListener("click", scan);
   runBtn.addEventListener("click", runCleanup);
+  targetList.addEventListener("change", () => {
+    runBtn.disabled = running || getSelectedIds().length === 0;
+  });
 
   async function scan() {
     if (scanning || running) return;
@@ -42,8 +45,7 @@
     setProgress(0, "스캔 준비 중입니다.");
     status.textContent = "정리 경로를 스캔하는 중입니다.";
     summary.textContent = "용량을 계산하는 중입니다.";
-    resultList.innerHTML = "";
-    resultList.append(ui.createLoadingState("삭제 없이 스캔만 진행 중입니다."));
+    resultList.replaceChildren(ui.createLoadingState("삭제 없이 스캔만 진행 중입니다."));
 
     try {
       const selected = getSelectedIds();
@@ -56,8 +58,7 @@
       runBtn.disabled = getSelectedIds().length === 0;
     } catch (error) {
       summary.textContent = "스캔에 실패했습니다.";
-      resultList.innerHTML = "";
-      resultList.append(empty(`스캔 실패: ${error.message}`));
+      resultList.replaceChildren(empty(`스캔 실패: ${error.message}`));
       ui.showToast(`시스템 정리 스캔 실패: ${error.message}`);
     } finally {
       scanning = false;
@@ -69,7 +70,7 @@
 
   function renderTargets(selectedBefore) {
     const selected = selectedBefore.length ? new Set(selectedBefore) : null;
-    targetList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of scanItems) {
       const label = document.createElement("label");
       label.className = "cleanup-target";
@@ -84,22 +85,20 @@
       const input = label.querySelector("input");
       input.value = item.id;
       input.checked = selected ? selected.has(item.id) : Boolean(item.defaultSelected);
-      input.addEventListener("change", () => {
-        runBtn.disabled = running || getSelectedIds().length === 0;
-      });
       label.querySelector("strong").textContent = item.label;
       label.querySelector("small").textContent = item.description;
       label.querySelector("em").textContent = formatBytes(item.bytes || 0);
-      targetList.append(label);
+      fragment.append(label);
     }
+    targetList.replaceChildren(fragment);
   }
 
   function renderResults(items) {
-    resultList.innerHTML = "";
     if (!items.length) {
-      resultList.append(empty("정리 가능한 항목이 없습니다."));
+      resultList.replaceChildren(empty("정리 가능한 항목이 없습니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const card = document.createElement("article");
       card.className = "cleanup-result-card";
@@ -113,8 +112,9 @@
       appendPathSection(card, "스캔 경로", item.roots, (value) => ({ path: value, note: "대상 경로" }));
       appendPathSection(card, "대표 파일/폴더", item.samples);
       appendPathSection(card, "접근 실패", item.failures, null, "fail");
-      resultList.append(card);
+      fragment.append(card);
     }
+    resultList.replaceChildren(fragment);
   }
 
   async function runCleanup() {
@@ -135,8 +135,7 @@
     scanBtn.disabled = true;
     runBtn.disabled = true;
     ui.setBusy(runBtn, true);
-    detailList.innerHTML = "";
-    detailList.append(ui.createLoadingState("정리 중입니다."));
+    detailList.replaceChildren(ui.createLoadingState("정리 중입니다."));
     status.textContent = "선택한 항목을 정리하는 중입니다.";
     setProgress(0, "정리 준비 중입니다.");
 
@@ -156,8 +155,7 @@
       await ui.notifyComplete("시스템 정리가 완료됐습니다.", { achievementKey: "cleanupsDone" });
     } catch (error) {
       status.textContent = `정리 실패: ${error.message}`;
-      detailList.innerHTML = "";
-      detailList.append(empty(`정리 실패: ${error.message}`));
+      detailList.replaceChildren(empty(`정리 실패: ${error.message}`));
       ui.showToast(`시스템 정리 실패: ${error.message}`);
     } finally {
       running = false;
@@ -169,7 +167,7 @@
   }
 
   function renderDetails(result) {
-    detailList.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of result.details || []) {
       const card = document.createElement("article");
       card.className = "cleanup-result-card";
@@ -179,8 +177,9 @@
       card.querySelector("p").textContent = `처리 ${item.removed || 0}개${item.failed ? ` · 실패 ${item.failed}개` : ""}`;
       appendPathSection(card, "삭제됨", item.removedItems);
       appendPathSection(card, "실패", item.failedItems, null, "fail");
-      detailList.append(card);
+      fragment.append(card);
     }
+    detailList.replaceChildren(fragment);
   }
 
   function appendPathSection(card, title, items = [], mapper = null, mode = "") {

@@ -144,12 +144,13 @@
     const conflict = data.conflictCount;
     summary.textContent = `총 ${data.total}개 · 바뀜 ${changed}개${conflict ? ` · 충돌 ${conflict}개` : ""}`;
 
-    tableBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of data.items) {
       const row = document.createElement("tr");
       row.append(createCell(item.from), createCell(item.changed ? item.to : item.from), createStatusCell(item));
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
     tableWrap.classList.toggle("empty", data.items.length === 0);
   }
 

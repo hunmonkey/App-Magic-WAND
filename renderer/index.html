@@ -6,28 +6,43 @@
     <title>Magic WAND</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="main-body">
+    <div class="window-titlebar" role="banner">
+      <span class="window-title">Hwang Jae Hoon</span>
+      <div class="window-controls" aria-label="창 제어">
+        <button class="window-control" type="button" data-window-action="minimize" aria-label="최소화">-</button>
+        <button class="window-control" type="button" data-window-action="maximize" aria-label="최대화">&#9633;</button>
+        <button class="window-control close" type="button" data-window-action="close" aria-label="닫기">&times;</button>
+      </div>
+    </div>
     <main class="app-shell">
       <aside class="side-menu">
+        <div class="side-brand" aria-label="Magic WAND">
+          <img src="./assets/logo.svg" alt="" aria-hidden="true" />
+          <span>Magic WAND</span>
+        </div>
         <nav class="side-nav" aria-label="주 메뉴">
           <div class="menu-group">
             <button class="menu-heading" type="button" aria-expanded="true" data-icon="▣">PC 관리</button>
             <div class="menu-sublist">
-              <button id="systemInfoMenu" class="menu-link sub-link active" type="button" data-icon="ⓘ">기초 정보</button>
+              <button id="systemInfoMenu" class="menu-link sub-link active" type="button" data-icon="ⓘ">PC 기본 정보</button>
               <button id="healthMenu" class="menu-link sub-link" type="button" data-icon="∿">PC 성능 점검</button>
-              <button id="integratedCheckMenu" class="menu-link sub-link" type="button" data-icon="▤">통합 점검 리포트</button>
-              <button id="checkMenu" class="menu-link sub-link" type="button" data-icon="◇">점검 : HW,SW</button>
-              <button id="controlPanelMenu" class="menu-link sub-link" type="button" data-icon="⌁">점검 : Network</button>
-              <button id="printerMenu" class="menu-link sub-link" type="button" data-icon="▦">점검 : Printer</button>
-              <button id="shareMenu" class="menu-link sub-link" type="button" data-icon="⇄">점검 : Share</button>
-              <button id="securityMenu" class="menu-link sub-link" type="button" data-icon="◆">점검 : Security</button>
+              <button id="integratedCheckMenu" class="menu-link sub-link" type="button" data-icon="▤">통합 점검</button>
+              <button id="hwCheckMenu" class="menu-link sub-link" type="button" data-icon="◇">점검 : 하드웨어</button>
+              <button id="swCheckMenu" class="menu-link sub-link" type="button" data-icon="◈">점검 : 소프트웨어</button>
+              <button id="eventLogMenu" class="menu-link sub-link" type="button" data-icon="▥">점검 : 이벤트 로그</button>
+              <button id="controlPanelMenu" class="menu-link sub-link" type="button" data-icon="⌁">점검 : 네트워크</button>
+              <button id="printerMenu" class="menu-link sub-link" type="button" data-icon="▦">점검 : 프린터</button>
+              <button id="shareMenu" class="menu-link sub-link" type="button" data-icon="⇄">점검 : 공유폴더</button>
+              <button id="securityMenu" class="menu-link sub-link" type="button" data-icon="◆">점검 : 계정 및 보안</button>
             </div>
           </div>
 
           <div class="menu-group collapsed">
             <button class="menu-heading" type="button" aria-expanded="false" data-icon="▦">자산 관리</button>
             <div class="menu-sublist">
-              <button id="assetMenu" class="menu-link sub-link" type="button" data-icon="▧">자산 대장</button>
+              <button id="assetRegisterMenu" class="menu-link sub-link" type="button" data-icon="▧">자산 등록</button>
+              <button id="assetListMenu" class="menu-link sub-link" type="button" data-icon="▤">자산 목록</button>
               <button id="remoteMenu" class="menu-link sub-link" type="button" data-icon="⇥">원격 일괄 작업</button>
             </div>
           </div>
@@ -44,21 +59,36 @@
           <div class="menu-group collapsed">
             <button class="menu-heading" type="button" aria-expanded="false" data-icon="▥">행정 업무</button>
             <div class="menu-sublist">
-              <button id="adminWorkMenu" class="menu-link sub-link" type="button" data-icon="▥">행정 대장</button>
+              <button id="adminOverviewMenu" class="menu-link sub-link" type="button" data-icon="▦">상황판</button>
+              <button id="adminVendorsMenu" class="menu-link sub-link" type="button" data-icon="☎">거래처</button>
+              <button id="adminSuppliesMenu" class="menu-link sub-link" type="button" data-icon="▤">비품수불</button>
+              <button id="adminPurchasesMenu" class="menu-link sub-link" type="button" data-icon="⇄">구매 진행</button>
+              <button id="adminContractsMenu" class="menu-link sub-link" type="button" data-icon="⌑">계약만료</button>
+              <button id="adminRequestsMenu" class="menu-link sub-link" type="button" data-icon="!">요청접수</button>
+              <button id="adminChecklistsMenu" class="menu-link sub-link" type="button" data-icon="☑">업무 체크리스트</button>
+              <button id="adminNotesMenu" class="menu-link sub-link" type="button" data-icon="✎">빠른 메모</button>
             </div>
           </div>
 
           <div class="menu-group collapsed">
             <button class="menu-heading" type="button" aria-expanded="false" data-icon="⌘">부가기능</button>
             <div class="menu-sublist">
-              <button id="fileToolsMenu" class="menu-link sub-link" type="button" data-icon="⇪">파일 백업/전송</button>
-              <button id="webShortcutMenu" class="menu-link sub-link" type="button" data-icon="◎">웹 바로가기</button>
-              <button id="fileRenameMenu" class="menu-link sub-link" type="button" data-icon="↺">파일 이름 일괄 변경</button>
+              <button id="fileToolsMenu" class="menu-link sub-link" type="button" data-icon="⇪">백업 및 전송</button>
+              <button id="webShortcutMenu" class="menu-link sub-link" type="button" data-icon="◎">바로가기 관리</button>
+              <button id="fileRenameMenu" class="menu-link sub-link" type="button" data-icon="↺">파일명 관리</button>
               <button id="startupMenu" class="menu-link sub-link" type="button" data-icon="⇧">시작 프로그램 관리</button>
-              <button id="recoveryMenu" class="menu-link sub-link" type="button" data-icon="↻">USB/SD 복구</button>
-              <button id="cleanupMenu" class="menu-link sub-link" type="button" data-icon="⌫">시스템 정리</button>
-              <button id="driverMenu" class="menu-link sub-link" type="button" data-icon="▧">드라이버 백업</button>
-              <button id="swLicenseMenu" class="menu-link sub-link" type="button" data-icon="⌑">소프트웨어 라이선스</button>
+              <button id="recoveryMenu" class="menu-link sub-link" type="button" data-icon="↻">외부 저장장치 복구</button>
+              <button id="cleanupMenu" class="menu-link sub-link" type="button" data-icon="⌫">시스템 최적화</button>
+              <button id="driverMenu" class="menu-link sub-link" type="button" data-icon="▧">장치 드라이버 관리</button>
+              <button id="swLicenseMenu" class="menu-link sub-link" type="button" data-icon="⌑">라이선스 관리</button>
+            </div>
+          </div>
+
+          <div class="menu-group collapsed">
+            <button class="menu-heading" type="button" aria-expanded="false" data-icon="i">안내</button>
+            <div class="menu-sublist">
+              <button id="helpMenu" class="menu-link sub-link" type="button" data-icon="?">도움말</button>
+              <button id="creatorMenu" class="menu-link sub-link" type="button" data-icon="@">프로그램 정보</button>
             </div>
           </div>
 
@@ -95,7 +125,7 @@
                 <div class="button-grid">
                   <button id="addButton" type="submit">등록</button>
                   <button id="updateButton" type="button" disabled>수정</button>
-                  <button id="deleteButton" type="button" disabled>삭제</button>
+                  <button id="deleteButton" class="danger-action" type="button" disabled>삭제</button>
                   <button id="clearButton" type="button">비우기</button>
                 </div>
               </form>
@@ -272,6 +302,11 @@
               </div>
               <div id="hwCheckResults" class="diagnostic-results"></div>
             </section>
+          </div>
+        </section>
+
+        <section id="softwareCheckPage" class="page">
+          <div class="check-page">
             <section class="panel">
               <div class="panel-header">
                 <div>
@@ -298,6 +333,11 @@
               </div>
               <div id="threatList" class="threat-list"></div>
             </section>
+          </div>
+        </section>
+
+        <section id="eventLogPage" class="page">
+          <div class="check-page">
             <section class="panel event-log-panel">
               <div class="panel-header">
                 <div>
@@ -436,17 +476,17 @@
               <section class="net-monitor-panel">
                 <div class="panel-header compact">
                   <div>
-                    <p class="section-label">속도·핑 모니터</p>
-                    <p id="netMonitorSummary" class="muted-text">실시간 지연시간과 송수신 속도를 확인합니다.</p>
+                    <p class="section-label">회선 속도 측정</p>
+                    <p id="netMonitorSummary" class="muted-text">실제 다운로드·업로드 테스트로 인터넷 회선 속도를 확인합니다.</p>
                   </div>
                 </div>
                 <div class="net-monitor-controls">
-                  <input id="netMonitorTarget" type="text" value="1.1.1.1" aria-label="핑 대상" />
-                  <button id="netMonitorStartBtn" type="button">시작</button>
+                  <input id="netMonitorTarget" type="text" value="speed.cloudflare.com" aria-label="속도 측정 서버" readonly />
+                  <button id="netMonitorStartBtn" type="button">측정시작</button>
                   <button id="netMonitorStopBtn" type="button" disabled>정지</button>
                 </div>
                 <div class="net-monitor-metrics">
-                  <div class="net-metric"><span>핑</span><strong id="netMonitorPing">—</strong></div>
+                  <div class="net-metric"><span>지연시간</span><strong id="netMonitorPing">—</strong></div>
                   <div class="net-metric"><span>다운로드</span><strong id="netMonitorDown">—</strong></div>
                   <div class="net-metric"><span>업로드</span><strong id="netMonitorUp">—</strong></div>
                 </div>
@@ -581,7 +621,7 @@
                 <button id="shareRefresh" type="button">새로고침</button>
               </div>
               <div class="tool-actions">
-                <button id="shareRemoveBtn" type="button" disabled>공유 중지</button>
+                <button id="shareRemoveBtn" class="danger-action" type="button" disabled>공유 중지</button>
                 <button type="button" data-windows-tool="sharedFolders">공유 폴더 관리</button>
                 <button type="button" data-windows-tool="networkSharing">네트워크 공유 센터</button>
               </div>
@@ -709,7 +749,7 @@
                 </div>
               </label>
               <div class="tool-actions">
-                <button id="eraseRunBtn" type="button" disabled>선택 항목 영구 삭제</button>
+                <button id="eraseRunBtn" class="danger-action" type="button" disabled>선택 항목 영구 삭제</button>
               </div>
               <label class="sec-target-label">
                 드라이브 전체 와이프 (시스템 드라이브 제외)
@@ -801,9 +841,9 @@
                 <button id="fmRowBelow" type="button" title="아래에 행 추가">행+↓</button>
                 <button id="fmColLeft" type="button" title="왼쪽에 열 추가">열+←</button>
                 <button id="fmColRight" type="button" title="오른쪽에 열 추가">열+→</button>
-                <button id="fmRowDelete" type="button" title="현재 행 삭제">행 삭제</button>
-                <button id="fmColDelete" type="button" title="현재 열 삭제">열 삭제</button>
-                <button id="fmTableDelete" type="button" title="표 전체 삭제">표 삭제</button>
+                <button id="fmRowDelete" class="danger-action" type="button" title="현재 행 삭제">행 삭제</button>
+                <button id="fmColDelete" class="danger-action" type="button" title="현재 열 삭제">열 삭제</button>
+                <button id="fmTableDelete" class="danger-action" type="button" title="표 전체 삭제">표 삭제</button>
               </span>
               <input id="fmImageInput" type="file" accept="image/*" hidden />
             </div>
@@ -834,7 +874,7 @@
                 <button id="fmgDuplicateBtn" type="button" disabled>복제</button>
                 <button id="fmgPrintBtn" type="button" disabled>PDF 저장</button>
                 <button id="fmgExportBtn" type="button" disabled>HTML 내보내기</button>
-                <button id="fmgDeleteBtn" type="button" disabled>삭제</button>
+                <button id="fmgDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
               </div>
               <div class="table-wrap fmg-table-wrap">
                 <table>
@@ -929,7 +969,7 @@
           <section class="panel">
             <div class="panel-header">
               <div>
-                <p class="section-label">통합 점검 리포트</p>
+                <p class="section-label">통합 점검</p>
                 <p class="muted-text">여러 점검을 한 번에 실행하고 결과를 증빙 문서로 저장합니다.</p>
               </div>
               <div class="ic-header-actions">
@@ -970,42 +1010,21 @@
           </section>
         </section>
 
-        <section id="adminWorkPage" class="page">
-          <div class="admin-work-layout">
-            <section class="panel admin-work-side">
-              <div class="panel-header">
-                <div>
-                  <p class="section-label">행정 업무</p>
-                  <p class="muted-text">요청, 체크리스트, 비품, 계약, 메모를 한곳에서 관리합니다.</p>
-                </div>
-              </div>
-              <div class="admin-stat-grid">
-                <div><span>미완료 요청</span><strong id="adminStatOpen">0</strong></div>
-                <div><span>오늘까지</span><strong id="adminStatDue">0</strong></div>
-                <div><span>부족 비품</span><strong id="adminStatSupply">0</strong></div>
-                <div><span>만료 임박</span><strong id="adminStatContract">0</strong></div>
-                <div><span>구매 진행</span><strong id="adminStatPurchase">0</strong></div>
-                <div><span>거래처</span><strong id="adminStatVendor">0</strong></div>
-              </div>
-              <div class="admin-tab-list" role="tablist" aria-label="행정 업무 분류">
-                <button id="adminTabOverview" class="admin-tab-button active" type="button" role="tab" aria-selected="true" aria-controls="adminPanelOverview" data-admin-tab="overview">상황판</button>
-                <button id="adminTabVendors" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelVendors" data-admin-tab="vendors">거래처</button>
-                <button id="adminTabSupplies" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelSupplies" data-admin-tab="supplies">비품·수불</button>
-                <button id="adminTabPurchases" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelPurchases" data-admin-tab="purchases">구매 진행</button>
-                <button id="adminTabContracts" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelContracts" data-admin-tab="contracts">계약·만료</button>
-                <button id="adminTabRequests" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelRequests" data-admin-tab="requests">요청 접수</button>
-                <button id="adminTabChecklists" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelChecklists" data-admin-tab="checklists">업무 체크리스트</button>
-                <button id="adminTabNotes" class="admin-tab-button" type="button" role="tab" aria-selected="false" aria-controls="adminPanelNotes" data-admin-tab="notes">빠른 메모</button>
-              </div>
-            </section>
-
-            <div class="admin-work-main">
-              <section id="adminPanelOverview" class="panel admin-tab-panel active" role="tabpanel" aria-labelledby="adminTabOverview" data-admin-panel="overview">
+        <section id="adminOverviewPage" class="page admin-work-page">
+              <section id="adminPanelOverview" class="panel admin-tab-panel" data-admin-panel="overview">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">행정 상황판</p>
                     <p class="muted-text">오늘 먼저 봐야 할 요청, 재고, 구매, 계약을 한 화면에 모읍니다.</p>
                   </div>
+                </div>
+                <div class="admin-stat-grid">
+                  <div><span>미완료 요청</span><strong id="adminStatOpen">0</strong></div>
+                  <div><span>오늘까지</span><strong id="adminStatDue">0</strong></div>
+                  <div><span>부족 비품</span><strong id="adminStatSupply">0</strong></div>
+                  <div><span>만료 임박</span><strong id="adminStatContract">0</strong></div>
+                  <div><span>구매 진행</span><strong id="adminStatPurchase">0</strong></div>
+                  <div><span>거래처</span><strong id="adminStatVendor">0</strong></div>
                 </div>
                 <div class="admin-dashboard-grid">
                   <section>
@@ -1026,8 +1045,10 @@
                   </section>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelVendors" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabVendors" data-admin-panel="vendors" hidden>
+        <section id="adminVendorsPage" class="page admin-work-page">
+              <section id="adminPanelVendors" class="panel admin-tab-panel" data-admin-panel="vendors">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">거래처 간편 대장</p>
@@ -1071,8 +1092,10 @@
                   <p class="empty-message">등록된 거래처가 없습니다.</p>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelRequests" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabRequests" data-admin-panel="requests" hidden>
+        <section id="adminRequestsPage" class="page admin-work-page">
+              <section id="adminPanelRequests" class="panel admin-tab-panel" data-admin-panel="requests">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">요청 접수 대장</p>
@@ -1125,8 +1148,10 @@
                   <p class="empty-message">저장된 요청이 없습니다.</p>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelChecklists" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabChecklists" data-admin-panel="checklists" hidden>
+        <section id="adminChecklistsPage" class="page admin-work-page">
+              <section id="adminPanelChecklists" class="panel admin-tab-panel" data-admin-panel="checklists">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">업무 체크리스트</p>
@@ -1153,8 +1178,10 @@
                   <p class="empty-inline">아직 체크리스트가 없습니다.</p>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelSupplies" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabSupplies" data-admin-panel="supplies" hidden>
+        <section id="adminSuppliesPage" class="page admin-work-page">
+              <section id="adminPanelSupplies" class="panel admin-tab-panel" data-admin-panel="supplies">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">비품·소모품 수불</p>
@@ -1234,8 +1261,10 @@
                   </div>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelPurchases" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabPurchases" data-admin-panel="purchases" hidden>
+        <section id="adminPurchasesPage" class="page admin-work-page">
+              <section id="adminPanelPurchases" class="panel admin-tab-panel" data-admin-panel="purchases">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">구매 요청·견적·입고</p>
@@ -1292,8 +1321,10 @@
                   <p class="empty-message">등록된 구매 건이 없습니다.</p>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelContracts" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabContracts" data-admin-panel="contracts" hidden>
+        <section id="adminContractsPage" class="page admin-work-page">
+              <section id="adminPanelContracts" class="panel admin-tab-panel" data-admin-panel="contracts">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">계약·만료 알림</p>
@@ -1338,8 +1369,10 @@
                   <p class="empty-message">등록된 계약이 없습니다.</p>
                 </div>
               </section>
+        </section>
 
-              <section id="adminPanelNotes" class="panel admin-tab-panel" role="tabpanel" aria-labelledby="adminTabNotes" data-admin-panel="notes" hidden>
+        <section id="adminNotesPage" class="page admin-work-page">
+              <section id="adminPanelNotes" class="panel admin-tab-panel" data-admin-panel="notes">
                 <div class="panel-header">
                   <div>
                     <p class="section-label">빠른 메모·히스토리</p>
@@ -1362,9 +1395,6 @@
                   </div>
                 </div>
               </section>
-
-            </div>
-          </div>
         </section>
 
         <section id="fileToolsPage" class="page">
@@ -1437,7 +1467,7 @@
                 <div class="tool-actions">
                   <button id="ftUseSavedPathBtn" type="button">불러오기</button>
                   <button id="ftSaveTransferPathBtn" type="button">경로 저장</button>
-                  <button id="ftDeleteTransferPathBtn" type="button">삭제</button>
+                  <button id="ftDeleteTransferPathBtn" class="danger-action" type="button">삭제</button>
                 </div>
               </div>
               <label>
@@ -1476,7 +1506,7 @@
             <section class="panel work-tool-panel">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">웹 바로가기 추가</p>
+                  <p class="section-label">바로가기 추가</p>
                   <p class="muted-text">업무 사이트를 바탕화면 바로가기 아이콘으로 만듭니다.</p>
                 </div>
               </div>
@@ -1514,11 +1544,11 @@
                 <input id="shortcutSetName" type="text" autocomplete="off" />
               </label>
               <div class="saved-path-panel shortcut-set-panel">
-                <select id="shortcutSetSelect" aria-label="저장된 웹 바로가기 세트"></select>
+                <select id="shortcutSetSelect" aria-label="저장된 바로가기 세트"></select>
                 <div class="tool-actions">
                   <button id="shortcutSaveSetBtn" type="button">세트 저장</button>
                   <button id="shortcutLoadSetBtn" type="button">세트 불러오기</button>
-                  <button id="shortcutDeleteSetBtn" type="button">세트 삭제</button>
+                  <button id="shortcutDeleteSetBtn" class="danger-action" type="button">세트 삭제</button>
                 </div>
               </div>
               <div class="tool-actions">
@@ -1759,7 +1789,7 @@
             <section class="panel driver-panel driver-export-panel">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">드라이버 백업</p>
+                  <p class="section-label">장치 드라이버 관리</p>
                   <p class="muted-text">Windows 드라이버를 선택한 폴더 안에 추출합니다.</p>
                 </div>
               </div>
@@ -1813,7 +1843,7 @@
                 <label>메모<textarea id="swLicenseNote"></textarea></label>
                 <div class="tool-actions">
                   <button id="swLicenseAddBtn" type="submit">저장</button>
-                  <button id="swLicenseDeleteBtn" type="button" disabled>삭제</button>
+                  <button id="swLicenseDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
                   <button id="swLicenseClearBtn" type="button">비우기</button>
                   <button id="swLicenseMaskBtn" type="button">키 보기</button>
                 </div>
@@ -1847,52 +1877,208 @@
           </div>
         </section>
 
-        <section id="assetPage" class="page">
-          <div class="page-grid">
-            <section class="panel record-panel">
+        <section id="assetRegisterPage" class="page">
+          <div class="asset-register-layout">
+            <section class="panel record-panel asset-register-panel">
               <div class="panel-heading">
                 <p class="section-label">자산 등록</p>
-                <p class="muted-text">PC·장비를 자산으로 등록하고 보증 만료를 관리합니다.</p>
+                <p class="muted-text">PC·노트북·모니터·복합기·NAS의 핵심 관리 정보를 등록합니다.</p>
               </div>
-              <form id="assetForm" class="record-form">
-                <label>장비 종류
-                  <select id="assetType">
-                    <option value="pc">PC</option>
-                    <option value="monitor">모니터</option>
-                    <option value="printer">프린터</option>
-                    <option value="other">기타 전산장비</option>
-                  </select>
-                </label>
-                <label>자산번호<input id="assetTag" type="text" autocomplete="off" /></label>
-                <label>장비명<input id="assetName" type="text" autocomplete="off" /></label>
-                <label>IP 주소<input id="assetIp" type="text" autocomplete="off" /></label>
-                <label>사양·모델<input id="assetSpec" type="text" autocomplete="off" /></label>
-                <label>위치<input id="assetLocation" type="text" autocomplete="off" /></label>
-                <label>담당자<input id="assetOwner" type="text" autocomplete="off" /></label>
-                <label>구매일<input id="assetPurchaseDate" type="date" /></label>
-                <label>보증 만료일<input id="assetWarrantyEnd" type="date" /></label>
-                <label>메모<textarea id="assetMemo"></textarea></label>
-                <div class="button-grid">
-                  <button id="assetAddBtn" type="submit">등록</button>
-                  <button id="assetUpdateBtn" type="button" disabled>수정</button>
-                  <button id="assetDeleteBtn" type="button" disabled>삭제</button>
-                  <button id="assetClearBtn" type="button">비우기</button>
+              <form id="assetForm" class="record-form asset-form">
+                <div class="asset-field-grid">
+                  <label>장비 종류
+                    <select id="assetType">
+                      <option value="pc">PC</option>
+                      <option value="laptop">노트북</option>
+                      <option value="monitor">모니터</option>
+                      <option value="mfp">복합기</option>
+                      <option value="nas">NAS</option>
+                    </select>
+                  </label>
+                  <label>자산번호<input id="assetTag" type="text" autocomplete="off" /></label>
+                  <label>장비명<input id="assetName" type="text" autocomplete="off" /></label>
+                  <label>관리 상태
+                    <select id="assetStatus">
+                      <option value="사용중">사용중</option>
+                      <option value="보관">보관</option>
+                      <option value="수리중">수리중</option>
+                      <option value="폐기 예정">폐기 예정</option>
+                      <option value="폐기">폐기</option>
+                    </select>
+                  </label>
+                  <label>제조사<input id="assetManufacturer" type="text" autocomplete="off" /></label>
+                  <label>모델명<input id="assetModel" type="text" autocomplete="off" /></label>
+                  <label>시리얼번호<input id="assetSerialNumber" type="text" autocomplete="off" /></label>
+                  <label>IP 주소<input id="assetIp" type="text" autocomplete="off" /></label>
+                  <label>사용부서<input id="assetDepartment" type="text" autocomplete="off" /></label>
+                  <label>사용자<input id="assetOwner" type="text" autocomplete="off" /></label>
+                  <label>설치 위치<input id="assetLocation" type="text" autocomplete="off" /></label>
+                  <label>구입일자<input id="assetPurchaseDate" type="date" /></label>
+                  <label>구입금액<input id="assetPurchaseAmount" type="number" min="0" step="1000" inputmode="numeric" /></label>
+                  <label>증빙서류<input id="assetEvidence" type="text" autocomplete="off" placeholder="영수증 번호, 파일명, 보관 위치 등" /></label>
+                  <label>보증 만료일<input id="assetWarrantyEnd" type="date" /></label>
                 </div>
-                <div class="tool-actions">
-                  <button id="assetFillBtn" type="button">현재 PC 정보로 채우기</button>
+
+                <div class="asset-specific-stack">
+                  <section class="asset-type-fields" data-asset-fields="pc laptop">
+                    <div class="asset-type-title">
+                      <strong>PC·노트북 핵심 사양</strong>
+                    </div>
+                    <div class="asset-field-grid">
+                      <label>CPU<input id="assetCpu" type="text" autocomplete="off" /></label>
+                      <label>RAM<input id="assetRam" type="text" autocomplete="off" /></label>
+                      <label>메인보드<input id="assetMotherboard" type="text" autocomplete="off" /></label>
+                      <label>그래픽카드<input id="assetVga" type="text" autocomplete="off" /></label>
+                      <label>SSD<input id="assetSsd" type="text" autocomplete="off" /></label>
+                      <label>HDD<input id="assetHdd" type="text" autocomplete="off" /></label>
+                      <label>NIC<input id="assetNic" type="text" autocomplete="off" /></label>
+                      <label>파워<input id="assetPower" type="text" autocomplete="off" /></label>
+                      <label>운영체제<input id="assetOs" type="text" autocomplete="off" /></label>
+                    </div>
+                  </section>
+
+                  <section class="asset-type-fields" data-asset-fields="laptop">
+                    <div class="asset-type-title">
+                      <strong>노트북 추가 정보</strong>
+                    </div>
+                    <div class="asset-field-grid">
+                      <label>화면 크기<input id="assetScreenSize" type="text" autocomplete="off" /></label>
+                      <label>배터리 상태<input id="assetBatteryHealth" type="text" autocomplete="off" /></label>
+                    </div>
+                  </section>
+
+                  <section class="asset-type-fields" data-asset-fields="monitor">
+                    <div class="asset-type-title">
+                      <strong>모니터 핵심 정보</strong>
+                    </div>
+                    <div class="asset-field-grid">
+                      <label>화면 크기<input id="assetMonitorScreenSize" type="text" autocomplete="off" /></label>
+                      <label>해상도<input id="assetResolution" type="text" autocomplete="off" /></label>
+                      <label>패널/주사율<input id="assetPanelType" type="text" autocomplete="off" /></label>
+                      <label>입력 포트<input id="assetPorts" type="text" autocomplete="off" /></label>
+                      <label>연결 PC<input id="assetConnectedAsset" type="text" autocomplete="off" /></label>
+                    </div>
+                  </section>
+
+                  <section class="asset-type-fields" data-asset-fields="mfp">
+                    <div class="asset-type-title">
+                      <strong>복합기 핵심 정보</strong>
+                    </div>
+                    <div class="asset-field-grid">
+                      <label>인쇄 방식<input id="assetPrintType" type="text" autocomplete="off" placeholder="레이저, 잉크젯 등" /></label>
+                      <label>컬러 지원<input id="assetColorMode" type="text" autocomplete="off" /></label>
+                      <label>연결 방식<input id="assetConnectionType" type="text" autocomplete="off" placeholder="유선 LAN, USB, Wi-Fi 등" /></label>
+                      <label>토너/잉크 모델<input id="assetTonerModel" type="text" autocomplete="off" /></label>
+                      <label>누적 매수<input id="assetPrintCounter" type="number" min="0" step="1" inputmode="numeric" /></label>
+                      <label>스캔/FAX<input id="assetScanFax" type="text" autocomplete="off" /></label>
+                    </div>
+                  </section>
+
+                  <section class="asset-type-fields" data-asset-fields="nas">
+                    <div class="asset-type-title">
+                      <strong>NAS 핵심 정보</strong>
+                    </div>
+                    <div class="asset-field-grid">
+                      <label>CPU<input id="assetNasCpu" type="text" autocomplete="off" /></label>
+                      <label>RAM<input id="assetNasRam" type="text" autocomplete="off" /></label>
+                      <label>베이 수<input id="assetDiskBays" type="text" autocomplete="off" /></label>
+                      <label>저장장치 구성<input id="assetStorage" type="text" autocomplete="off" /></label>
+                      <label>RAID<input id="assetRaid" type="text" autocomplete="off" /></label>
+                      <label>NIC<input id="assetNasNic" type="text" autocomplete="off" /></label>
+                      <label>운영체제<input id="assetNasOs" type="text" autocomplete="off" /></label>
+                      <label>백업 대상<input id="assetBackupTarget" type="text" autocomplete="off" /></label>
+                      <label>관리 주소<input id="assetAdminUrl" type="text" autocomplete="off" /></label>
+                    </div>
+                  </section>
                 </div>
-                <p class="muted-text">「현재 PC 정보로 채우기」는 장비 종류를 PC로 바꾸고 이 PC의 사양·IP·이름을 자동으로 입력합니다.</p>
+
+                <div class="asset-note-actions">
+                  <label>수리이력<textarea id="assetRepairHistory"></textarea></label>
+                  <label>메모<textarea id="assetMemo"></textarea></label>
+                  <div class="button-grid">
+                    <button id="assetAddBtn" type="submit">등록</button>
+                    <button id="assetUpdateBtn" type="button" disabled>수정</button>
+                    <button id="assetDeleteBtn" class="danger-action" type="button" disabled>삭제</button>
+                    <button id="assetClearBtn" type="button">비우기</button>
+                  </div>
+                  <div class="tool-actions">
+                    <button id="assetFillBtn" type="button">현재 PC 정보로 채우기</button>
+                  </div>
+                </div>
               </form>
             </section>
+          </div>
+        </section>
 
-            <div class="asset-right">
-            <section class="panel list-panel">
+        <section id="assetListPage" class="page">
+          <div class="asset-list-layout">
+            <section class="panel asset-filter-panel">
+              <div class="panel-heading">
+                <p class="section-label">자산 목록</p>
+                <p id="assetCount" class="muted-text">등록한 자산을 검색하고 관리합니다.</p>
+              </div>
+              <div class="asset-filter-grid">
+                <label>장비 종류
+                  <select id="assetTypeFilter">
+                    <option value="all">전체</option>
+                    <option value="pc">PC</option>
+                    <option value="laptop">노트북</option>
+                    <option value="monitor">모니터</option>
+                    <option value="mfp">복합기</option>
+                    <option value="nas">NAS</option>
+                  </select>
+                </label>
+                <label>사용부서
+                  <select id="assetDepartmentFilter">
+                    <option value="all">전체</option>
+                  </select>
+                </label>
+                <label>관리 상태
+                  <select id="assetStatusFilter">
+                    <option value="all">전체</option>
+                    <option value="사용중">사용중</option>
+                    <option value="보관">보관</option>
+                    <option value="수리중">수리중</option>
+                    <option value="폐기 예정">폐기 예정</option>
+                    <option value="폐기">폐기</option>
+                  </select>
+                </label>
+                <label>검색<input id="assetSearch" type="search" autocomplete="off" /></label>
+              </div>
+              <div class="asset-stat-grid">
+                <div>
+                  <span>선택 자산</span>
+                  <strong id="assetStatTotal">0대</strong>
+                </div>
+                <div>
+                  <span>구입금액 합계</span>
+                  <strong id="assetStatAmount">0원</strong>
+                </div>
+                <div>
+                  <span>보증 확인</span>
+                  <strong id="assetStatWarranty">0대</strong>
+                </div>
+                <div>
+                  <span>사용부서</span>
+                  <strong id="assetStatDepartment">0곳</strong>
+                </div>
+              </div>
+              <div class="asset-chart-panel">
+                <div class="asset-chart-head">
+                  <strong>통계 그래프</strong>
+                  <span id="assetChartNote">장비 종류별 보유 수</span>
+                </div>
+                <div id="assetChart" class="asset-chart"></div>
+              </div>
+            </section>
+
+            <section class="panel list-panel asset-list-panel">
               <div class="list-toolbar asset-list-toolbar">
                 <div>
-                  <p class="section-label">자산 목록</p>
-                  <p id="assetCount" class="muted-text">등록한 자산을 검색하고 관리합니다.</p>
+                  <p class="section-label">목록 관리</p>
+                  <p class="muted-text">행을 선택하면 오른쪽에서 상세 확인, 수정 이동, 삭제가 가능합니다.</p>
                 </div>
-                <label class="search-field asset-search-field"><span>검색</span><input id="assetSearch" type="search" /></label>
+                <button id="assetNewBtn" type="button">새 자산 등록</button>
               </div>
               <div class="table-wrap asset-table-wrap">
                 <table>
@@ -1901,26 +2087,27 @@
                       <th>종류</th>
                       <th>자산번호</th>
                       <th>장비명</th>
-                      <th>IP</th>
+                      <th>사용부서</th>
+                      <th>사용자</th>
                       <th>위치</th>
-                      <th>담당자</th>
+                      <th>IP</th>
+                      <th>상태</th>
                       <th>보증 만료</th>
                     </tr>
                   </thead>
                   <tbody id="assetTableBody"></tbody>
                 </table>
-                <p id="assetEmptyMessage" class="empty-message">등록된 자산이 없습니다.</p>
+                <p id="assetEmptyMessage" class="empty-message">조건에 맞는 자산이 없습니다.</p>
               </div>
             </section>
 
             <section class="panel asset-detail-panel">
               <div class="panel-heading">
                 <p class="section-label">자산 상세</p>
-                <p class="muted-text">목록에서 자산을 선택하면 상세 정보를 한 카드로 모아 보여줍니다.</p>
+                <p class="muted-text">선택한 자산의 핵심 정보를 한 번에 확인합니다.</p>
               </div>
               <div id="assetDetailBody" class="asset-detail-body"></div>
             </section>
-            </div>
           </div>
         </section>
 
@@ -1989,7 +2176,7 @@
                 <button id="healthSnapshotBtn" type="button" disabled>스냅샷 저장</button>
                 <select id="healthSnapshotSelect" aria-label="비교할 스냅샷"></select>
                 <button id="healthCompareBtn" type="button" disabled>비교</button>
-                <button id="healthSnapshotDeleteBtn" type="button" disabled>스냅샷 삭제</button>
+                <button id="healthSnapshotDeleteBtn" class="danger-action" type="button" disabled>스냅샷 삭제</button>
               </div>
             </section>
 
@@ -2056,6 +2243,66 @@
           </div>
         </section>
 
+        <section id="helpPage" class="page">
+          <div class="help-layout">
+            <section class="panel help-index-panel">
+              <div class="panel-heading">
+                <p class="section-label">안내</p>
+                <p class="muted-text">화면별 기능, 버튼, 사용 순서, 주의점, 오류 대응법을 확인합니다.</p>
+              </div>
+              <label class="search-field">
+                검색
+                <input id="helpSearch" type="search" autocomplete="off" placeholder="예: 프린터, 백업, 오류" />
+              </label>
+              <div id="helpIndex" class="help-index"></div>
+            </section>
+
+            <section class="panel help-content-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">도움말</p>
+                  <p id="helpSummary" class="muted-text">각 페이지를 같은 양식으로 정리했습니다.</p>
+                </div>
+              </div>
+              <div id="helpContent" class="help-content"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="creatorPage" class="page">
+          <div class="creator-layout">
+            <section class="panel creator-panel">
+              <div class="creator-header">
+                <img class="creator-logo" src="./assets/logo.svg" alt="Magic WAND 로고" />
+                <div>
+                  <p class="section-label">프로그램 정보</p>
+                  <h1>Magic WAND</h1>
+                  <p>사용 허가 및 정품 인증 안내</p>
+                </div>
+              </div>
+
+              <dl class="creator-info-list">
+                <div>
+                  <dt>이름</dt>
+                  <dd>황재훈</dd>
+                </div>
+                <div>
+                  <dt>이메일</dt>
+                  <dd class="creator-email">hunmonkey@hanmail.net</dd>
+                </div>
+                <div class="creator-info-wide">
+                  <dt>안내문구</dt>
+                  <dd>본 프로그램의 사용은 개발자에게 허가받은 사용자로 제한됩니다. 계정 및 비밀번호 관리에 유의하여 주세요.</dd>
+                </div>
+                <div class="creator-info-wide">
+                  <dt>정품인증</dt>
+                  <dd><span class="creator-license-badge">인증 받은 사용자 입니다</span></dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </section>
+
       </section>
     </main>
 
@@ -2081,33 +2328,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+    <script src="./window-controls.js"></script>
     <script src="./app.js"></script>
     <script src="./menu.js"></script>
-    <script src="./pages/system-info.js"></script>
-    <script src="./pages/hardware-check.js"></script>
-    <script src="./pages/threat-scan.js"></script>
-    <script src="./pages/control-panel.js"></script>
-    <script src="./pages/printer.js"></script>
-    <script src="./pages/share.js"></script>
-    <script src="./pages/security.js"></script>
-    <script src="./pages/win-update.js"></script>
-    <script src="./pages/form-maker.js"></script>
-    <script src="./pages/form-manager.js"></script>
-    <script src="./pages/label-maker.js"></script>
-    <script src="./pages/integrated-check.js"></script>
-    <script src="./pages/file-tools.js"></script>
-    <script src="./pages/web-shortcut.js"></script>
-    <script src="./pages/file-rename.js"></script>
-    <script src="./pages/settings-backup.js"></script>
-    <script src="./pages/startup-apps.js"></script>
-    <script src="./pages/recovery.js"></script>
-    <script src="./pages/cleanup.js"></script>
-    <script src="./pages/driver.js"></script>
-    <script src="./pages/event-log.js"></script>
-    <script src="./pages/sw-license.js"></script>
-    <script src="./pages/asset.js"></script>
-    <script src="./pages/remote.js"></script>
-    <script src="./pages/health.js"></script>
-    <script src="./pages/admin-work.js"></script>
   </body>
 </html>

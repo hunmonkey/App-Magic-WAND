@@ -41,15 +41,15 @@
   elements.selectAllBtn.addEventListener("click", () => setAllTargets(true));
   elements.clearBtn.addEventListener("click", () => setAllTargets(false));
   elements.runBtn.addEventListener("click", runRemoteJob);
+  elements.targetList.addEventListener("change", updateButtons);
 
   elements.targetList.append(createEmptyState("새로고침 버튼을 눌러 대상 PC 목록을 불러오세요."));
   updateButtons();
 
   async function loadTargets() {
     setRunning(false);
-    elements.targetList.innerHTML = "";
-    elements.targetList.append(ui.createLoadingState("자산 목록을 불러오는 중입니다."));
-    elements.targetCount.textContent = "자산 대장을 확인하고 있습니다.";
+    elements.targetList.replaceChildren(ui.createLoadingState("자산 목록을 불러오는 중입니다."));
+    elements.targetCount.textContent = "자산 목록을 확인하고 있습니다.";
     ui.setBusy(elements.refreshBtn, true);
 
     try {
@@ -59,26 +59,25 @@
     } catch (error) {
       targets = [];
       elements.targetCount.textContent = "대상 PC를 불러오지 못했습니다.";
-      elements.targetList.innerHTML = "";
-      elements.targetList.append(createEmptyState(`불러오기 실패: ${error.message}`));
+      elements.targetList.replaceChildren(createEmptyState(`불러오기 실패: ${error.message}`));
     } finally {
       ui.setBusy(elements.refreshBtn, false);
     }
   }
 
   function renderTargets(messages) {
-    elements.targetList.innerHTML = "";
     elements.targetCount.textContent = targets.length
       ? `IP가 등록된 자산 ${targets.length}대를 선택할 수 있습니다.`
       : "선택할 수 있는 대상 PC가 없습니다.";
 
     if (!targets.length) {
-      const message = messages[0] || "자산 대장에 IP가 있는 PC를 먼저 등록해 주세요.";
-      elements.targetList.append(createEmptyState(message));
+      const message = messages[0] || "자산 목록에 IP가 있는 PC를 먼저 등록해 주세요.";
+      elements.targetList.replaceChildren(createEmptyState(message));
       updateButtons();
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const target of targets) {
       const label = document.createElement("label");
       label.className = "remote-target";
@@ -92,12 +91,12 @@
       `;
       const checkbox = label.querySelector("input");
       checkbox.value = target.id;
-      checkbox.addEventListener("change", updateButtons);
       label.querySelector("strong").textContent = target.name || target.assetTag || target.ip;
       label.querySelector("small").textContent = [target.assetTag, target.location, target.owner].filter(Boolean).join(" · ") || "추가 정보 없음";
       label.querySelector("em").textContent = target.ip;
-      elements.targetList.append(label);
+      fragment.append(label);
     }
+    elements.targetList.replaceChildren(fragment);
 
     updateButtons();
   }
@@ -118,7 +117,7 @@
 
     const action = elements.actionSelect.value;
     currentJobId = `remote-${Date.now()}`;
-    elements.resultList.innerHTML = "";
+    elements.resultList.replaceChildren();
     elements.status.textContent = `${actionLabels[action]} 점검을 시작했습니다.`;
     setRunning(true);
 

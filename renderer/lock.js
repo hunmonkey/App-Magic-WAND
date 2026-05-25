@@ -65,6 +65,7 @@
       if (result.ok) return; // 로그인 성공 → 본 화면으로 창이 전환됨
       loginBtn.disabled = false;
       msg.textContent = loginError(result.reason);
+      shake(document.querySelector(".lock-card"));
       pwInput.focus();
       pwInput.select();
     });
@@ -91,6 +92,7 @@
         render(await api.status());
       } else if (result.reason !== "canceled") {
         msg.textContent = "해제키가 올바르지 않습니다. 발급한 마스터 해제키가 맞는지 확인해 주세요.";
+        shake(document.querySelector(".lock-card"));
       }
     });
 
@@ -103,6 +105,13 @@
   }
 
   // ── helpers
+  function shake(node) {
+    if (!node) return;
+    node.classList.remove("mw-shake");
+    void node.offsetWidth; // 리플로우로 애니메이션을 처음부터 다시 재생한다.
+    node.classList.add("mw-shake");
+  }
+
   function el(tag, attrs, ...kids) {
     const node = document.createElement(tag);
     if (attrs) {

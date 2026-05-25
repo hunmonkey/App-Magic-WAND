@@ -216,4 +216,9 @@ contextBridge.exposeInMainWorld("magicWand", {
       return () => ipcRenderer.removeListener("app:request-quit-confirmation", listener);
     },
   },
+  windowControls: {
+    minimize: () => ipcRenderer.send("window:minimize"),
+    toggleMaximize: () => ipcRenderer.send("window:toggle-maximize"),
+    close: () => ipcRenderer.send("window:close"),
+  },
 });

@@ -54,6 +54,7 @@
     shortcuts = [];
     renderList();
   });
+  listEl.addEventListener("click", handleListClick);
 
   renderList();
   renderSetSelect();
@@ -126,13 +127,16 @@
   }
 
   function renderList() {
-    listEl.innerHTML = "";
     summaryEl.textContent = shortcuts.length ? `생성 예정 ${shortcuts.length}개` : "목록에 추가한 사이트가 없습니다.";
     if (!shortcuts.length) {
-      listEl.innerHTML = "<p class='empty-inline'>바로가기 이름과 주소를 입력해 목록에 추가하세요.</p>";
+      const empty = document.createElement("p");
+      empty.className = "empty-inline";
+      empty.textContent = "바로가기 이름과 주소를 입력해 목록에 추가하세요.";
+      listEl.replaceChildren(empty);
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     shortcuts.forEach((item, index) => {
       const card = document.createElement("article");
       card.className = "shortcut-card";
@@ -149,14 +153,20 @@
       }
       const remove = document.createElement("button");
       remove.type = "button";
+      remove.className = "danger-action";
       remove.textContent = "삭제";
-      remove.addEventListener("click", () => {
-        shortcuts.splice(index, 1);
-        renderList();
-      });
+      remove.dataset.index = String(index);
       card.append(info, remove);
-      listEl.append(card);
+      fragment.append(card);
     });
+    listEl.replaceChildren(fragment);
+  }
+
+  function handleListClick(event) {
+    const button = event.target.closest("button[data-index]");
+    if (!button) return;
+    shortcuts.splice(Number(button.dataset.index), 1);
+    renderList();
   }
 
   async function createShortcuts() {
@@ -266,23 +276,24 @@
   }
 
   function renderSetSelect(preferredId = "") {
-    setSelect.innerHTML = "";
     if (!settings.shortcutSets?.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "저장된 세트가 없습니다.";
-      setSelect.append(option);
+      setSelect.replaceChildren(option);
       setNameInput.value = "";
       loadSetBtn.disabled = true;
       deleteSetBtn.disabled = true;
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const set of settings.shortcutSets) {
       const option = document.createElement("option");
       option.value = set.id;
       option.textContent = `${set.name} (${set.shortcuts.length}개)`;
-      setSelect.append(option);
+      fragment.append(option);
     }
+    setSelect.replaceChildren(fragment);
     setSelect.value = preferredId && settings.shortcutSets.some((set) => set.id === preferredId)
       ? preferredId
       : settings.shortcutSets[0].id;

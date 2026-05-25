@@ -36,6 +36,7 @@
     e.preventDefault();
     await createShare();
   });
+  tableBody.addEventListener("click", handleTableClick);
   bindToolButtons(page);
 
   async function pickFolder() {
@@ -91,7 +92,7 @@
     refreshBtn.disabled = true;
     ui.setBusy(refreshBtn, true);
     emptyMessage.textContent = "공유 폴더 목록을 불러오는 중입니다.";
-    tableBody.innerHTML = "";
+    tableBody.replaceChildren();
     tableWrap.classList.add("empty");
     try {
       const result = await window.magicWand.share.list();
@@ -109,31 +110,37 @@
   }
 
   function renderTable() {
-    tableBody.innerHTML = "";
     const myShares = shares.filter((s) => !s.special);
     if (!myShares.length && !mappings.length) {
+      tableBody.replaceChildren();
       tableWrap.classList.add("empty");
       updateRemoveButton();
       return;
     }
     tableWrap.classList.remove("empty");
+    const fragment = document.createDocumentFragment();
     for (const s of myShares) {
       const row = document.createElement("tr");
+      row.dataset.name = s.name;
       if (s.name === selectedName) row.classList.add("selected");
       row.append(cell("내 공유"), cell(s.name), cell(s.path), cell(s.description || ""));
-      row.addEventListener("click", () => {
-        selectedName = s.name === selectedName ? "" : s.name;
-        renderTable();
-      });
-      tableBody.append(row);
+      fragment.append(row);
     }
     for (const m of mappings) {
       const row = document.createElement("tr");
       row.classList.add("share-network-row");
       row.append(cell("연결됨"), cell(m.localPath || ""), cell(m.remotePath || ""), cell(statusText(m.status)));
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
     updateRemoveButton();
+  }
+
+  function handleTableClick(event) {
+    const row = event.target.closest("tr[data-name]");
+    if (!row) return;
+    selectedName = row.dataset.name === selectedName ? "" : row.dataset.name;
+    renderTable();
   }
 
   function statusText(status) {

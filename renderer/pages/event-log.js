@@ -1,7 +1,8 @@
 (function () {
   const ui = window.MagicWand;
+  const menu = document.querySelector("#eventLogMenu");
   const scanBtn = document.querySelector("#eventLogScanBtn");
-  if (!scanBtn || !ui) return;
+  if (!menu || !scanBtn || !ui) return;
 
   const daysSelect = document.querySelector("#eventLogDays");
   const saveBtn = document.querySelector("#eventLogSaveBtn");
@@ -12,6 +13,9 @@
 
   let lastResult = null;
 
+  menu.addEventListener("click", () => {
+    ui.switchPage("#eventLogPage", menu);
+  });
   scanBtn.addEventListener("click", scan);
   saveBtn.addEventListener("click", saveText);
 
@@ -20,9 +24,8 @@
     ui.setBusy(scanBtn, true);
     saveBtn.disabled = true;
     summary.textContent = "이벤트 로그를 조회하는 중입니다.";
-    groupsEl.innerHTML = "";
-    groupsEl.append(ui.createLoadingState("오류와 경고 기록을 모으는 중입니다."));
-    tableBody.innerHTML = "";
+    groupsEl.replaceChildren(ui.createLoadingState("오류와 경고 기록을 모으는 중입니다."));
+    tableBody.replaceChildren();
 
     try {
       lastResult = await window.magicWand.eventLog.scan({ days: Number(daysSelect.value) || 7 });
@@ -30,8 +33,7 @@
       saveBtn.disabled = !(lastResult.events || []).length;
     } catch (error) {
       summary.textContent = "이벤트 로그 조회에 실패했습니다.";
-      groupsEl.innerHTML = "";
-      groupsEl.append(empty(`조회 실패: ${error.message}`));
+      groupsEl.replaceChildren(empty(`조회 실패: ${error.message}`));
       ui.showToast(`이벤트 로그 조회 실패: ${error.message}`);
     } finally {
       scanBtn.disabled = false;
@@ -46,12 +48,12 @@
   }
 
   function renderGroups(groups) {
-    groupsEl.innerHTML = "";
     if (!groups.length) {
-      groupsEl.append(empty("반복되는 오류 그룹이 없습니다."));
+      groupsEl.replaceChildren(empty("반복되는 오류 그룹이 없습니다."));
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const group of groups) {
       const card = document.createElement("article");
       card.className = "event-group-card";
@@ -64,13 +66,14 @@
       card.querySelector("span").textContent = `${group.count}건`;
       card.querySelector("p").textContent = group.hint || "";
       card.querySelector("small").textContent = group.sample || "";
-      groupsEl.append(card);
+      fragment.append(card);
     }
+    groupsEl.replaceChildren(fragment);
   }
 
   function renderRows(events) {
-    tableBody.innerHTML = "";
     tableWrap.classList.toggle("empty", events.length === 0);
+    const fragment = document.createDocumentFragment();
     for (const event of events.slice(0, 100)) {
       const row = document.createElement("tr");
       row.append(
@@ -79,8 +82,9 @@
         cell(`${event.provider || "공급자 확인 안 됨"} / ${event.id}`),
         cell(event.message || ""),
       );
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
   }
 
   async function saveText() {

@@ -68,6 +68,8 @@
   cancelTransferBtn.addEventListener("click", () => cancelJob(currentTransferJobId));
   openBackupBtn.addEventListener("click", () => openPath(lastBackupPath));
   openTransferBtn.addEventListener("click", () => openPath(lastTransferPath));
+  quickFoldersEl.addEventListener("click", handleQuickFolderClick);
+  sourceListEl.addEventListener("click", handleSourceListClick);
 
   renderSources();
   renderSavedPaths();
@@ -76,21 +78,29 @@
     commonLoaded = true;
     try {
       const folders = await window.magicWand.fileTools.commonFolders();
-      quickFoldersEl.innerHTML = "";
+      const fragment = document.createDocumentFragment();
       for (const folder of folders) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = folder.label;
         btn.title = folder.path;
-        btn.addEventListener("click", () => addSources([folder.path]));
-        quickFoldersEl.append(btn);
+        btn.dataset.path = folder.path;
+        fragment.append(btn);
       }
+      quickFoldersEl.replaceChildren(fragment);
       const downloads = folders.find((item) => item.key === "downloads") || folders[0];
       if (downloads && !backupDestInput.value) {
         backupDestInput.value = downloads.path;
       }
     } catch (err) {
-      quickFoldersEl.innerHTML = `<p class="empty-inline">기본 폴더를 불러오지 못했습니다: ${err.message}</p>`;
+      quickFoldersEl.replaceChildren(emptyState(`기본 폴더를 불러오지 못했습니다: ${err.message}`));
+    }
+  }
+
+  function handleQuickFolderClick(event) {
+    const button = event.target.closest("button[data-path]");
+    if (button) {
+      addSources([button.dataset.path]);
     }
   }
 
@@ -125,11 +135,14 @@
   }
 
   function renderSources() {
-    sourceListEl.innerHTML = "";
     if (!sources.length) {
-      sourceListEl.innerHTML = "<p class='empty-inline'>선택한 파일이나 폴더가 없습니다.</p>";
+      const empty = document.createElement("p");
+      empty.className = "empty-inline";
+      empty.textContent = "선택한 파일이나 폴더가 없습니다.";
+      sourceListEl.replaceChildren(empty);
       return;
     }
+    const fragment = document.createDocumentFragment();
     sources.forEach((source, index) => {
       const item = document.createElement("article");
       item.className = "path-item";
@@ -141,14 +154,20 @@
       text.append(title, pathText);
       const remove = document.createElement("button");
       remove.type = "button";
+      remove.className = "danger-action";
       remove.textContent = "삭제";
-      remove.addEventListener("click", () => {
-        sources.splice(index, 1);
-        renderSources();
-      });
+      remove.dataset.index = String(index);
       item.append(text, remove);
-      sourceListEl.append(item);
+      fragment.append(item);
     });
+    sourceListEl.replaceChildren(fragment);
+  }
+
+  function handleSourceListClick(event) {
+    const button = event.target.closest("button[data-index]");
+    if (!button) return;
+    sources.splice(Number(button.dataset.index), 1);
+    renderSources();
   }
 
   async function pickDestination(input) {
@@ -287,22 +306,23 @@
   }
 
   function renderSavedPaths() {
-    savedPathSelect.innerHTML = "";
     if (!settings.transferPaths.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "저장된 전송 경로가 없습니다.";
-      savedPathSelect.append(option);
+      savedPathSelect.replaceChildren(option);
       useSavedPathBtn.disabled = true;
       deleteTransferPathBtn.disabled = true;
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const item of settings.transferPaths) {
       const option = document.createElement("option");
       option.value = item;
       option.textContent = item;
-      savedPathSelect.append(option);
+      fragment.append(option);
     }
+    savedPathSelect.replaceChildren(fragment);
     useSavedPathBtn.disabled = false;
     deleteTransferPathBtn.disabled = false;
   }
@@ -355,6 +375,13 @@
     } catch (err) {
       ui.showToast(`열기 실패: ${err.message}`);
     }
+  }
+
+  function emptyState(message) {
+    const p = document.createElement("p");
+    p.className = "empty-inline";
+    p.textContent = message;
+    return p;
   }
 
   function baseName(targetPath) {

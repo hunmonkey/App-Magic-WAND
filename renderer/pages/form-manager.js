@@ -33,7 +33,8 @@
   });
 
   refreshBtn.addEventListener("click", load);
-  searchInput.addEventListener("input", renderTable);
+  searchInput.addEventListener("input", debounce(renderTable, 160));
+  tableBody.addEventListener("click", handleTableClick);
   editBtn.addEventListener("click", editDoc);
   renameBtn.addEventListener("click", renameDoc);
   duplicateBtn.addEventListener("click", duplicateDoc);
@@ -59,7 +60,7 @@
     const keyword = searchInput.value.trim().toLowerCase();
     const visible = docs.filter((doc) => !keyword || doc.title.toLowerCase().includes(keyword));
 
-    tableBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const doc of visible) {
       const row = document.createElement("tr");
       row.dataset.id = doc.id;
@@ -67,15 +68,22 @@
         row.classList.add("selected");
       }
       row.append(createCell(doc.title || "(제목 없음)"), createCell(formatDate(doc.updatedAt)));
-      row.addEventListener("click", () => selectDoc(doc.id));
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
 
     tableWrap.classList.toggle("empty", visible.length === 0);
     summary.textContent = docs.length
       ? `저장된 양식지 ${docs.length}건을 관리합니다.`
       : "보관함에 저장한 양식지를 관리합니다.";
     updateButtons();
+  }
+
+  function handleTableClick(event) {
+    const row = event.target.closest("tr[data-id]");
+    if (row) {
+      selectDoc(row.dataset.id);
+    }
   }
 
   function createCell(value) {
@@ -93,7 +101,7 @@
   async function renderPreview() {
     if (!selectedDoc()) {
       previewTitle.textContent = "목록에서 문서를 선택하면 내용을 미리 봅니다.";
-      preview.innerHTML = "";
+      preview.replaceChildren();
       return;
     }
 
@@ -107,7 +115,7 @@
     } catch (error) {
       if (token !== previewToken) return;
       previewTitle.textContent = "미리보기를 불러오지 못했습니다.";
-      preview.innerHTML = "";
+      preview.replaceChildren();
     }
   }
 
@@ -223,4 +231,12 @@
       }
     },
   };
+
+  function debounce(fn, delay) {
+    let timer = null;
+    return (...args) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => fn(...args), delay);
+    };
+  }
 })();

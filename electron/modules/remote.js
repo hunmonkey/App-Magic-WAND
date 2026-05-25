@@ -27,11 +27,11 @@ async function loadTargets() {
     return {
       targets,
       count: targets.length,
-      messages: targets.length ? [] : ["자산 대장에 IP가 등록된 대상이 없습니다."],
+      messages: targets.length ? [] : ["자산 목록에 IP가 등록된 대상이 없습니다."],
     };
   } catch (error) {
     if (error.code === "ENOENT") {
-      return { targets: [], count: 0, messages: ["자산 대장이 아직 없습니다. 먼저 자산을 등록해 주세요."] };
+      return { targets: [], count: 0, messages: ["자산 목록이 아직 없습니다. 먼저 자산을 등록해 주세요."] };
     }
     throw error;
   }
@@ -51,7 +51,7 @@ async function run(event, payload = {}) {
   const allTargets = (await loadTargets()).targets;
   const targets = allTargets.filter((target) => selectedIds.has(target.id));
   if (!targets.length) {
-    throw new Error("선택한 대상 PC를 자산 대장에서 찾지 못했습니다.");
+    throw new Error("선택한 대상 PC를 자산 목록에서 찾지 못했습니다.");
   }
 
   const jobId = String(payload.jobId || `remote-${Date.now()}`);

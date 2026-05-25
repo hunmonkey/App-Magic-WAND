@@ -30,6 +30,7 @@
   });
   softwareSaveText.addEventListener("click", saveSoftwareText);
   softwareRefresh.addEventListener("click", loadSoftware);
+  softwareTableBody.addEventListener("click", handleSoftwareTableClick);
 
   async function loadHardware() {
     hardwareRefresh.disabled = true;
@@ -137,7 +138,6 @@
   }
 
   function renderSoftware() {
-    softwareTableBody.innerHTML = "";
     softwareSaveText.disabled = softwareItems.length === 0;
 
     if (!softwareItems.length) {
@@ -145,27 +145,28 @@
       return;
     }
 
-    for (const item of softwareItems) {
+    const fragment = document.createDocumentFragment();
+    for (const [index, item] of softwareItems.entries()) {
       const row = document.createElement("tr");
       row.append(
         cell(item.name),
         cell(item.version),
         cell(item.publisher),
         cell(item.installDate),
-        actionCell(item),
+        actionCell(item, index),
       );
-      softwareTableBody.append(row);
+      fragment.append(row);
     }
+    softwareTableBody.replaceChildren(fragment);
   }
 
   function renderSoftwareMessage(message) {
-    softwareTableBody.innerHTML = "";
     const row = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 5;
     td.textContent = message;
     row.append(td);
-    softwareTableBody.append(row);
+    softwareTableBody.replaceChildren(row);
   }
 
   function cell(value) {
@@ -210,17 +211,26 @@
     return lines.join("\n").trim();
   }
 
-  function actionCell(item) {
+  function actionCell(item, index) {
     const td = document.createElement("td");
     td.className = "software-action-cell";
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "software-delete-button";
+    button.className = "software-delete-button danger-action";
     button.textContent = "삭제";
     button.disabled = !item.canUninstall;
-    button.addEventListener("click", () => uninstallSoftware(item, button));
+    button.dataset.softwareIndex = String(index);
     td.append(button);
     return td;
+  }
+
+  function handleSoftwareTableClick(event) {
+    const button = event.target.closest("[data-software-index]");
+    if (!button) return;
+    const item = softwareItems[Number(button.dataset.softwareIndex)];
+    if (item) {
+      uninstallSoftware(item, button);
+    }
   }
 
   async function uninstallSoftware(item, button) {

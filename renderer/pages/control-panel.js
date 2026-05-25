@@ -42,6 +42,8 @@
   let selectedInterfaceId = "";
   let monitorRunning = false;
   let monitorPoints = [];
+  let monitorScaleBps = 1024 * 64;
+  const MONITOR_MAX_POINTS = 60;
 
   initGrid();
 
@@ -88,7 +90,7 @@
   // Left: IP 사용 현황
   // ─────────────────────────────────────────────
   function initGrid() {
-    ipGrid.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (let i = 0; i < 255; i++) {
       const cell = document.createElement("div");
       cell.className = "ip-cell";
@@ -96,8 +98,9 @@
       num.className = "ip-num";
       num.textContent = String(i + 1);
       cell.append(num);
-      ipGrid.append(cell);
+      fragment.append(cell);
     }
+    ipGrid.replaceChildren(fragment);
   }
 
   async function autoDetect() {
@@ -229,13 +232,15 @@
   async function runDiag() {
     diagBtn.disabled = true;
     ui.setBusy(diagBtn, true);
-    diagResults.innerHTML = "";
-    diagResults.append(ui.createLoadingState("진단 중입니다."));
+    diagResults.replaceChildren(ui.createLoadingState("진단 중입니다."));
     try {
       const result = await window.magicWand.network.diagnose(selectedInterfaceId);
       renderDiag(result);
     } catch (err) {
-      diagResults.innerHTML = `<p class='muted-text'>진단 실패: ${err.message}</p>`;
+      const message = document.createElement("p");
+      message.className = "muted-text";
+      message.textContent = `진단 실패: ${err.message}`;
+      diagResults.replaceChildren(message);
     } finally {
       diagBtn.disabled = false;
       ui.setBusy(diagBtn, false);
@@ -245,14 +250,13 @@
   async function findRouter() {
     routerFindBtn.disabled = true;
     ui.setBusy(routerFindBtn, true);
-    routerResults.innerHTML = "";
-    routerResults.append(ui.createLoadingState("공유기 후보를 찾는 중입니다."));
+    routerResults.replaceChildren(ui.createLoadingState("공유기 후보를 찾는 중입니다."));
     routerSummary.textContent = "게이트웨이와 자주 쓰는 공유기 주소를 확인합니다.";
     try {
       const result = await window.magicWand.network.routerInfo();
       renderRouterInfo(result);
     } catch (err) {
-      routerResults.innerHTML = `<p class="empty-inline">공유기 정보를 불러오지 못했습니다: ${err.message}</p>`;
+      routerResults.replaceChildren(emptyState(`공유기 정보를 불러오지 못했습니다: ${err.message}`));
       routerSummary.textContent = "공유기 찾기에 실패했습니다.";
     } finally {
       routerFindBtn.disabled = false;
@@ -261,7 +265,7 @@
   }
 
   function renderRouterInfo(result) {
-    routerResults.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     const wifi = result.wifi?.find((item) => item.ssid) ?? result.wifi?.[0];
     const gateway = result.candidates?.find((item) => item.role === "현재 게이트웨이");
     routerSummary.textContent = gateway
@@ -274,12 +278,13 @@
       wifiBox.append(routerLine("Wi-Fi", wifi.ssid || wifi.name || "확인 안 됨"));
       wifiBox.append(routerLine("신호", wifi.signal || "확인 안 됨"));
       wifiBox.append(routerLine("채널", wifi.channel || "확인 안 됨"));
-      routerResults.append(wifiBox);
+      fragment.append(wifiBox);
     }
 
     const candidates = result.candidates || [];
     if (!candidates.length) {
-      routerResults.append(emptyState("공유기 후보를 찾지 못했습니다."));
+      fragment.append(emptyState("공유기 후보를 찾지 못했습니다."));
+      routerResults.replaceChildren(fragment);
       return;
     }
 
@@ -309,8 +314,9 @@
         actions.append(btn);
       }
       card.append(head, meta, actions);
-      routerResults.append(card);
+      fragment.append(card);
     }
+    routerResults.replaceChildren(fragment);
   }
 
   function routerLine(label, value) {
@@ -340,28 +346,28 @@
 
   async function startMonitor() {
     if (monitorRunning) return;
-    const targetHost = monitorTarget.value.trim() || "1.1.1.1";
+    monitorTarget.value = "speed.cloudflare.com";
     monitorRunning = true;
     monitorPoints = [];
+    monitorScaleBps = 1024 * 1024;
+    monitorPing.textContent = "측정 중";
+    monitorDown.textContent = "대기";
+    monitorUp.textContent = "대기";
     monitorStartBtn.disabled = true;
     ui.setBusy(monitorStartBtn, true);
     monitorStopBtn.disabled = false;
     monitorTarget.disabled = true;
-    monitorSummary.textContent = "실시간 모니터링을 시작했습니다.";
+    monitorSummary.textContent = "회선 속도 측정을 시작했습니다. 실제 데이터를 사용합니다.";
     drawMonitorChart();
     try {
-      await window.magicWand.netMonitor.start({
-        targetHost,
-        interfaceName: currentInterfaceName(),
-        intervalMs: 2000,
-      });
+      await window.magicWand.netMonitor.start();
     } catch (err) {
       monitorRunning = false;
       monitorStartBtn.disabled = false;
       ui.setBusy(monitorStartBtn, false);
       monitorStopBtn.disabled = true;
       monitorTarget.disabled = false;
-      monitorSummary.textContent = `모니터 시작 실패: ${err.message}`;
+      monitorSummary.textContent = `속도 측정 시작 실패: ${err.message}`;
     }
   }
 
@@ -372,7 +378,7 @@
     ui.setBusy(monitorStartBtn, false);
     monitorStopBtn.disabled = true;
     monitorTarget.disabled = false;
-    monitorSummary.textContent = "모니터링을 정지했습니다.";
+    monitorSummary.textContent = "회선 속도 측정을 중지했습니다.";
     try {
       await window.magicWand.netMonitor.stop();
     } catch {}
@@ -384,21 +390,37 @@
 
   function handleMonitorTick(payload) {
     if (!monitorRunning) return;
-    if (payload.error) {
-      monitorSummary.textContent = `모니터링 오류: ${payload.error}`;
-    } else {
-      monitorSummary.textContent = `${payload.interfaceName || "네트워크"} · 대상 ${payload.targetHost}`;
+    if (payload.done) {
+      monitorRunning = false;
+      monitorStartBtn.disabled = false;
+      ui.setBusy(monitorStartBtn, false);
+      monitorStopBtn.disabled = true;
+      monitorTarget.disabled = false;
     }
-    monitorPing.textContent = payload.online && payload.latencyMs != null ? `${Math.round(payload.latencyMs)}ms` : "응답 없음";
-    monitorDown.textContent = formatRate(payload.downloadBps);
-    monitorUp.textContent = formatRate(payload.uploadBps);
-    monitorPoints.push({
-      down: Number(payload.downloadBps) || 0,
-      up: Number(payload.uploadBps) || 0,
-      ping: Number(payload.latencyMs) || 0,
-    });
-    if (monitorPoints.length > 40) {
-      monitorPoints = monitorPoints.slice(-40);
+
+    if (payload.error) {
+      monitorSummary.textContent = `속도 측정 오류: ${payload.error}`;
+    } else {
+      monitorSummary.textContent = payload.message || `측정 서버: ${payload.targetHost || "speed.cloudflare.com"}`;
+    }
+    monitorPing.textContent = payload.latencyMs != null ? `${Math.round(payload.latencyMs)}ms` : "측정 중";
+    const downBps = Number(payload.downloadBps) || 0;
+    const upBps = Number(payload.uploadBps) || 0;
+    if (downBps > 0 || payload.phase === "done") {
+      monitorDown.textContent = formatRate(downBps);
+    }
+    if (upBps > 0 || payload.phase === "done") {
+      monitorUp.textContent = formatRate(upBps);
+    }
+    if (downBps > 0 || upBps > 0) {
+      monitorPoints.push({
+        down: downBps,
+        up: upBps,
+        ping: payload.latencyMs != null ? Number(payload.latencyMs) || 0 : null,
+      });
+    }
+    if (monitorPoints.length > MONITOR_MAX_POINTS) {
+      monitorPoints = monitorPoints.slice(-MONITOR_MAX_POINTS);
     }
     drawMonitorChart();
   }
@@ -410,60 +432,169 @@
 
   function drawMonitorChart() {
     if (!monitorChart) return;
-    const ctx = monitorChart.getContext("2d");
-    const width = monitorChart.width;
-    const height = monitorChart.height;
+    const prepared = prepareMonitorCanvas();
+    if (!prepared) return;
+    const { ctx, width, height } = prepared;
+    const blue = cssVar("--blue") || "#2563eb";
+    const green = cssVar("--green") || "#15803d";
+    const amber = cssVar("--amber") || "#b45309";
+    const plot = { left: 10, top: 18, right: 10, bottom: 20 };
+    plot.width = width - plot.left - plot.right;
+    plot.height = height - plot.top - plot.bottom;
+
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = cssVar("--surface-soft");
+    ctx.fillStyle = cssVar("--surface") || "#ffffff";
     ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = cssVar("--line");
+    ctx.strokeStyle = cssVar("--line") || "#ccd6e2";
     ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.8;
     for (let i = 1; i < 4; i += 1) {
-      const y = Math.round((height / 4) * i);
+      const y = Math.round(plot.top + (plot.height / 4) * i);
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+      ctx.moveTo(plot.left, y);
+      ctx.lineTo(width - plot.right, y);
       ctx.stroke();
     }
-    drawLine(ctx, width, height, monitorPoints.map((point) => point.down), cssVar("--blue"));
-    drawLine(ctx, width, height, monitorPoints.map((point) => point.up), cssVar("--green"));
+    ctx.globalAlpha = 1;
+
+    if (!monitorPoints.length) {
+      drawEmptyMonitorChart(ctx, width, height);
+      return;
+    }
+
+    const speedMax = updateMonitorScale();
+    drawSeries(ctx, plot, monitorPoints.map((point) => point.down), speedMax, blue, "rgba(37, 99, 235, 0.13)");
+    drawSeries(ctx, plot, monitorPoints.map((point) => point.up), speedMax, green, "rgba(21, 128, 61, 0.1)");
+
+    const pingValues = monitorPoints.map((point) => point.ping);
+    const pingMax = niceChartMax(Math.max(20, ...pingValues.filter((value) => value != null)));
+    drawSeries(ctx, plot, pingValues, pingMax, amber, "", [4, 4]);
+    drawMonitorLegend(ctx, width, height, [
+      ["다운", blue],
+      ["업", green],
+      ["핑", amber],
+    ]);
+    ctx.fillStyle = cssVar("--muted") || "#64748b";
+    ctx.font = "10px NanumHuman, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(formatRate(speedMax), width - 10, 12);
   }
 
-  function drawLine(ctx, width, height, values, color) {
-    if (values.length < 2) return;
-    const max = Math.max(1, ...monitorPoints.flatMap((point) => [point.down, point.up]));
+  function prepareMonitorCanvas() {
+    const rect = monitorChart.getBoundingClientRect();
+    const width = Math.max(240, Math.round(rect.width || monitorChart.width));
+    const height = Math.max(110, Math.round(rect.height || monitorChart.height));
+    const ratio = Math.max(1, window.devicePixelRatio || 1);
+    const pixelWidth = Math.round(width * ratio);
+    const pixelHeight = Math.round(height * ratio);
+    if (monitorChart.width !== pixelWidth || monitorChart.height !== pixelHeight) {
+      monitorChart.width = pixelWidth;
+      monitorChart.height = pixelHeight;
+    }
+    const ctx = monitorChart.getContext("2d");
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return { ctx, width, height };
+  }
+
+  function drawEmptyMonitorChart(ctx, width, height) {
+    ctx.fillStyle = cssVar("--muted") || "#64748b";
+    ctx.font = "12px NanumHuman, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("측정 시작을 누르면 회선 속도를 확인합니다.", width / 2, height / 2 + 4);
+  }
+
+  function updateMonitorScale() {
+    const latestMax = Math.max(1024, ...monitorPoints.flatMap((point) => [point.down, point.up]));
+    if (latestMax > monitorScaleBps) {
+      monitorScaleBps = latestMax;
+    } else {
+      monitorScaleBps = Math.max(latestMax, monitorScaleBps * 0.94);
+    }
+    return niceChartMax(monitorScaleBps);
+  }
+
+  function niceChartMax(value) {
+    const safeValue = Math.max(1, Number(value) || 1);
+    const power = 10 ** Math.floor(Math.log10(safeValue));
+    const scaled = safeValue / power;
+    const nice = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
+    return nice * power;
+  }
+
+  function drawSeries(ctx, plot, values, max, color, fillColor = "", dash = []) {
+    const points = values
+      .map((value, index) => {
+        if (value == null || !Number.isFinite(Number(value))) return null;
+        const x = plot.left + (index / Math.max(1, values.length - 1)) * plot.width;
+        const y = plot.top + plot.height - (Math.max(0, Number(value)) / max) * plot.height;
+        return { x, y };
+      })
+      .filter(Boolean);
+
+    if (!points.length) return;
+    if (fillColor && points.length > 1) {
+      ctx.fillStyle = fillColor;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, plot.top + plot.height);
+      points.forEach((point) => ctx.lineTo(point.x, point.y));
+      ctx.lineTo(points[points.length - 1].x, plot.top + plot.height);
+      ctx.closePath();
+      ctx.fill();
+    }
+
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.4;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.setLineDash(dash);
     ctx.beginPath();
-    values.forEach((value, index) => {
-      const x = (index / Math.max(1, values.length - 1)) * (width - 8) + 4;
-      const y = height - 6 - (Math.max(0, value) / max) * (height - 14);
-      if (index === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let index = 1; index < points.length; index += 1) {
+      const prev = points[index - 1];
+      const point = points[index];
+      const midX = (prev.x + point.x) / 2;
+      const midY = (prev.y + point.y) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+    }
+    const last = points[points.length - 1];
+    ctx.lineTo(last.x, last.y);
+    if (points.length === 1) {
+      ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
+    }
     ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawMonitorLegend(ctx, width, height, items) {
+    let x = 10;
+    const y = height - 8;
+    ctx.font = "10px NanumHuman, sans-serif";
+    ctx.textAlign = "left";
+    for (const [label, color] of items) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y - 7, 8, 3);
+      ctx.fillStyle = cssVar("--muted") || "#64748b";
+      ctx.fillText(label, x + 12, y - 3);
+      x += 42;
+    }
   }
 
   function formatRate(bytesPerSecond) {
     const value = Number(bytesPerSecond) || 0;
-    if (value < 1024) return `${value} B/s`;
-    const units = ["KB/s", "MB/s", "GB/s"];
-    let size = value / 1024;
-    let index = 0;
-    while (size >= 1024 && index < units.length - 1) {
-      size /= 1024;
-      index += 1;
+    const mbps = (value * 8) / 1000 / 1000;
+    if (mbps < 1) {
+      return `${Math.round(mbps * 1000)} Kbps`;
     }
-    return `${size.toFixed(size >= 10 ? 1 : 2)} ${units[index]}`;
+    return `${mbps.toFixed(mbps >= 100 ? 0 : mbps >= 10 ? 1 : 2)} Mbps`;
   }
 
   function renderDiag(result) {
-    diagResults.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     if (result.summary) {
       const s = document.createElement("p");
       s.className = "net-diag-summary";
       s.textContent = result.summary;
-      diagResults.append(s);
+      fragment.append(s);
     }
     for (const test of result.tests ?? []) {
       const item = document.createElement("div");
@@ -492,8 +623,9 @@
         }
         item.append(repairRow);
       }
-      diagResults.append(item);
+      fragment.append(item);
     }
+    diagResults.replaceChildren(fragment);
   }
 
   async function runRepair(btn, repair) {
@@ -541,7 +673,7 @@
   // Center: 네트워크 어댑터 설정
   // ─────────────────────────────────────────────
   async function loadAdapters() {
-    adapterSelect.innerHTML = "";
+    adapterSelect.replaceChildren();
     adapterSelect.disabled  = true;
     applyIpBtn.disabled     = true;
     renderConfigMessage("어댑터 정보를 불러오는 중입니다.");
@@ -552,12 +684,14 @@
         renderConfigMessage(result.messages?.join(" / ") || "사용 가능한 네트워크 어댑터가 없습니다.");
         return;
       }
+      const fragment = document.createDocumentFragment();
       adapters.forEach((a) => {
         const opt = document.createElement("option");
         opt.value       = a.name;
         opt.textContent = cleanName(a.name) + (a.status !== "Up" ? " (비활성)" : "");
-        adapterSelect.append(opt);
+        fragment.append(opt);
       });
+      adapterSelect.replaceChildren(fragment);
       adapterSelect.disabled = false;
       applyIpBtn.disabled    = false;
       renderCurrentConfig();
@@ -568,12 +702,12 @@
 
   function renderCurrentConfig() {
     const a = adapters.find((ad) => ad.name === adapterSelect.value);
-    if (!a) { currentConfigEl.innerHTML = ""; toggleStaticFieldsDisabled(true); return; }
+    if (!a) { currentConfigEl.replaceChildren(); toggleStaticFieldsDisabled(true); return; }
     document.querySelector(`input[name="ipMode"][value="${a.dhcp ? "dhcp" : "static"}"]`).checked = true;
     prefillStaticFields(a);
     toggleStaticFieldsDisabled(a.dhcp);
     const dnsArr = (a.dns || "").split(",").map((d) => d.trim()).filter(Boolean);
-    currentConfigEl.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     [
       ["IP 주소",  a.ip      || "없음"],
       ["서브넷 마스크", a.prefix != null ? prefixToMask(a.prefix) : "없음"],
@@ -590,19 +724,19 @@
       dt.textContent = label;
       dd.textContent = value;
       div.append(dt, dd);
-      currentConfigEl.append(div);
+      fragment.append(div);
     });
+    currentConfigEl.replaceChildren(fragment);
   }
 
   function renderConfigMessage(message) {
-    currentConfigEl.innerHTML = "";
     const div = document.createElement("div");
     const dt  = document.createElement("dt");
     const dd  = document.createElement("dd");
     dt.textContent = "상태";
     dd.textContent = message;
     div.append(dt, dd);
-    currentConfigEl.append(div);
+    currentConfigEl.replaceChildren(div);
   }
 
   function onModeChange() {

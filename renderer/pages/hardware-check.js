@@ -1,6 +1,6 @@
 (function () {
   const ui = window.MagicWand;
-  const menu = document.querySelector("#checkMenu");
+  const menu = document.querySelector("#hwCheckMenu");
   if (!menu || !ui) {
     return;
   }
@@ -34,7 +34,6 @@
     lastResult = null;
     lastSummaryText = "하드웨어를 점검 중입니다.";
     setRunning(true);
-    results.innerHTML = "";
     renderWaitingMessage();
 
     try {
@@ -69,7 +68,6 @@
   function stopCheck() {
     runId += 1;
     lastResult = null;
-    results.innerHTML = "";
     lastSummaryText = "검사가 종료되었습니다.";
     renderStatusMessage(lastSummaryText);
     setRunning(false);
@@ -102,15 +100,14 @@
   }
 
   function renderWaitingMessage() {
-    results.append(ui.createLoadingState("검사 항목을 준비 중입니다."));
+    results.replaceChildren(ui.createLoadingState("검사 항목을 준비 중입니다."));
   }
 
   function renderStatusMessage(message) {
-    results.innerHTML = "";
     const empty = document.createElement("p");
     empty.className = "empty-inline";
     empty.textContent = message;
-    results.append(empty);
+    results.replaceChildren(empty);
   }
 
   function buildHardwareText(result) {

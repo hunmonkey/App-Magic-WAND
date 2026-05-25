@@ -64,14 +64,26 @@ function applyBadges(state) {
     }
   }
   state.badges = [...after];
-  return state.badges.filter((id) => !before.has(id)).map((id) => BADGES.find((badge) => badge.id === id)).filter(Boolean);
+  return state.badges.filter((id) => !before.has(id)).map(publicBadge).filter(Boolean);
+}
+
+function publicBadge(id) {
+  const badge = BADGES.find((item) => item.id === id);
+  if (!badge) {
+    return null;
+  }
+  return {
+    id: badge.id,
+    label: badge.label,
+    description: badge.description,
+  };
 }
 
 async function get() {
   const state = await readState();
   return {
     ...state,
-    badgeDetails: state.badges.map((id) => BADGES.find((badge) => badge.id === id)).filter(Boolean),
+    badgeDetails: state.badges.map(publicBadge).filter(Boolean),
   };
 }
 

@@ -357,6 +357,7 @@ function evaluateDisks(disks) {
         status === "ok"
           ? "여유 공간은 넉넉합니다."
           : "임시 파일 정리, 큰 파일 이동, 디스크 정리를 검토해 주세요.",
+      meters: [{ label: "사용", value: 100 - percent, max: 100, unit: "%", level: status }],
     };
   });
 }
@@ -497,6 +498,26 @@ function evaluateSmartReport(report, device) {
     .filter(Boolean)
     .join(" · ");
 
+  const meters = [];
+  if (Number.isFinite(percentUsed)) {
+    meters.push({
+      label: "수명",
+      value: percentUsed,
+      max: 100,
+      unit: "%",
+      level: percentUsed >= 100 ? "fail" : percentUsed >= 80 ? "warn" : "ok",
+    });
+  }
+  if (Number.isFinite(temp)) {
+    meters.push({
+      label: "온도",
+      value: temp,
+      max: 100,
+      unit: "°C",
+      level: temp >= 95 ? "fail" : temp >= 80 ? "warn" : "ok",
+    });
+  }
+
   return {
     category: inferStorageCategory({ ...report, ...device, Model: model }),
     name: `SMART 상세 · ${model}`,
@@ -506,6 +527,7 @@ function evaluateSmartReport(report, device) {
       status === "ok"
         ? "디스크 자체 진단값에서 큰 이상은 보이지 않습니다."
         : "중요 자료를 먼저 백업하고, 관리자 권한 실행 상태에서도 같은 경고가 반복되는지 확인해 주세요.",
+    meters,
   };
 }
 
@@ -529,6 +551,7 @@ function evaluateMemory(totalKb, freeKb) {
       status === "ok"
         ? "메모리 여유가 있습니다."
         : "사용량이 높습니다. 무거운 프로그램을 정리하면 빨라질 수 있습니다.",
+    meters: [{ label: "사용", value: percent, max: 100, unit: "%", level: status }],
   };
 }
 
@@ -547,6 +570,7 @@ function evaluateBattery(battery) {
       status,
       detail: `현재 충전 ${Number.isFinite(charge) ? `${charge}%` : "확인 안 됨"} · 상태 코드 ${battery.Status}`,
       hint: status === "ok" ? "배터리 잔량은 충분합니다." : "충전기를 연결해 주세요.",
+      meters: Number.isFinite(charge) ? [{ label: "충전", value: charge, max: 100, unit: "%", level: status }] : [],
     },
   ];
 }
@@ -606,6 +630,7 @@ function evaluateThermalZones(thermalZones) {
       status === "ok"
         ? "Windows가 제공한 온도값은 정상 범위입니다."
         : "온도가 높습니다. 먼지, 통풍, 팬 동작 상태를 확인해 주세요.",
+    meters: [{ label: "최고", value: max, max: 100, unit: "°C", level: status }],
   };
 }
 
@@ -678,6 +703,7 @@ function evaluateSensorReport(report) {
         status === "ok"
           ? "보조 진단기가 읽은 온도값은 정상 범위입니다."
           : "온도가 높습니다. 통풍, 팬, 장시간 고부하 작업 여부를 확인해 주세요.",
+      meters: [{ label: "최고", value: Number(max.toFixed(1)), max: 100, unit: "°C", level: status }],
     };
   });
 }
@@ -965,6 +991,7 @@ function fallbackCheck() {
         status: usedRatio > 0.92 ? "warn" : "ok",
         detail: `${formatBytes(total - free)} 사용 중 / 전체 ${formatBytes(total)}`,
         hint: "자세한 디스크·배터리·오류 점검은 Windows에서 확인할 수 있습니다.",
+        meters: [{ label: "사용", value: Math.round(usedRatio * 100), max: 100, unit: "%", level: usedRatio > 0.92 ? "warn" : "ok" }],
       },
     ],
     messages: ["디스크 상태, 배터리, 오류 기록 점검은 Windows에서만 동작합니다."],

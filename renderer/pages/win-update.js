@@ -22,7 +22,7 @@
       status.className = result.level === "warn" ? "caution-text" : "empty-inline";
       status.textContent = `${result.level === "warn" ? "주의: " : "정상: "}${result.message}`;
     } catch (error) {
-      info.innerHTML = "";
+      info.replaceChildren();
       status.className = "caution-text";
       status.textContent = `업데이트 점검 실패: ${error.message}`;
     } finally {
@@ -38,7 +38,7 @@
       ["대기 중 업데이트", result.pendingText],
       ["재부팅 필요", result.rebootRequired ? "필요" : "필요 없음"],
     ];
-    info.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const [label, value] of rows) {
       const wrap = document.createElement("div");
       const dt = document.createElement("dt");
@@ -46,7 +46,8 @@
       const dd = document.createElement("dd");
       dd.textContent = value;
       wrap.append(dt, dd);
-      info.append(wrap);
+      fragment.append(wrap);
     }
+    info.replaceChildren(fragment);
   }
 })();

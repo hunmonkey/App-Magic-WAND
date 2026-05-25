@@ -47,7 +47,8 @@
   deleteBtn.addEventListener("click", deleteLicense);
   clearBtn.addEventListener("click", clearForm);
   maskBtn.addEventListener("click", toggleMask);
-  searchInput.addEventListener("input", renderTable);
+  searchInput.addEventListener("input", debounce(renderTable, 160));
+  tableBody.addEventListener("click", handleTableClick);
 
   async function loadLicenses() {
     try {
@@ -76,18 +77,19 @@
   }
 
   function renderSoftwareSelect(software) {
-    softwareSelect.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     const empty = document.createElement("option");
     empty.value = "";
     empty.textContent = software.length ? "프로그램 선택" : "목록 조회 전";
-    softwareSelect.append(empty);
+    fragment.append(empty);
 
     for (const item of software) {
       const opt = document.createElement("option");
       opt.value = JSON.stringify({ name: item.name, publisher: item.publisher });
       opt.textContent = [item.name, item.version].filter(Boolean).join(" · ");
-      softwareSelect.append(opt);
+      fragment.append(opt);
     }
+    softwareSelect.replaceChildren(fragment);
   }
 
   function fillFromSoftware() {
@@ -187,9 +189,10 @@
       return [item.product, item.vendor, item.key, item.note].join(" ").toLowerCase().includes(keyword);
     }).sort(compareLicense);
 
-    tableBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of visible) {
       const row = document.createElement("tr");
+      row.dataset.id = item.id;
       if (item.id === selectedId) {
         row.classList.add("selected");
       }
@@ -200,14 +203,21 @@
         expireCell(item.expireDate),
         cell(item.note || ""),
       );
-      row.addEventListener("click", () => selectLicense(item.id));
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
 
     tableWrap.classList.toggle("empty", visible.length === 0);
     summary.textContent = items.length
       ? `저장된 라이선스 ${items.length}건을 관리합니다. 정품키는 화면에서만 숨김 처리됩니다.`
       : "저장된 라이선스를 검색하고 만료일을 확인합니다.";
+  }
+
+  function handleTableClick(event) {
+    const row = event.target.closest("tr[data-id]");
+    if (row) {
+      selectLicense(row.dataset.id);
+    }
   }
 
   function compareLicense(left, right) {
@@ -253,5 +263,13 @@
     const td = document.createElement("td");
     td.textContent = value || "";
     return td;
+  }
+
+  function debounce(fn, delay) {
+    let timer = null;
+    return (...args) => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => fn(...args), delay);
+    };
   }
 })();

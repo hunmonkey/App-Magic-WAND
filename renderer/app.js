@@ -42,6 +42,7 @@ let records = [];
 let selectedIndex = null;
 let selectedInterfaceId = "";
 let networkInfo = null;
+let addressHostsByIp = new Map();
 let toastTimer = null;
 let quitConfirmed = false;
 let confirmResolve = null;
@@ -52,14 +53,62 @@ let commandItems = [];
 let menuCommands = [];
 let dataCommands = [];
 let commandActiveIndex = 0;
-let uiSettings = { soundEnabled: true, desktopNotificationEnabled: false };
+let visibleCommandItems = [];
+let dataCommandsLoadedAt = 0;
+let dataCommandsLoading = null;
+let uiSettings = { soundEnabled: true, desktopNotificationEnabled: false, animationEnabled: true };
 let soundContext = null;
 let achievementState = null;
+const DATA_COMMAND_CACHE_MS = 30000;
+const COMMAND_RENDER_LIMIT = 80;
+const ADMIN_WORK_MENUS = [
+  "#adminOverviewMenu",
+  "#adminVendorsMenu",
+  "#adminSuppliesMenu",
+  "#adminPurchasesMenu",
+  "#adminContractsMenu",
+  "#adminRequestsMenu",
+  "#adminChecklistsMenu",
+  "#adminNotesMenu",
+];
+const PAGE_SCRIPT_ROUTES = [
+  { menus: ["#systemInfoMenu"], scripts: ["./pages/system-info.js"] },
+  { menus: ["#healthMenu"], scripts: ["./pages/health.js"] },
+  { menus: ["#integratedCheckMenu"], scripts: ["./pages/integrated-check.js"] },
+  { menus: ["#hwCheckMenu"], scripts: ["./pages/hardware-check.js"] },
+  { menus: ["#swCheckMenu"], scripts: ["./pages/threat-scan.js"] },
+  { menus: ["#eventLogMenu"], scripts: ["./pages/event-log.js"] },
+  { menus: ["#controlPanelMenu"], scripts: ["./pages/control-panel.js"] },
+  { menus: ["#printerMenu"], scripts: ["./pages/printer.js"] },
+  { menus: ["#shareMenu"], scripts: ["./pages/share.js"] },
+  { menus: ["#securityMenu"], scripts: ["./pages/security.js", "./pages/win-update.js"] },
+  { menus: ["#assetRegisterMenu", "#assetListMenu"], scripts: ["./pages/asset.js"] },
+  { menus: ["#remoteMenu"], scripts: ["./pages/remote.js"] },
+  { menus: ["#formMakerMenu"], scripts: ["./pages/form-maker.js"] },
+  { menus: ["#formManagerMenu"], scripts: ["./pages/form-maker.js", "./pages/form-manager.js"] },
+  { menus: ["#labelMakerMenu"], scripts: ["./pages/label-maker.js"] },
+  { menus: ADMIN_WORK_MENUS, scripts: ["./pages/admin-work.js"] },
+  { menus: ["#fileToolsMenu"], scripts: ["./pages/file-tools.js", "./pages/settings-backup.js"] },
+  { menus: ["#webShortcutMenu"], scripts: ["./pages/web-shortcut.js"] },
+  { menus: ["#fileRenameMenu"], scripts: ["./pages/file-rename.js"] },
+  { menus: ["#startupMenu"], scripts: ["./pages/startup-apps.js"] },
+  { menus: ["#recoveryMenu"], scripts: ["./pages/recovery.js"] },
+  { menus: ["#cleanupMenu"], scripts: ["./pages/cleanup.js"] },
+  { menus: ["#driverMenu"], scripts: ["./pages/driver.js"] },
+  { menus: ["#swLicenseMenu"], scripts: ["./pages/sw-license.js"] },
+  { menus: ["#helpMenu"], scripts: ["./pages/help.js"] },
+  { menus: ["#creatorMenu"], scripts: ["./pages/creator.js"] },
+];
+const pageScriptByMenu = new Map();
+const loadedPageScripts = new Set();
+const loadingPageScripts = new Map();
 
 window.addEventListener("DOMContentLoaded", () => {
+  bindLazyPageScripts();
   bindEvents();
   setOverviewIdle();
   renderTable();
+  loadInitialPageScript();
 
   window.setTimeout(() => {
     loadUiSettings();
@@ -121,9 +170,77 @@ function bindEvents() {
     renderNetworkOverview();
     renderPcInfo();
   });
-  elements.searchInput.addEventListener("input", renderTable);
+  // 검색 시 불필요한 연속 렌더링 방지 (200ms 디바운스)
+  elements.searchInput.addEventListener("input", debounce(renderTable, 200));
+
+  // 이벤트 위임: 모든 행에 리스너를 다는 대신 부모에서 처리하여 메모리 절약
+  elements.tableBody.addEventListener("click", handleTableClick);
+  elements.addressGrid.addEventListener("click", handleAddressGridClick);
+  elements.pcInfoBody.addEventListener("click", handlePcInfoBodyClick);
 }
 
+function bindLazyPageScripts() {
+  for (const route of PAGE_SCRIPT_ROUTES) {
+    for (const menuSelector of route.menus) {
+      pageScriptByMenu.set(menuSelector, route.scripts);
+      const menuButton = document.querySelector(menuSelector);
+      menuButton?.addEventListener("click", (event) => handleLazyMenuClick(event, menuButton, route.scripts), true);
+    }
+  }
+}
+
+function loadInitialPageScript() {
+  const activeButton = document.querySelector(".side-nav .menu-link.active:not(.danger)");
+  if (!activeButton) return;
+  const menuSelector = `#${activeButton.id}`;
+  const scripts = pageScriptByMenu.get(menuSelector);
+  if (scripts) {
+    loadPageScripts(scripts).catch((error) => showToast(`화면 준비 실패: ${error.message}`));
+  }
+}
+
+function handleLazyMenuClick(event, menuButton, scripts) {
+  if (scripts.every((src) => loadedPageScripts.has(src))) {
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  loadPageScripts(scripts)
+    .then(() => menuButton.click())
+    .catch((error) => showToast(`화면 준비 실패: ${error.message}`));
+}
+
+async function loadPageScripts(scripts) {
+  for (const src of scripts) {
+    await loadPageScript(src);
+  }
+}
+
+function loadPageScript(src) {
+  if (loadedPageScripts.has(src)) {
+    return Promise.resolve();
+  }
+  if (loadingPageScripts.has(src)) {
+    return loadingPageScripts.get(src);
+  }
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.async = false;
+    script.src = src;
+    script.onload = () => {
+      loadedPageScripts.add(src);
+      loadingPageScripts.delete(src);
+      resolve();
+    };
+    script.onerror = () => {
+      loadingPageScripts.delete(src);
+      reject(new Error(src));
+    };
+    document.body.append(script);
+  });
+  loadingPageScripts.set(src, promise);
+  return promise;
+}
 window.addEventListener("beforeunload", (event) => {
   if (quitConfirmed) {
     return;
@@ -162,13 +279,22 @@ function createCommandPalette() {
       <div class="command-footer">
         <label><input id="soundToggle" type="checkbox" /> 소리</label>
         <label><input id="desktopNotifyToggle" type="checkbox" /> 바탕화면 알림</label>
+        <label><input id="animationToggle" type="checkbox" /> 애니메이션</label>
       </div>
     </section>
   `;
   document.body.append(commandPalette);
   commandInput = commandPalette.querySelector("#commandPaletteInput");
   commandList = commandPalette.querySelector("#commandPaletteList");
-  commandInput.addEventListener("input", () => renderCommandList());
+  commandInput.addEventListener("input", debounce(renderCommandList, 80));
+  commandList.addEventListener("click", (event) => {
+    const button = event.target.closest(".command-item");
+    if (!button) return;
+    const item = visibleCommandItems[Number(button.dataset.index)];
+    if (item) {
+      runCommand(item);
+    }
+  });
   commandPalette.addEventListener("click", (event) => {
     if (event.target === commandPalette) {
       closeCommandPalette();
@@ -176,6 +302,7 @@ function createCommandPalette() {
   });
   commandPalette.querySelector("#soundToggle").addEventListener("change", saveUiSettingsFromPalette);
   commandPalette.querySelector("#desktopNotifyToggle").addEventListener("change", saveUiSettingsFromPalette);
+  commandPalette.querySelector("#animationToggle").addEventListener("change", saveUiSettingsFromPalette);
 }
 
 function collectCommands() {
@@ -195,6 +322,24 @@ function collectCommands() {
 // 자산·양식지 문서·빠른 메모를 검색 대상에 추가한다. (제목/이름/태그/메모로 찾아 해당 화면으로 이동)
 // 정품키 등 민감정보는 인덱싱하지 않는다.
 async function loadDataCommands() {
+  const now = Date.now();
+  if (dataCommandsLoadedAt && now - dataCommandsLoadedAt < DATA_COMMAND_CACHE_MS) {
+    commandItems = [...menuCommands, ...dataCommands];
+    return dataCommands;
+  }
+  if (dataCommandsLoading) {
+    return dataCommandsLoading;
+  }
+
+  dataCommandsLoading = loadFreshDataCommands();
+  try {
+    return await dataCommandsLoading;
+  } finally {
+    dataCommandsLoading = null;
+  }
+}
+
+async function loadFreshDataCommands() {
   const next = [];
   try {
     const assets = await window.magicWand.asset.load();
@@ -204,7 +349,7 @@ async function loadDataCommands() {
         label,
         group: "자산",
         searchText: [asset.assetTag, asset.name, asset.ip, asset.location, asset.owner, asset.memo].join(" "),
-        run: () => navigateAndSearch("#assetMenu", "#assetSearch", asset.name || asset.assetTag || asset.ip || ""),
+        run: () => navigateAndSearch("#assetListMenu", "#assetSearch", asset.name || asset.assetTag || asset.ip || ""),
       });
     }
   } catch {
@@ -239,11 +384,22 @@ async function loadDataCommands() {
     // 행정 메모를 불러오지 못해도 기본 메뉴 검색은 계속 사용할 수 있어야 한다.
   }
   dataCommands = next;
+  dataCommandsLoadedAt = Date.now();
   commandItems = [...menuCommands, ...dataCommands];
+  return dataCommands;
 }
 
-// 해당 화면으로 이동한 뒤, 그 화면 검색칸에 키워드를 채워 항목을 바로 찾게 한다.
-function navigateAndSearch(menuSelector, searchSelector, term) {
+// 해당 화면 코드를 먼저 준비한 뒤, 검색칸에 키워드를 채워 항목을 바로 찾게 한다.
+async function navigateAndSearch(menuSelector, searchSelector, term) {
+  const scripts = pageScriptByMenu.get(menuSelector);
+  if (scripts) {
+    try {
+      await loadPageScripts(scripts);
+    } catch (error) {
+      showToast(`화면 준비 실패: ${error.message}`);
+      return;
+    }
+  }
   document.querySelector(menuSelector)?.click();
   if (!searchSelector || !term) {
     return;
@@ -258,15 +414,22 @@ function navigateAndSearch(menuSelector, searchSelector, term) {
 }
 
 async function navigateAdminNote(noteId) {
-  const menu = document.querySelector("#adminWorkMenu");
+  const menu = document.querySelector("#adminNotesMenu");
+  const scripts = pageScriptByMenu.get("#adminNotesMenu");
+  if (scripts) {
+    try {
+      await loadPageScripts(scripts);
+    } catch (error) {
+      showToast(`화면 준비 실패: ${error.message}`);
+      return;
+    }
+  }
   menu?.click();
   if (window.AdminWork && typeof window.AdminWork.openNote === "function") {
     await window.AdminWork.openNote(noteId);
     return;
   }
-  window.setTimeout(() => {
-    document.querySelector('[data-admin-tab="notes"]')?.click();
-  }, 60);
+  menu?.click();
 }
 
 function openCommandPalette() {
@@ -300,26 +463,34 @@ function renderCommandList() {
     const text = `${item.group} ${item.label} ${item.searchText || ""}`.toLowerCase();
     return !keyword || text.includes(keyword);
   });
-  commandActiveIndex = Math.min(commandActiveIndex, Math.max(0, visible.length - 1));
-  commandList.innerHTML = "";
-  if (!visible.length) {
+  visibleCommandItems = visible.slice(0, COMMAND_RENDER_LIMIT);
+  commandActiveIndex = Math.min(commandActiveIndex, Math.max(0, visibleCommandItems.length - 1));
+  if (!visibleCommandItems.length) {
     const empty = document.createElement("p");
     empty.className = "empty-inline";
     empty.textContent = "검색 결과가 없습니다.";
-    commandList.append(empty);
+    commandList.replaceChildren(empty);
     return;
   }
-  visible.forEach((item, index) => {
+  const fragment = document.createDocumentFragment();
+  visibleCommandItems.forEach((item, index) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "command-item";
     btn.classList.toggle("active", index === commandActiveIndex);
+    btn.dataset.index = String(index);
     btn.innerHTML = `<span></span><strong></strong>`;
     btn.querySelector("span").textContent = item.group;
     btn.querySelector("strong").textContent = item.label;
-    btn.addEventListener("click", () => runCommand(item));
-    commandList.append(btn);
+    fragment.append(btn);
   });
+  if (visible.length > visibleCommandItems.length) {
+    const more = document.createElement("p");
+    more.className = "empty-inline";
+    more.textContent = `결과가 많아 ${COMMAND_RENDER_LIMIT}건만 표시합니다. 검색어를 더 입력해 주세요.`;
+    fragment.append(more);
+  }
+  commandList.replaceChildren(fragment);
 }
 
 function handleCommandPaletteKey(event) {
@@ -330,7 +501,7 @@ function handleCommandPaletteKey(event) {
   }
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {
     event.preventDefault();
-    const count = commandList.querySelectorAll(".command-item").length;
+    const count = visibleCommandItems.length;
     if (!count) return;
     commandActiveIndex = (commandActiveIndex + (event.key === "ArrowDown" ? 1 : -1) + count) % count;
     renderCommandList();
@@ -338,8 +509,10 @@ function handleCommandPaletteKey(event) {
   }
   if (event.key === "Enter") {
     event.preventDefault();
-    const items = commandList.querySelectorAll(".command-item");
-    items[commandActiveIndex]?.click();
+    const item = visibleCommandItems[commandActiveIndex];
+    if (item) {
+      runCommand(item);
+    }
   }
 }
 
@@ -357,15 +530,23 @@ async function loadUiSettings() {
   try {
     uiSettings = await window.magicWand.uiSettings.get();
   } catch {
-    uiSettings = { soundEnabled: true, desktopNotificationEnabled: false };
+    uiSettings = { soundEnabled: true, desktopNotificationEnabled: false, animationEnabled: true };
   }
+  applyAnimationSetting();
+}
+
+// 애니메이션 끄기 설정을 body 클래스로 반영한다. (styles.css의 body.motion-off 가드)
+function applyAnimationSetting() {
+  document.body.classList.toggle("motion-off", uiSettings.animationEnabled === false);
 }
 
 async function saveUiSettingsFromPalette() {
   uiSettings = {
     soundEnabled: commandPalette.querySelector("#soundToggle").checked,
     desktopNotificationEnabled: commandPalette.querySelector("#desktopNotifyToggle").checked,
+    animationEnabled: commandPalette.querySelector("#animationToggle").checked,
   };
+  applyAnimationSetting();
   try {
     uiSettings = await window.magicWand.uiSettings.save(uiSettings);
   } catch (error) {
@@ -376,6 +557,7 @@ async function saveUiSettingsFromPalette() {
 function updateSettingsToggles() {
   commandPalette.querySelector("#soundToggle").checked = uiSettings.soundEnabled !== false;
   commandPalette.querySelector("#desktopNotifyToggle").checked = uiSettings.desktopNotificationEnabled === true;
+  commandPalette.querySelector("#animationToggle").checked = uiSettings.animationEnabled !== false;
 }
 
 function showQuitDialog() {
@@ -390,7 +572,16 @@ function hideQuitDialog() {
 
 function confirmQuit() {
   quitConfirmed = true;
-  window.magicWand.app.quit();
+  hideQuitDialog();
+  const leave = () => window.magicWand.app.quit();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || document.body.classList.contains("motion-off")) {
+    leave();
+    return;
+  }
+  // 화면을 부드럽게 페이드아웃한 뒤 종료한다.
+  document.body.classList.add("app-leaving");
+  window.setTimeout(leave, 300);
 }
 
 function showConfirm(message, options = {}) {
@@ -524,7 +715,8 @@ function recordFromForm() {
 
 function renderTable() {
   const keyword = elements.searchInput.value.trim().toLowerCase();
-  elements.tableBody.innerHTML = "";
+
+  const fragment = document.createDocumentFragment();
 
   const visibleRecords = records
     .map((record, index) => ({ record, index }))
@@ -549,12 +741,32 @@ function renderTable() {
       createCell(record.memo),
     );
 
-    row.addEventListener("click", () => selectRecord(index));
-    elements.tableBody.append(row);
+    fragment.append(row);
   }
 
+  elements.tableBody.replaceChildren(fragment);
   elements.tableWrap.classList.toggle("empty", visibleRecords.length === 0);
   updateButtons();
+}
+
+/**
+ * 테이블 본체에서 클릭을 감지하여 선택 처리 (이벤트 위임)
+ */
+function handleTableClick(event) {
+  const row = event.target.closest("tr");
+  if (!row || !row.dataset.index) return;
+  selectRecord(Number(row.dataset.index));
+}
+
+/**
+ * 성능 최적화를 위한 디바운스 함수
+ */
+function debounce(fn, delay) {
+  let timer = null;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
 }
 
 function createCell(value) {
@@ -612,8 +824,7 @@ function setOverviewIdle() {
   elements.pcNameValue.textContent = "확인 전";
   elements.primaryIpValue.textContent = "확인 전";
   elements.networkRangeValue.textContent = "확인 전";
-  elements.pcInfoBody.innerHTML = "";
-  elements.pcInfoBody.append(createEmptyState("새로고침 버튼을 눌러 네트워크 정보를 확인하세요."));
+  elements.pcInfoBody.replaceChildren(createEmptyState("새로고침 버튼을 눌러 네트워크 정보를 확인하세요."));
 }
 
 function setOverviewLoading() {
@@ -621,8 +832,7 @@ function setOverviewLoading() {
   elements.pcNameValue.textContent = "확인 중";
   elements.primaryIpValue.textContent = "확인 중";
   elements.networkRangeValue.textContent = "확인 중";
-  elements.pcInfoBody.innerHTML = "";
-  elements.pcInfoBody.append(createLoadingState("네트워크 정보를 확인하는 중입니다."));
+  elements.pcInfoBody.replaceChildren(createLoadingState("네트워크 정보를 확인하는 중입니다."));
 }
 
 function setOverviewFailed() {
@@ -646,14 +856,15 @@ function renderInterfaceSelect() {
     selectedInterfaceId = networkInfo?.primaryInterface?.id ?? interfaces[0]?.id ?? "";
   }
 
-  elements.interfaceSelect.innerHTML = "";
+  const fragment = document.createDocumentFragment();
 
   for (const item of interfaces) {
     const option = document.createElement("option");
     option.value = item.id;
     option.textContent = `${item.name} · ${item.privateIp}`;
-    elements.interfaceSelect.append(option);
+    fragment.append(option);
   }
+  elements.interfaceSelect.replaceChildren(fragment);
 
   elements.interfaceSelect.disabled = interfaces.length === 0;
   elements.interfaceSelect.value = selectedInterfaceId;
@@ -663,15 +874,16 @@ function renderPcInfo() {
   const interfaces = networkInfo?.privateInterfaces ?? [];
   const selected = getSelectedInterface();
 
-  elements.pcInfoBody.innerHTML = "";
   if (!interfaces.length) {
-    elements.pcInfoBody.append(createEmptyState("표시할 PC IP 정보가 없습니다."));
+    elements.pcInfoBody.replaceChildren(createEmptyState("표시할 PC IP 정보가 없습니다."));
     return;
   }
 
+  const fragment = document.createDocumentFragment();
   for (const item of interfaces) {
     const block = document.createElement("article");
     block.className = "interface-item";
+    block.dataset.interfaceId = item.id;
     if (selected?.id === item.id) {
       block.classList.add("active");
     }
@@ -694,21 +906,28 @@ function renderPcInfo() {
     values[1].textContent = item.networkRange;
     values[2].textContent = item.gateway || "확인 안 됨";
     values[3].textContent = item.dnsServers?.length ? item.dnsServers.join(", ") : "확인 안 됨";
-    block.addEventListener("click", () => {
-      selectedInterfaceId = item.id;
-      elements.interfaceSelect.value = item.id;
-      renderNetworkOverview();
-      renderPcInfo();
-    });
-    elements.pcInfoBody.append(block);
+    fragment.append(block);
   }
+  elements.pcInfoBody.replaceChildren(fragment);
+}
+
+function handlePcInfoBodyClick(event) {
+  const block = event.target.closest(".interface-item[data-interface-id]");
+  if (!block || !elements.pcInfoBody.contains(block)) {
+    return;
+  }
+  selectedInterfaceId = block.dataset.interfaceId;
+  elements.interfaceSelect.value = selectedInterfaceId;
+  renderNetworkOverview();
+  renderPcInfo();
 }
 
 async function scanAddressUsage() {
   elements.usageScanButton.disabled = true;
   setBusy(elements.usageScanButton, true);
-  elements.addressGrid.innerHTML = "";
-  elements.usedDeviceList.innerHTML = "";
+  elements.addressGrid.replaceChildren();
+  elements.usedDeviceList.replaceChildren();
+  addressHostsByIp = new Map();
   elements.usageRangeChip.textContent = "대역: 조사 중";
   elements.usedCountChip.textContent = "사용: 0";
   elements.freeCountChip.textContent = "비어 있음: 0";
@@ -730,21 +949,33 @@ function renderAddressUsage(result) {
   elements.usedCountChip.textContent = `사용: ${result.usedCount}`;
   elements.freeCountChip.textContent = `비어 있음: ${result.freeCount}`;
 
-  elements.addressGrid.innerHTML = "";
+  addressHostsByIp = new Map();
+  const fragment = document.createDocumentFragment();
   for (const host of result.hosts ?? []) {
+    addressHostsByIp.set(host.ip, host);
     const cell = document.createElement("button");
     cell.type = "button";
     cell.className = `address-cell ${host.status}`;
+    cell.dataset.ip = host.ip;
     if (host.role) {
       cell.classList.add(host.role);
     }
     cell.textContent = host.ip.split(".").at(-1);
     cell.title = makeHostTitle(host);
-    cell.addEventListener("click", () => fillIpFromHost(host));
-    elements.addressGrid.append(cell);
+    fragment.append(cell);
   }
+  elements.addressGrid.replaceChildren(fragment);
 
   renderUsedDeviceList(result.hosts ?? []);
+}
+
+function handleAddressGridClick(event) {
+  const cell = event.target.closest(".address-cell[data-ip]");
+  if (!cell) return;
+  const host = addressHostsByIp.get(cell.dataset.ip);
+  if (host) {
+    fillIpFromHost(host);
+  }
 }
 
 function makeHostTitle(host) {
@@ -773,13 +1004,13 @@ function fillIpFromHost(host) {
 
 function renderUsedDeviceList(hosts) {
   const usedHosts = hosts.filter((host) => host.status === "used");
-  elements.usedDeviceList.innerHTML = "";
 
   if (!usedHosts.length) {
-    elements.usedDeviceList.append(createEmptyState("응답한 장비가 없습니다."));
+    elements.usedDeviceList.replaceChildren(createEmptyState("응답한 장비가 없습니다."));
     return;
   }
 
+  const fragment = document.createDocumentFragment();
   for (const host of usedHosts) {
     const item = document.createElement("article");
     item.className = "used-device";
@@ -791,22 +1022,21 @@ function renderUsedDeviceList(hosts) {
     item.querySelector("strong").textContent = host.ip;
     item.querySelector("span").textContent = host.name || roleLabel(host.role) || "장비명 확인 안 됨";
     item.querySelector("small").textContent = host.macAddress || "MAC 확인 안 됨";
-    elements.usedDeviceList.append(item);
+    fragment.append(item);
   }
+  elements.usedDeviceList.replaceChildren(fragment);
 }
 
 async function runDiagnostics() {
   elements.diagnosticButton.disabled = true;
   setBusy(elements.diagnosticButton, true);
-  elements.diagnosticResults.innerHTML = "";
-  elements.diagnosticResults.append(createLoadingState("진단 중입니다."));
+  elements.diagnosticResults.replaceChildren(createLoadingState("진단 중입니다."));
 
   try {
     const result = await window.magicWand.network.diagnose(selectedInterfaceId);
     renderDiagnostics(result);
   } catch (error) {
-    elements.diagnosticResults.innerHTML = "";
-    elements.diagnosticResults.append(createEmptyState(`진단 실패: ${error.message}`));
+    elements.diagnosticResults.replaceChildren(createEmptyState(`진단 실패: ${error.message}`));
   } finally {
     elements.diagnosticButton.disabled = false;
     setBusy(elements.diagnosticButton, false);
@@ -818,7 +1048,7 @@ function renderDiagnostics(result) {
 }
 
 function renderTestList(container, tests) {
-  container.innerHTML = "";
+  const fragment = document.createDocumentFragment();
 
   for (const test of tests ?? []) {
     const item = document.createElement("article");
@@ -833,8 +1063,71 @@ function renderTestList(container, tests) {
     item.querySelector("strong").textContent = test.name;
     item.querySelector("span").textContent = statusLabel(test.status);
     item.querySelector("p").textContent = `${test.detail} ${test.hint ?? ""}`.trim();
-    container.append(item);
+    if (Array.isArray(test.meters) && test.meters.length) {
+      item.append(createMeterGroup(test.meters, test.status));
+    }
+    fragment.append(item);
   }
+  container.replaceChildren(fragment);
+}
+
+// 점검 항목의 수치를 막대 게이지로 시각화한다. (차오름 + 숫자 카운트업)
+function createMeterGroup(meters, fallbackLevel) {
+  const wrap = document.createElement("div");
+  wrap.className = "diagnostic-meters";
+  for (const meter of meters) {
+    const value = Number(meter.value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    const max = Number(meter.max) > 0 ? Number(meter.max) : 100;
+    const pct = Math.max(0, Math.min(100, (value / max) * 100));
+    const row = document.createElement("div");
+    row.className = "meter-row";
+    row.innerHTML = `
+      <span class="meter-label"></span>
+      <div class="meter-track"><span class="meter-fill"></span></div>
+      <strong class="meter-value"></strong>
+    `;
+    row.querySelector(".meter-label").textContent = meter.label || "";
+    const fill = row.querySelector(".meter-fill");
+    fill.classList.add(meter.level || fallbackLevel || "ok");
+    fill.style.width = `${pct}%`;
+    animateMeterValue(row.querySelector(".meter-value"), value, meter.unit || "");
+    wrap.append(row);
+  }
+  return wrap;
+}
+
+// 수치를 0에서 목표값까지 카운트업한다. (정수는 반올림, 소수는 한 자리)
+function animateMeterValue(element, target, unit) {
+  const isInt = Number.isInteger(target);
+  const format = (v) => `${isInt ? Math.round(v) : v.toFixed(1)}${unit}`;
+  if (animationsDisabled()) {
+    element.textContent = format(target);
+    return;
+  }
+  const duration = 800;
+  const start = performance.now();
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    element.textContent = format(target * eased);
+    if (t < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      element.textContent = format(target);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+// 애니메이션 끄기(설정 토글 또는 OS 동작 줄이기) 여부.
+function animationsDisabled() {
+  return (
+    document.body.classList.contains("motion-off") ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 function getSelectedInterface() {
@@ -913,14 +1206,9 @@ function isIPv4(value) {
   if (parts.length !== 4) {
     return false;
   }
-
-  return parts.every((part) => {
-    if (!/^\d{1,3}$/.test(part)) {
-      return false;
-    }
-    const number = Number(part);
-    return number >= 0 && number <= 255;
-  });
+  return parts.every((part) =>
+    /^\d{1,3}$/.test(part) && Number(part) >= 0 && Number(part) <= 255
+  );
 }
 
 function showToast(message) {
@@ -1003,7 +1291,7 @@ function renderAchievements() {
   const stats = document.querySelector("#achievementStats");
   const badges = document.querySelector("#achievementBadges");
   if (!stats || !badges || !achievementState) return;
-  stats.innerHTML = "";
+  const statsFragment = document.createDocumentFragment();
   [
     ["점검", achievementState.checksDone],
     ["백업", achievementState.backupsDone],
@@ -1012,24 +1300,26 @@ function renderAchievements() {
   ].forEach(([label, value]) => {
     const item = document.createElement("span");
     item.textContent = `${label} ${Number(value || 0)}`;
-    stats.append(item);
+    statsFragment.append(item);
   });
+  stats.replaceChildren(statsFragment);
 
-  badges.innerHTML = "";
   const badgeDetails = achievementState.badgeDetails || [];
   if (!badgeDetails.length) {
     const empty = document.createElement("p");
     empty.className = "empty-inline";
     empty.textContent = "아직 획득한 배지가 없습니다.";
-    badges.append(empty);
+    badges.replaceChildren(empty);
     return;
   }
+  const badgesFragment = document.createDocumentFragment();
   for (const badge of badgeDetails) {
     const chip = document.createElement("span");
     chip.title = badge.description || "";
     chip.textContent = badge.label;
-    badges.append(chip);
+    badgesFragment.append(chip);
   }
+  badges.replaceChildren(badgesFragment);
 }
 
 window.MagicWand = {

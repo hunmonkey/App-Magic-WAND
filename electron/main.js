@@ -36,8 +36,14 @@ const license = require("./modules/license");
 let mainWindow = null;
 let lockWindow = null;
 let lastGate = null;
+const WINDOW_TITLE = "Magic WAND";
 
-app.setName("Magic WAND");
+app.setName(WINDOW_TITLE);
+
+function getWindowIcon() {
+  const iconPath = path.join(__dirname, "..", "build", "LOGO.png");
+  return fs.existsSync(iconPath) ? iconPath : undefined;
+}
 
 // 정품키 게이트는 패키징된 빌드에서만 강제한다.
 // 개발 중(electron .)에는 건너뛴다. (MW_FORCE_GATE=1로 강제 가능)
@@ -46,13 +52,15 @@ function gateEnabled() {
 }
 
 function createMainWindow() {
+  const windowIcon = getWindowIcon();
   mainWindow = new BrowserWindow({
-    title: "Magic WAND",
+    title: WINDOW_TITLE,
     width: 1180,
     height: 760,
     minWidth: 980,
     minHeight: 640,
     show: false,
+    frame: false,
     fullscreen: false,
     autoHideMenuBar: false,
     resizable: true,
@@ -60,11 +68,16 @@ function createMainWindow() {
     maximizable: true,
     closable: true,
     backgroundColor: "#f4f7fb",
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow.on("page-title-updated", (event) => {
+    event.preventDefault();
   });
 
   mainWindow.once("ready-to-show", () => {
@@ -76,20 +89,27 @@ function createMainWindow() {
 }
 
 function createLockWindow() {
+  const windowIcon = getWindowIcon();
   lockWindow = new BrowserWindow({
-    title: "Magic WAND",
+    title: WINDOW_TITLE,
     width: 460,
     height: 580,
+    frame: false,
     resizable: false,
     maximizable: false,
     fullscreenable: false,
     autoHideMenuBar: true,
     backgroundColor: "#f4f7fb",
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  lockWindow.on("page-title-updated", (event) => {
+    event.preventDefault();
   });
 
   lockWindow.loadFile(path.join(__dirname, "..", "renderer", "lock.html"));
@@ -165,6 +185,26 @@ function registerIpcHandlers() {
   adminWork.register(ipcMain);
 
   ipcMain.handle("export:pdf", exportPdf);
+
+  ipcMain.on("window:minimize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.minimize();
+  });
+
+  ipcMain.on("window:toggle-maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || !win.isMaximizable()) return;
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  });
+
+  ipcMain.on("window:close", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.close();
+  });
 
   ipcMain.on("app:quit", () => {
     app.quit();

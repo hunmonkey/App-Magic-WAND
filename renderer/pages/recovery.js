@@ -25,9 +25,10 @@
   refreshBtn.addEventListener("click", refresh);
   scanBtn.addEventListener("click", () => runCheck("scan"));
   fixBtn.addEventListener("click", confirmFix);
+  volumeList.addEventListener("click", handleVolumeClick);
 
-  volumeList.append(empty("새로고침 버튼을 눌러 USB/SD 목록을 불러오세요."));
-  selectedBox.append(row("선택", "USB/SD 목록을 먼저 불러오세요."));
+  volumeList.replaceChildren(empty("새로고침 버튼을 눌러 USB/SD 목록을 불러오세요."));
+  selectedBox.replaceChildren(row("선택", "USB/SD 목록을 먼저 불러오세요."));
 
   async function refresh() {
     if (busy) return;
@@ -52,25 +53,33 @@
   }
 
   function renderVolumes() {
-    volumeList.innerHTML = "";
     if (!volumes.length) {
-      volumeList.append(empty("연결된 USB 또는 SD카드가 없습니다."));
+      volumeList.replaceChildren(empty("연결된 USB 또는 SD카드가 없습니다."));
       summary.textContent = "USB와 SD카드를 불러옵니다.";
       return;
     }
 
     summary.textContent = `이동식 디스크 ${volumes.length}개`;
+    const fragment = document.createDocumentFragment();
     for (const volume of volumes) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "recovery-volume-item";
+      btn.dataset.letter = volume.letter;
       btn.classList.toggle("selected", sameLetter(volume.letter, selectedLetter));
       btn.innerHTML = `<strong></strong><span></span><small></small>`;
       btn.querySelector("strong").textContent = `${volume.letter}: ${volume.label || "이름 없음"}`;
       btn.querySelector("span").textContent = [volume.fs || "파일 시스템 확인 안 됨", volume.bus || "이동식"].join(" · ");
       btn.querySelector("small").textContent = `${volume.sizeGB || 0}GB · ${volume.health || "상태 확인 안 됨"}`;
-      btn.addEventListener("click", () => selectVolume(volume.letter));
-      volumeList.append(btn);
+      fragment.append(btn);
+    }
+    volumeList.replaceChildren(fragment);
+  }
+
+  function handleVolumeClick(event) {
+    const button = event.target.closest(".recovery-volume-item[data-letter]");
+    if (button) {
+      selectVolume(button.dataset.letter);
     }
   }
 
@@ -84,14 +93,13 @@
 
   function renderSelected() {
     const volume = selectedVolume();
-    selectedBox.innerHTML = "";
     if (!volume) {
-      selectedBox.append(row("선택", "없음"));
+      selectedBox.replaceChildren(row("선택", "없음"));
       scanBtn.disabled = true;
       fixBtn.disabled = true;
       return;
     }
-    selectedBox.append(
+    selectedBox.replaceChildren(
       row("드라이브", `${volume.letter}:`),
       row("이름", volume.label || "이름 없음"),
       row("형식", volume.fs || "확인 안 됨"),
@@ -110,8 +118,7 @@
     fixBtn.disabled = true;
     const targetBtn = mode === "fix" ? fixBtn : scanBtn;
     ui.setBusy(targetBtn, true);
-    resultBox.innerHTML = "";
-    resultBox.append(ui.createLoadingState(mode === "fix" ? "복구를 실행하는 중입니다." : "검사 중입니다."));
+    resultBox.replaceChildren(ui.createLoadingState(mode === "fix" ? "복구를 실행하는 중입니다." : "검사 중입니다."));
     try {
       const payload = { letter: volume.letter, mode };
       if (mode === "fix") payload.token = FIX_TOKEN;
@@ -140,28 +147,25 @@
   }
 
   function renderIdle() {
-    resultBox.innerHTML = "";
-    resultBox.append(empty("검사시작을 눌러 상태를 확인하세요."));
+    resultBox.replaceChildren(empty("검사시작을 눌러 상태를 확인하세요."));
   }
 
   function renderResult(result, mode) {
-    resultBox.innerHTML = "";
     const card = document.createElement("article");
     card.className = `diagnostic-item ${result.healthy ? "ok" : "warn"}`;
     card.innerHTML = `<div><strong></strong><span></span></div><p></p>`;
     card.querySelector("strong").textContent = mode === "fix" ? "복구 결과" : "검사 결과";
     card.querySelector("span").textContent = result.healthy ? "정상" : "확인 필요";
     card.querySelector("p").textContent = result.message || "결과를 확인하지 못했습니다.";
-    resultBox.append(card);
+    resultBox.replaceChildren(card);
   }
 
   function renderError(message) {
-    resultBox.innerHTML = "";
     const card = document.createElement("article");
     card.className = "diagnostic-item fail";
     card.innerHTML = `<div><strong>작업 실패</strong><span>문제</span></div><p></p>`;
     card.querySelector("p").textContent = message;
-    resultBox.append(card);
+    resultBox.replaceChildren(card);
   }
 
   function updateFixButton() {

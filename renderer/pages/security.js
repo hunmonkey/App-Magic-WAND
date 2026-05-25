@@ -57,18 +57,17 @@
   setDrivePlaceholder("목록 조회 버튼을 눌러 확인하세요");
 
   function setDrivePlaceholder(text) {
-    eraseDriveSelect.innerHTML = "";
     const opt = document.createElement("option");
     opt.value = "";
     opt.textContent = text;
-    eraseDriveSelect.append(opt);
+    eraseDriveSelect.replaceChildren(opt);
     eraseDriveBtn.disabled = true;
   }
 
   async function loadStatus() {
     refreshBtn.disabled = true;
     renderActivationMessage("확인 중입니다.");
-    bitlockerEl.innerHTML = "<p class='empty-inline'>확인 중입니다.</p>";
+    bitlockerEl.replaceChildren(emptyState("확인 중입니다."));
     try {
       const act = await window.magicWand.security.activation();
       renderActivation(act);
@@ -79,15 +78,14 @@
       const bl = await window.magicWand.security.bitlocker();
       renderBitlocker(bl.volumes || []);
     } catch (err) {
-      bitlockerEl.innerHTML = "";
-      bitlockerEl.append(emptyState(err.message));
+      bitlockerEl.replaceChildren(emptyState(err.message));
     } finally {
       refreshBtn.disabled = false;
     }
   }
 
   function renderActivation(act) {
-    activationEl.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     [
       ["정품 상태", act.status],
       ["에디션", act.edition],
@@ -100,27 +98,27 @@
       dt.textContent = label;
       dd.textContent = value || "확인 안 됨";
       div.append(dt, dd);
-      activationEl.append(div);
+      fragment.append(div);
     });
+    activationEl.replaceChildren(fragment);
   }
 
   function renderActivationMessage(message) {
-    activationEl.innerHTML = "";
     const div = document.createElement("div");
     const dt = document.createElement("dt");
     const dd = document.createElement("dd");
     dt.textContent = "상태";
     dd.textContent = message;
     div.append(dt, dd);
-    activationEl.append(div);
+    activationEl.replaceChildren(div);
   }
 
   function renderBitlocker(volumes) {
-    bitlockerEl.innerHTML = "";
     if (!volumes.length) {
-      bitlockerEl.append(emptyState("암호화 정보를 찾을 수 없습니다."));
+      bitlockerEl.replaceChildren(emptyState("암호화 정보를 찾을 수 없습니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const v of volumes) {
       const on = /on|protected/i.test(v.status);
       const card = document.createElement("article");
@@ -137,30 +135,30 @@
       meta.className = "tool-meta";
       meta.textContent = `암호화 진행률 ${v.percent}%`;
       card.append(head, meta);
-      bitlockerEl.append(card);
+      fragment.append(card);
     }
+    bitlockerEl.replaceChildren(fragment);
   }
 
   async function loadUsers() {
     usersRefreshBtn.disabled = true;
-    userListEl.innerHTML = "<p class='empty-inline'>사용자 계정을 불러오는 중입니다.</p>";
+    userListEl.replaceChildren(emptyState("사용자 계정을 불러오는 중입니다."));
     try {
       const result = await window.magicWand.security.localUsers();
       renderUsers(result.users || []);
     } catch (err) {
-      userListEl.innerHTML = "";
-      userListEl.append(emptyState(`사용자 계정 조회 실패: ${err.message}`));
+      userListEl.replaceChildren(emptyState(`사용자 계정 조회 실패: ${err.message}`));
     } finally {
       usersRefreshBtn.disabled = false;
     }
   }
 
   function renderUsers(users) {
-    userListEl.innerHTML = "";
     if (!users.length) {
-      userListEl.append(emptyState("사용자 계정이 없습니다."));
+      userListEl.replaceChildren(emptyState("사용자 계정이 없습니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const u of users) {
       const card = document.createElement("article");
       card.className = "tool-card";
@@ -177,8 +175,9 @@
       meta.className = "tool-meta";
       meta.textContent = u.description || "설명 없음";
       card.append(head, meta);
-      userListEl.append(card);
+      fragment.append(card);
     }
+    userListEl.replaceChildren(fragment);
   }
 
   async function pickFolder() {
@@ -247,7 +246,7 @@
   }
 
   function renderKeyRows(rows) {
-    keyEl.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const [label, value] of rows) {
       const div = document.createElement("div");
       const dt = document.createElement("dt");
@@ -255,8 +254,9 @@
       dt.textContent = label;
       dd.textContent = value;
       div.append(dt, dd);
-      keyEl.append(div);
+      fragment.append(div);
     }
+    keyEl.replaceChildren(fragment);
   }
 
   function renderKeyMessage(message) {
@@ -308,14 +308,15 @@
         setDrivePlaceholder("와이프 가능한 드라이브 없음");
         return;
       }
-      eraseDriveSelect.innerHTML = "";
+      const fragment = document.createDocumentFragment();
       for (const d of usable) {
         const opt = document.createElement("option");
         opt.value = d.letter;
         const label = d.label ? ` ${d.label}` : "";
         opt.textContent = `${d.letter}:${label} — 여유 ${d.freeGb}GB / 전체 ${d.sizeGb}GB`;
-        eraseDriveSelect.append(opt);
+        fragment.append(opt);
       }
+      eraseDriveSelect.replaceChildren(fragment);
       eraseDriveBtn.disabled = erasing;
     } catch (err) {
       setDrivePlaceholder("드라이브 목록을 불러오지 못했습니다");

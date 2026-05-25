@@ -2,31 +2,87 @@ const { app } = require("electron");
 const fs = require("fs/promises");
 const { getDataFileForRead, getDataFileForWrite } = require("../core/portable-data");
 
-// 자산 대장은 form-maker처럼 파일을 나눌 만큼 무겁지 않으므로
-// ip-records와 같은 단일 JSON 배열로 보관한다.
+// 자산 정보는 아직 DB가 필요할 만큼 크지 않으므로 단일 JSON 배열로 보관한다.
 const DATA_FILE = "assets.json";
-const ASSET_TYPES = new Set(["pc", "monitor", "printer", "other"]);
+const ASSET_TYPES = new Set(["pc", "laptop", "monitor", "mfp", "nas"]);
+const LEGACY_TYPE_MAP = {
+  printer: "mfp",
+  other: "pc",
+};
+
+const STRING_FIELDS = [
+  "id",
+  "type",
+  "assetTag",
+  "name",
+  "manufacturer",
+  "model",
+  "serialNumber",
+  "status",
+  "department",
+  "owner",
+  "location",
+  "ip",
+  "purchaseDate",
+  "purchaseAmount",
+  "evidence",
+  "warrantyEnd",
+  "cpu",
+  "ram",
+  "motherboard",
+  "vga",
+  "ssd",
+  "hdd",
+  "nic",
+  "power",
+  "os",
+  "screenSize",
+  "resolution",
+  "panelType",
+  "ports",
+  "connectedAsset",
+  "batteryHealth",
+  "printType",
+  "colorMode",
+  "connectionType",
+  "tonerModel",
+  "printCounter",
+  "scanFax",
+  "diskBays",
+  "storage",
+  "raid",
+  "backupTarget",
+  "adminUrl",
+  "repairHistory",
+  "memo",
+  "createdAt",
+  "updatedAt",
+];
 
 function normalize(entry) {
-  return {
-    id: String(entry?.id ?? "").trim() || makeId(),
-    type: normalizeType(entry?.type),
-    assetTag: String(entry?.assetTag ?? "").trim(),
-    name: String(entry?.name ?? "").trim(),
-    ip: String(entry?.ip ?? "").trim(),
-    spec: String(entry?.spec ?? "").trim(),
-    location: String(entry?.location ?? "").trim(),
-    owner: String(entry?.owner ?? "").trim(),
-    purchaseDate: String(entry?.purchaseDate ?? "").trim(),
-    warrantyEnd: String(entry?.warrantyEnd ?? "").trim(),
-    memo: String(entry?.memo ?? "").trim(),
-    updatedAt: String(entry?.updatedAt ?? "").trim(),
-  };
+  const normalized = {};
+  for (const field of STRING_FIELDS) {
+    normalized[field] = String(entry?.[field] ?? "").trim();
+  }
+  normalized.id = normalized.id || makeId();
+  normalized.type = normalizeType(entry?.type);
+  normalized.status = normalized.status || "사용중";
+
+  // 예전 "사양·모델" 한 줄 입력값은 새 상세 사양 칸으로 최대한 보존한다.
+  if (!normalized.model && entry?.spec) {
+    normalized.model = String(entry.spec).trim();
+  }
+  if (!normalized.cpu && entry?.spec && normalized.type === "pc") {
+    normalized.cpu = String(entry.spec).trim();
+  }
+
+  return normalized;
 }
 
 function normalizeType(type) {
   const value = String(type ?? "").trim();
-  return ASSET_TYPES.has(value) ? value : "pc";
+  const mapped = LEGACY_TYPE_MAP[value] || value;
+  return ASSET_TYPES.has(mapped) ? mapped : "pc";
 }
 
 function makeId() {

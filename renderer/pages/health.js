@@ -9,6 +9,7 @@
   const scoreValue = document.querySelector("#healthScoreValue");
   const gradeValue = document.querySelector("#healthGradeValue");
   const gaugeFill = document.querySelector("#healthGaugeFill");
+  const gaugeWrap = gaugeFill.closest(".health-gauge-wrap");
   const breakdown = document.querySelector("#healthBreakdown");
   const snapshotBtn = document.querySelector("#healthSnapshotBtn");
   const snapshotSelect = document.querySelector("#healthSnapshotSelect");
@@ -39,11 +40,35 @@
     threatCap: 40, // 위험 SW 감점 상한
     notActivated: 10, // 정품 인증 안 됨
   };
+  const CHECK_STEPS = [
+    {
+      id: "hardware",
+      label: "하드웨어 점검",
+      detail: "디스크, 메모리, SMART, 온도, 배터리 확인",
+    },
+    {
+      id: "threat",
+      label: "위험 소프트웨어 점검",
+      detail: "실행 프로그램, 시작프로그램, Defender/YARA 확인",
+    },
+    {
+      id: "activation",
+      label: "정품 인증 확인",
+      detail: "Windows 정품 인증 상태 확인",
+    },
+  ];
 
   let running = false;
   let lastResult = null; // { score, grade, items }
   let snapshots = [];
   let loaded = false;
+  let activeRunId = 0;
+  let currentStepId = "idle";
+  let failedStepId = "";
+  let liveProgress = createLiveProgress();
+
+  window.magicWand.hardware.onCheckProgress(handleHardwareProgress);
+  window.magicWand.threat.onScanProgress(handleThreatProgress);
 
   menu.addEventListener("click", () => {
     ui.switchPage("#healthPage", menu);
@@ -87,15 +112,13 @@
     tempRefreshBtn.disabled = true;
     ui.setBusy(tempRefreshBtn, true);
     tempSummary.textContent = "온도 센서를 조회하는 중입니다.";
-    tempGaugeList.innerHTML = "";
-    tempGaugeList.append(ui.createLoadingState("온도 조회 중입니다."));
+    tempGaugeList.replaceChildren(ui.createLoadingState("온도 조회 중입니다."));
     try {
       const result = await api.temps();
       renderTemps(result);
     } catch (error) {
       tempSummary.textContent = `온도 조회 실패: ${error.message}`;
-      tempGaugeList.innerHTML = "";
-      tempGaugeList.append(createIdle("온도 정보를 읽지 못했습니다."));
+      tempGaugeList.replaceChildren(createIdle("온도 정보를 읽지 못했습니다."));
     } finally {
       tempRefreshBtn.disabled = false;
       ui.setBusy(tempRefreshBtn, false);
@@ -118,13 +141,13 @@
 
   function renderTemps(result) {
     tempSummary.textContent = result.message || "온도 조회가 끝났습니다.";
-    tempGaugeList.innerHTML = "";
     const groups = result.groups || [];
     if (!groups.length) {
-      tempGaugeList.append(createIdle("표시할 온도 센서가 없습니다."));
+      tempGaugeList.replaceChildren(createIdle("표시할 온도 센서가 없습니다."));
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const group of groups) {
       const card = document.createElement("article");
       card.className = `temp-gauge-card ${group.status}`;
@@ -143,24 +166,33 @@
         .slice(0, 3)
         .map((sensor) => `${sensor.hardwareName || "센서"} ${sensor.name || ""} ${Number(sensor.value).toFixed(1)}°C`.trim())
         .join(" · ");
-      tempGaugeList.append(card);
+      fragment.append(card);
     }
+    tempGaugeList.replaceChildren(fragment);
   }
 
   async function run() {
     if (running) return;
+    const runId = Date.now();
+    activeRunId = runId;
+    currentStepId = "hardware";
+    failedStepId = "";
+    liveProgress = createLiveProgress();
     setRunning(true);
     summary.textContent = "PC 상태를 점검하는 중입니다...";
-    breakdown.innerHTML = "";
-    breakdown.append(ui.createLoadingState("점검 중입니다. 잠시만 기다려 주세요."));
+    renderLiveProgress();
 
-    const runId = Date.now();
     const items = [];
     let score = 100;
 
     try {
       // 1) 하드웨어 점검
       const hw = await window.magicWand.hardware.check(runId);
+      if (activeRunId !== runId) {
+        return;
+      }
+      currentStepId = "threat";
+      renderLiveProgress();
       for (const test of hw.tests || []) {
         if (test.status === "fail") {
           score -= PENALTY.hwFail;
@@ -173,6 +205,11 @@
 
       // 2) 위험 소프트웨어 점검 (상한 적용)
       const threat = await window.magicWand.threat.scan(runId, { targets: [] });
+      if (activeRunId !== runId) {
+        return;
+      }
+      currentStepId = "activation";
+      renderLiveProgress();
       let threatPenalty = 0;
       for (const t of threat.items || []) {
         const p = t.status === "fail" ? PENALTY.threatFail : PENALTY.threatWarn;
@@ -193,11 +230,16 @@
         items.push(item("activation", "정품 인증", "warn", PENALTY.notActivated, status));
       }
     } catch (error) {
+      failedStepId = currentStepId;
       ui.showToast(`점검 중 오류가 발생했습니다: ${error.message}`);
       setRunning(false);
+      activeRunId = 0;
+      // 스캔 가운데 표시를 점검 전 상태로 되돌린다.
+      gaugeWrap.classList.remove("is-done");
+      scoreValue.textContent = "—";
+      gradeValue.textContent = "점검 전";
       summary.textContent = "점검에 실패했습니다. 다시 시도해 주세요.";
-      breakdown.innerHTML = "";
-      breakdown.append(createIdle("점검에 실패했습니다."));
+      breakdown.replaceChildren(createIdle("점검에 실패했습니다."));
       return;
     }
 
@@ -207,9 +249,192 @@
     renderScore(lastResult);
     renderBreakdown(items);
     setRunning(false);
+    activeRunId = 0;
+    currentStepId = "done";
     snapshotBtn.disabled = false;
     summary.textContent = `점검 완료 · ${items.length}개 항목에서 감점이 있었습니다.`;
     await ui.notifyComplete("PC 성능 점검을 완료했습니다.", { achievementKey: "checksDone" });
+  }
+
+  function createLiveProgress() {
+    return {
+      hardwareTests: [],
+      hardwareMessages: [],
+      threatEntries: [],
+    };
+  }
+
+  function handleHardwareProgress(payload) {
+    if (!payload || payload.runId !== activeRunId || !running) {
+      return;
+    }
+
+    liveProgress.hardwareTests = Array.isArray(payload.tests) ? payload.tests : [];
+    liveProgress.hardwareMessages = Array.isArray(payload.messages) ? payload.messages : [];
+    renderLiveProgress();
+  }
+
+  function handleThreatProgress(payload) {
+    if (!payload || payload.runId !== activeRunId || !running) {
+      return;
+    }
+
+    const entry = {
+      message: payload.message || "위험 소프트웨어 검사 진행 중",
+      detail: payload.detail || "",
+      time: payload.time || new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    };
+    const key = `${entry.time}|${entry.message}|${entry.detail}`;
+    const hasSameEntry = liveProgress.threatEntries.some((item) => `${item.time}|${item.message}|${item.detail}` === key);
+    if (!hasSameEntry) {
+      liveProgress.threatEntries.push(entry);
+    }
+    renderLiveProgress();
+  }
+
+  function renderLiveProgress() {
+    const shell = document.createElement("div");
+    shell.className = "health-progress-shell";
+    shell.append(createStepList());
+
+    if (currentStepId === "hardware" || liveProgress.hardwareTests.length > 0) {
+      shell.append(createHardwareProgressSection());
+    }
+
+    if (currentStepId === "threat" || currentStepId === "activation" || liveProgress.threatEntries.length > 0) {
+      shell.append(createThreatProgressSection());
+    }
+
+    if (currentStepId === "activation") {
+      shell.append(createActivationProgressSection());
+    }
+
+    breakdown.replaceChildren(shell);
+  }
+
+  function createStepList() {
+    const list = document.createElement("div");
+    list.className = "health-stage-list";
+
+    for (const step of CHECK_STEPS) {
+      const status = stepStatus(step.id);
+      const card = document.createElement("article");
+      card.className = `health-stage-card is-${status}`;
+      card.innerHTML = `
+        <span class="health-stage-mark" aria-hidden="true"></span>
+        <div>
+          <strong></strong>
+          <p></p>
+          <span class="health-stage-status"></span>
+        </div>
+      `;
+      card.querySelector("strong").textContent = step.label;
+      card.querySelector("p").textContent = step.detail;
+      card.querySelector(".health-stage-status").textContent = stepStatusLabel(status);
+      list.append(card);
+    }
+
+    return list;
+  }
+
+  function stepStatus(stepId) {
+    if (currentStepId === "done") {
+      return "done";
+    }
+    if (failedStepId && stepId === failedStepId) {
+      return "error";
+    }
+
+    const currentIndex = CHECK_STEPS.findIndex((step) => step.id === currentStepId);
+    const stepIndex = CHECK_STEPS.findIndex((step) => step.id === stepId);
+    if (currentIndex < 0 || stepIndex < 0) {
+      return "pending";
+    }
+    if (stepIndex < currentIndex) {
+      return "done";
+    }
+    return stepIndex === currentIndex ? "running" : "pending";
+  }
+
+  function stepStatusLabel(status) {
+    if (status === "done") return "완료";
+    if (status === "running") return "진행 중";
+    if (status === "error") return "오류";
+    return "대기";
+  }
+
+  function createHardwareProgressSection() {
+    const section = document.createElement("section");
+    section.className = "health-live-section";
+    section.append(createLiveTitle("하드웨어 상세 진행", "디스크, 메모리, 온도 등 확인된 항목을 실시간으로 표시합니다."));
+
+    const tests = liveProgress.hardwareTests;
+    if (!tests.length) {
+      section.append(ui.createLoadingState("하드웨어 검사 항목을 준비 중입니다."));
+      return section;
+    }
+
+    const list = document.createElement("div");
+    list.className = "health-live-test-list";
+    ui.renderTestList(list, tests);
+    section.append(list);
+
+    for (const message of liveProgress.hardwareMessages) {
+      section.append(createLiveNote(message));
+    }
+
+    return section;
+  }
+
+  function createThreatProgressSection() {
+    const section = document.createElement("section");
+    section.className = "health-live-section";
+    section.append(createLiveTitle("위험 소프트웨어 상세 진행", "프로세스, 시작프로그램, Defender, YARA 검사를 순서대로 표시합니다."));
+
+    if (!liveProgress.threatEntries.length) {
+      section.append(ui.createLoadingState("위험 소프트웨어 검사 항목을 준비 중입니다."));
+      return section;
+    }
+
+    const list = document.createElement("div");
+    list.className = "health-threat-progress-list";
+    const fragment = document.createDocumentFragment();
+    for (const entry of liveProgress.threatEntries) {
+      const card = document.createElement("article");
+      card.className = "health-progress-entry";
+      card.innerHTML = `<div><strong></strong><span></span></div><p></p>`;
+      card.querySelector("strong").textContent = entry.message;
+      card.querySelector("span").textContent = entry.time;
+      card.querySelector("p").textContent = entry.detail;
+      fragment.append(card);
+    }
+    list.append(fragment);
+    section.append(list);
+    return section;
+  }
+
+  function createActivationProgressSection() {
+    const section = document.createElement("section");
+    section.className = "health-live-section";
+    section.append(createLiveTitle("정품 인증 상세 진행", "Windows 정품 인증 상태를 확인하고 점수에 반영합니다."));
+    section.append(ui.createLoadingState("정품 인증 상태를 확인하는 중입니다."));
+    return section;
+  }
+
+  function createLiveTitle(title, detail) {
+    const head = document.createElement("div");
+    head.className = "health-live-title";
+    head.innerHTML = `<strong></strong><p></p>`;
+    head.querySelector("strong").textContent = title;
+    head.querySelector("p").textContent = detail;
+    return head;
+  }
+
+  function createLiveNote(message) {
+    const note = document.createElement("p");
+    note.className = "health-live-note";
+    note.textContent = message;
+    return note;
   }
 
   function item(key, label, status, penalty, detail) {
@@ -229,22 +454,62 @@
   }
 
   function renderScore(result) {
-    scoreValue.textContent = String(result.score);
+    gaugeWrap.classList.remove("is-scanning");
+    // 스캔 호(짧은 호)를 원래 둘레로 되돌리고 빈 게이지에서 시작한다.
+    gaugeFill.style.strokeDasharray = String(CIRC);
+    gaugeFill.style.strokeDashoffset = String(CIRC);
     gradeValue.textContent = result.grade;
     const cls = gradeClass(result.score);
     gaugeFill.classList.remove("health-good", "health-warn", "health-bad");
     gaugeFill.classList.add(cls);
     gradeValue.classList.remove("health-good", "health-warn", "health-bad");
     gradeValue.classList.add(cls);
-    gaugeFill.style.strokeDashoffset = String(CIRC * (1 - result.score / 100));
+    // 다음 프레임에 점수만큼 차오르게 한다. (CSS transition으로 부드럽게)
+    requestAnimationFrame(() => {
+      gaugeFill.style.strokeDashoffset = String(CIRC * (1 - result.score / 100));
+    });
+    animateScore(result.score);
+    // 완료 펄스를 처음부터 다시 재생한다.
+    gaugeWrap.classList.remove("is-done");
+    void gaugeWrap.offsetWidth;
+    gaugeWrap.classList.add("is-done");
+  }
+
+  // 동작 줄이기(설정 토글/OS)면 애니메이션을 건너뛴다.
+  function motionOff() {
+    return (
+      document.body.classList.contains("motion-off") ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  // 점수 숫자를 0에서 목표값까지 빠르게 카운트업한다. (easeOutCubic)
+  function animateScore(target) {
+    if (motionOff()) {
+      scoreValue.textContent = String(target);
+      return;
+    }
+    const duration = 900;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      scoreValue.textContent = String(Math.round(target * eased));
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        scoreValue.textContent = String(target);
+      }
+    }
+    requestAnimationFrame(tick);
   }
 
   function renderBreakdown(items) {
-    breakdown.innerHTML = "";
     if (!items.length) {
-      breakdown.append(createIdle("감점 항목이 없습니다. 상태가 양호합니다."));
+      breakdown.replaceChildren(createIdle("감점 항목이 없습니다. 상태가 양호합니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const it of items) {
       const card = document.createElement("article");
       card.className = `diagnostic-item ${it.status}`;
@@ -252,8 +517,9 @@
       card.querySelector("strong").textContent = it.label;
       card.querySelector("span").textContent = `−${it.penalty}점`;
       card.querySelector("p").textContent = it.detail || "";
-      breakdown.append(card);
+      fragment.append(card);
     }
+    breakdown.replaceChildren(fragment);
   }
 
   // ── 스냅샷 / Before·After ───────────────────────
@@ -267,20 +533,21 @@
   }
 
   function renderSnapshotSelect() {
-    snapshotSelect.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     if (!snapshots.length) {
       const opt = document.createElement("option");
       opt.value = "";
       opt.textContent = "저장된 스냅샷 없음";
-      snapshotSelect.append(opt);
+      fragment.append(opt);
     } else {
       for (const snap of snapshots) {
         const opt = document.createElement("option");
         opt.value = snap.id;
         opt.textContent = `${snap.label || formatDate(snap.createdAt)} (${snap.score}점)`;
-        snapshotSelect.append(opt);
+        fragment.append(opt);
       }
     }
+    snapshotSelect.replaceChildren(fragment);
     updateSnapshotButtons();
   }
 
@@ -340,8 +607,8 @@
 
   // 저장된 스냅샷(전) vs 현재 점검(후)을 나란히 비교한다.
   function renderCompare(before, after) {
-    compareResult.innerHTML = "";
     const delta = after.score - before.score;
+    const fragment = document.createDocumentFragment();
     const head = document.createElement("div");
     head.className = "health-compare-head";
     const arrow = delta > 0 ? "▲" : delta < 0 ? "▼" : "—";
@@ -351,7 +618,7 @@
       <span>후: <strong>${after.score}점</strong> (현재)</span>
       <span class="health-delta ${deltaClass}">${arrow} ${delta > 0 ? "+" : ""}${delta}점</span>
     `;
-    compareResult.append(head);
+    fragment.append(head);
 
     // 항목별 변화: 키+라벨 기준으로 전/후 감점 비교
     const beforeMap = mapItems(before.items);
@@ -382,7 +649,8 @@
       tbody.append(tr);
     }
     table.append(tbody);
-    compareResult.append(table);
+    fragment.append(table);
+    compareResult.replaceChildren(fragment);
   }
 
   function mapItems(items) {
@@ -397,6 +665,15 @@
     running = isRunning;
     runBtn.disabled = isRunning;
     ui.setBusy(runBtn, isRunning);
+    // 점검 중에는 게이지를 회전 스캔 모드로 전환한다.
+    gaugeWrap.classList.toggle("is-scanning", isRunning);
+    if (isRunning) {
+      gaugeWrap.classList.remove("is-done");
+      gaugeFill.classList.remove("health-good", "health-warn", "health-bad");
+      gradeValue.classList.remove("health-good", "health-warn", "health-bad");
+      scoreValue.textContent = "";
+      gradeValue.textContent = "점검 중";
+    }
   }
 
   function createIdle(message) {

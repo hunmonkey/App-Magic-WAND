@@ -8,6 +8,7 @@ function defaults() {
   return {
     soundEnabled: true,
     desktopNotificationEnabled: false,
+    animationEnabled: true,
   };
 }
 
@@ -16,6 +17,7 @@ function normalize(value) {
     ...defaults(),
     soundEnabled: value?.soundEnabled !== false,
     desktopNotificationEnabled: value?.desktopNotificationEnabled === true,
+    animationEnabled: value?.animationEnabled !== false,
   };
 }
 

@@ -54,7 +54,7 @@
     refreshBtn.disabled = true;
     ui.setBusy(refreshBtn, true);
     summary.textContent = "드라이버 목록을 조회하는 중입니다.";
-    tableBody.innerHTML = "";
+    tableBody.replaceChildren();
     try {
       const result = await window.magicWand.driver.list();
       renderDrivers(result.drivers || []);
@@ -69,8 +69,8 @@
   }
 
   function renderDrivers(drivers) {
-    tableBody.innerHTML = "";
     tableWrap.classList.toggle("empty", drivers.length === 0);
+    const fragment = document.createDocumentFragment();
     for (const driver of drivers) {
       const row = document.createElement("tr");
       row.append(
@@ -79,8 +79,9 @@
         cell([driver.version, driver.date].filter(Boolean).join(" · ")),
         cell(driver.infName || ""),
       );
-      tableBody.append(row);
+      fragment.append(row);
     }
+    tableBody.replaceChildren(fragment);
   }
 
   async function pickDestination() {

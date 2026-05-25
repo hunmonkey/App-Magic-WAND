@@ -1,7 +1,7 @@
 (function () {
   const TARGET_STORAGE_KEY = "magicWandThreatScanTargets";
   const ui = window.MagicWand;
-  const menu = document.querySelector("#checkMenu");
+  const menu = document.querySelector("#swCheckMenu");
   if (!menu || !ui) {
     return;
   }
@@ -28,7 +28,7 @@
   window.magicWand.threat.onScanProgress(handleProgress);
 
   menu.addEventListener("click", () => {
-    ui.switchPage("#hardwareCheckPage", menu);
+    ui.switchPage("#softwareCheckPage", menu);
   });
 
   startButton.addEventListener("click", runScan);
@@ -51,7 +51,7 @@
     lastSummaryText = "위험 소프트웨어를 점검 중입니다.";
     progressLog = [];
     setRunning(true);
-    list.innerHTML = "";
+    list.replaceChildren();
     const targetText = targetPaths.length > 0 ? `${targetPaths.length}개 선택 폴더` : "기본 검사대상";
     addProgress("검사를 준비하고 있습니다.", `${targetText}을 대상으로 Microsoft Defender와 YARA 룰 검사를 실행합니다.`);
 
@@ -240,14 +240,14 @@
   }
 
   function renderProgress() {
-    list.innerHTML = "";
+    const fragment = document.createDocumentFragment();
 
     for (const entry of progressLog) {
-    const card = document.createElement("article");
-    card.className = "threat-progress-item";
-    if (scanRunning) {
-      card.classList.add("busy-card");
-    }
+      const card = document.createElement("article");
+      card.className = "threat-progress-item";
+      if (scanRunning) {
+        card.classList.add("busy-card");
+      }
 
       const head = document.createElement("div");
       const strong = document.createElement("strong");
@@ -260,8 +260,9 @@
       detail.textContent = entry.detail;
 
       card.append(head, detail);
-      list.append(card);
+      fragment.append(card);
     }
+    list.replaceChildren(fragment);
   }
 
   function renderFinalResult(items) {
@@ -281,18 +282,12 @@
         : "표시할 의심 항목이 없습니다.";
 
     summaryCard.append(title, detail);
-    list.prepend(summaryCard);
-
-    if (items.length === 0) {
-      return;
-    }
-
-    let anchor = summaryCard;
+    const fragment = document.createDocumentFragment();
+    fragment.append(summaryCard);
     for (const item of items) {
-      const card = createThreatItem(item);
-      anchor.after(card);
-      anchor = card;
+      fragment.append(createThreatItem(item));
     }
+    list.replaceChildren(fragment);
   }
 
   function createThreatItem(item) {
@@ -319,7 +314,6 @@
   }
 
   function renderFolderTree() {
-    folderTree.innerHTML = "";
     const visibleNodes = getVisibleNodes();
 
     if (visibleNodes.length === 0) {
@@ -327,6 +321,7 @@
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const node of visibleNodes) {
       const row = document.createElement("div");
       row.className = "threat-folder-node";
@@ -350,16 +345,16 @@
       name.textContent = node.name;
 
       row.append(toggle, checkbox, name);
-      folderTree.append(row);
+      fragment.append(row);
     }
+    folderTree.replaceChildren(fragment);
   }
 
   function renderFolderTreeMessage(message) {
-    folderTree.innerHTML = "";
     const empty = document.createElement("p");
     empty.className = "threat-folder-empty";
     empty.textContent = message;
-    folderTree.append(empty);
+    folderTree.replaceChildren(empty);
   }
 
   function getVisibleNodes() {

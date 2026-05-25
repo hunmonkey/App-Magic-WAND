@@ -1,11 +1,19 @@
 (function () {
   const ui = window.MagicWand;
-  const menu = document.querySelector("#adminWorkMenu");
-  if (!menu || !ui) return;
+  const pageRoutes = {
+    overview: { menu: document.querySelector("#adminOverviewMenu"), page: "#adminOverviewPage" },
+    vendors: { menu: document.querySelector("#adminVendorsMenu"), page: "#adminVendorsPage" },
+    supplies: { menu: document.querySelector("#adminSuppliesMenu"), page: "#adminSuppliesPage" },
+    purchases: { menu: document.querySelector("#adminPurchasesMenu"), page: "#adminPurchasesPage" },
+    contracts: { menu: document.querySelector("#adminContractsMenu"), page: "#adminContractsPage" },
+    requests: { menu: document.querySelector("#adminRequestsMenu"), page: "#adminRequestsPage" },
+    checklists: { menu: document.querySelector("#adminChecklistsMenu"), page: "#adminChecklistsPage" },
+    notes: { menu: document.querySelector("#adminNotesMenu"), page: "#adminNotesPage" },
+  };
+  const adminMenus = Object.values(pageRoutes).filter((route) => route.menu);
+  if (!adminMenus.length || !ui) return;
 
   const api = window.magicWand.adminWork;
-  const tabs = document.querySelectorAll(".admin-tab-button");
-  const panels = document.querySelectorAll(".admin-tab-panel");
   const statOpen = document.querySelector("#adminStatOpen");
   const statDue = document.querySelector("#adminStatDue");
   const statSupply = document.querySelector("#adminStatSupply");
@@ -72,20 +80,18 @@
   let loadingPromise = null;
   let selected = { request: "", vendor: "", supply: "", purchase: "", contract: "", note: "" };
 
-  menu.addEventListener("click", () => {
-    ui.switchPage("#adminWorkPage", menu);
-    ensureLoaded();
-  });
-
-  tabs.forEach((button) => {
-    button.addEventListener("click", () => switchTab(button.dataset.adminTab));
-    button.addEventListener("keydown", handleTabKeydown);
+  adminMenus.forEach((route) => {
+    route.menu.addEventListener("click", () => {
+      ui.switchPage(route.page, route.menu);
+      ensureLoaded();
+    });
   });
 
   requestForm.addEventListener("submit", (event) => {
     event.preventDefault();
     saveRequest();
   });
+  requestBody.addEventListener("click", (event) => selectTableRow(event, selectRequest));
   requestDeleteBtn.addEventListener("click", deleteRequest);
   requestClearBtn.addEventListener("click", clearRequestForm);
 
@@ -93,11 +99,14 @@
     event.preventDefault();
     createChecklist();
   });
+  checklistList.addEventListener("click", handleChecklistClick);
+  checklistList.addEventListener("change", handleChecklistChange);
 
   vendorForm.addEventListener("submit", (event) => {
     event.preventDefault();
     saveVendor();
   });
+  vendorBody.addEventListener("click", (event) => selectTableRow(event, selectVendor));
   vendorDeleteBtn.addEventListener("click", deleteVendor);
   vendorClearBtn.addEventListener("click", clearVendorForm);
 
@@ -105,6 +114,7 @@
     event.preventDefault();
     saveSupply();
   });
+  supplyBody.addEventListener("click", (event) => selectTableRow(event, selectSupply));
   supplyDeleteBtn.addEventListener("click", deleteSupply);
   supplyClearBtn.addEventListener("click", clearSupplyForm);
   supplyLogForm.addEventListener("submit", (event) => {
@@ -116,6 +126,7 @@
     event.preventDefault();
     savePurchase();
   });
+  purchaseBody.addEventListener("click", (event) => selectTableRow(event, selectPurchase));
   purchaseDeleteBtn.addEventListener("click", deletePurchase);
   purchaseClearBtn.addEventListener("click", clearPurchaseForm);
 
@@ -123,6 +134,7 @@
     event.preventDefault();
     saveContract();
   });
+  contractBody.addEventListener("click", (event) => selectTableRow(event, selectContract));
   contractDeleteBtn.addEventListener("click", deleteContract);
   contractClearBtn.addEventListener("click", clearContractForm);
 
@@ -130,6 +142,7 @@
     event.preventDefault();
     saveNote();
   });
+  noteList.addEventListener("click", handleNoteListClick);
   noteDeleteBtn.addEventListener("click", deleteNote);
   noteClearBtn.addEventListener("click", clearNoteForm);
 
@@ -155,11 +168,17 @@
   }
 
   async function openNote(id) {
-    ui.switchPage("#adminWorkPage", menu);
+    openAdminPage("notes");
     await ensureLoaded();
-    switchTab("notes");
     if (id) {
       selectNote(id);
+    }
+  }
+
+  function openAdminPage(name) {
+    const route = pageRoutes[name];
+    if (route?.menu) {
+      ui.switchPage(route.page, route.menu);
     }
   }
 
@@ -180,36 +199,6 @@
     } catch (error) {
       ui.showToast(`저장 실패: ${error.message}`);
     }
-  }
-
-  function switchTab(tabName) {
-    tabs.forEach((button) => {
-      const active = button.dataset.adminTab === tabName;
-      button.classList.toggle("active", active);
-      button.setAttribute("aria-selected", String(active));
-    });
-    panels.forEach((panel) => {
-      const active = panel.dataset.adminPanel === tabName;
-      panel.classList.toggle("active", active);
-      panel.hidden = !active;
-    });
-  }
-
-  function handleTabKeydown(event) {
-    if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
-    event.preventDefault();
-    const list = Array.from(tabs);
-    const index = list.indexOf(event.currentTarget);
-    const nextIndex = event.key === "Home"
-      ? 0
-      : event.key === "End"
-        ? list.length - 1
-        : event.key === "ArrowUp"
-          ? Math.max(0, index - 1)
-          : Math.min(list.length - 1, index + 1);
-    const next = list[nextIndex];
-    next.focus();
-    switchTab(next.dataset.adminTab);
   }
 
   function renderAll() {
@@ -279,16 +268,17 @@
   }
 
   function renderDashboardList(container, items, emptyText, labeler) {
-    container.innerHTML = "";
     if (!items.length) {
-      container.append(empty(emptyText));
+      container.replaceChildren(empty(emptyText));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("p");
       row.textContent = labeler(item);
-      container.append(row);
+      fragment.append(row);
     }
+    container.replaceChildren(fragment);
   }
 
   function refreshMasterSelects() {
@@ -312,17 +302,18 @@
     const select = document.querySelector(selector);
     if (!select) return;
     const current = select.value;
-    select.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
     emptyOption.textContent = emptyLabel;
-    select.append(emptyOption);
+    fragment.append(emptyOption);
     for (const item of items) {
       const option = document.createElement("option");
       option.value = item.id;
       option.textContent = labeler(item);
-      select.append(option);
+      fragment.append(option);
     }
+    select.replaceChildren(fragment);
     select.value = current;
   }
 
@@ -383,9 +374,10 @@
 
   function renderRequests() {
     const items = [...state.requests].sort((a, b) => statusRank(a.status) - statusRank(b.status) || compareDate(a.dueDate, b.dueDate));
-    requestBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
+      row.dataset.id = item.id;
       row.classList.toggle("selected", item.id === selected.request);
       row.append(
         cell(item.title),
@@ -394,9 +386,9 @@
         badgeCell(item.priority),
         dueCell(item.dueDate),
       );
-      row.addEventListener("click", () => selectRequest(item.id));
-      requestBody.append(row);
+      fragment.append(row);
     }
+    requestBody.replaceChildren(fragment);
     requestWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -417,15 +409,16 @@
   }
 
   function renderChecklists() {
-    checklistList.innerHTML = "";
     if (!state.checklists.length) {
-      checklistList.append(empty("아직 체크리스트가 없습니다."));
+      checklistList.replaceChildren(empty("아직 체크리스트가 없습니다."));
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (const item of state.checklists) {
       const box = document.createElement("section");
       box.className = "admin-checklist-item";
+      box.dataset.id = item.id;
       const done = item.tasks.filter((task) => task.done).length;
       const total = item.tasks.length || 1;
 
@@ -437,8 +430,9 @@
       meta.textContent = `${done}/${total} 완료${item.owner ? ` · ${item.owner}` : ""}${item.dueDate ? ` · ${item.dueDate}` : ""}`;
       const remove = document.createElement("button");
       remove.type = "button";
+      remove.className = "danger-action";
       remove.textContent = "삭제";
-      remove.addEventListener("click", () => removeChecklist(item.id));
+      remove.dataset.action = "delete-checklist";
       head.append(title, meta, remove);
 
       const list = document.createElement("div");
@@ -449,7 +443,8 @@
         const input = document.createElement("input");
         input.type = "checkbox";
         input.checked = task.done;
-        input.addEventListener("change", () => toggleChecklistTask(item.id, index, input.checked));
+        input.dataset.checklistId = item.id;
+        input.dataset.taskIndex = String(index);
         const span = document.createElement("span");
         span.textContent = task.label;
         label.append(input, span);
@@ -457,7 +452,23 @@
       });
 
       box.append(head, list);
-      checklistList.append(box);
+      fragment.append(box);
+    }
+    checklistList.replaceChildren(fragment);
+  }
+
+  function handleChecklistClick(event) {
+    const button = event.target.closest("[data-action='delete-checklist']");
+    const box = button?.closest(".admin-checklist-item[data-id]");
+    if (box) {
+      removeChecklist(box.dataset.id);
+    }
+  }
+
+  function handleChecklistChange(event) {
+    const input = event.target.closest("input[data-checklist-id][data-task-index]");
+    if (input) {
+      toggleChecklistTask(input.dataset.checklistId, Number(input.dataset.taskIndex), input.checked);
     }
   }
 
@@ -534,9 +545,10 @@
 
   function renderVendors() {
     const items = [...state.vendors].sort((a, b) => Number(a.active === false) - Number(b.active === false) || a.name.localeCompare(b.name, "ko"));
-    vendorBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
+      row.dataset.id = item.id;
       row.classList.toggle("selected", item.id === selected.vendor);
       row.append(
         cell(item.name),
@@ -546,9 +558,9 @@
         cell(item.recentDate || ""),
         badgeCell(item.active === false ? "중지" : "사용"),
       );
-      row.addEventListener("click", () => selectVendor(item.id));
-      vendorBody.append(row);
+      fragment.append(row);
     }
+    vendorBody.replaceChildren(fragment);
     vendorWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -613,9 +625,10 @@
 
   function renderSupplies() {
     const items = [...state.supplies].sort((a, b) => Number(a.quantity > a.minQuantity) - Number(b.quantity > b.minQuantity) || a.name.localeCompare(b.name, "ko"));
-    supplyBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
+      row.dataset.id = item.id;
       row.classList.toggle("selected", item.id === selected.supply);
       row.append(
         cell([item.code, item.name].filter(Boolean).join("\n")),
@@ -624,9 +637,9 @@
         cell([vendorName(item.vendorId), item.location].filter(Boolean).join("\n")),
         cell(money(item.unitPrice)),
       );
-      row.addEventListener("click", () => selectSupply(item.id));
-      supplyBody.append(row);
+      fragment.append(row);
     }
+    supplyBody.replaceChildren(fragment);
     supplyWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -669,7 +682,7 @@
 
   function renderSupplyLogs() {
     const items = [...state.supplyLogs].sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || "").localeCompare(a.createdAt || "")).slice(0, 120);
-    supplyLogBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
       const supply = supplyById(item.supplyId);
@@ -681,8 +694,9 @@
         cell([item.reason, item.handler].filter(Boolean).join("\n")),
         cell([vendorName(item.vendorId), item.memo].filter(Boolean).join("\n")),
       );
-      supplyLogBody.append(row);
+      fragment.append(row);
     }
+    supplyLogBody.replaceChildren(fragment);
     supplyLogWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -794,10 +808,11 @@
 
   function renderPurchases() {
     const items = [...state.purchases].sort((a, b) => purchaseRank(a.status) - purchaseRank(b.status) || compareDate(a.neededDate, b.neededDate));
-    purchaseBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
       const quote = bestQuote(item);
+      row.dataset.id = item.id;
       row.classList.toggle("selected", item.id === selected.purchase);
       row.append(
         cell([item.title, item.itemName].filter(Boolean).join("\n")),
@@ -806,9 +821,9 @@
         cell(quote ? `${vendorName(quote.vendorId)}\n${money(quote.amount)}` : vendorName(item.selectedVendorId)),
         dueCell(item.neededDate),
       );
-      row.addEventListener("click", () => selectPurchase(item.id));
-      purchaseBody.append(row);
+      fragment.append(row);
     }
+    purchaseBody.replaceChildren(fragment);
     purchaseWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -870,9 +885,10 @@
 
   function renderContracts() {
     const items = [...state.contracts].sort((a, b) => compareDate(a.expireDate, b.expireDate));
-    contractBody.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     for (const item of items) {
       const row = document.createElement("tr");
+      row.dataset.id = item.id;
       row.classList.toggle("selected", item.id === selected.contract);
       row.append(
         cell(item.name),
@@ -881,9 +897,9 @@
         cell([item.owner, item.autoRenew ? "자동연장" : ""].filter(Boolean).join("\n")),
         cell([item.amount, item.filePath, item.memo].filter(Boolean).join("\n")),
       );
-      row.addEventListener("click", () => selectContract(item.id));
-      contractBody.append(row);
+      fragment.append(row);
     }
+    contractBody.replaceChildren(fragment);
     contractWrap.classList.toggle("empty", items.length === 0);
   }
 
@@ -931,21 +947,29 @@
   }
 
   function renderNotes() {
-    noteList.innerHTML = "";
     if (!state.notes.length) {
-      noteList.append(empty("아직 저장된 메모가 없습니다."));
+      noteList.replaceChildren(empty("아직 저장된 메모가 없습니다."));
       return;
     }
+    const fragment = document.createDocumentFragment();
     for (const item of [...state.notes].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))) {
       const note = document.createElement("button");
       note.type = "button";
       note.className = `admin-note-item${item.id === selected.note ? " selected" : ""}`;
+      note.dataset.id = item.id;
       note.innerHTML = `<strong></strong><span></span><p></p>`;
       note.querySelector("strong").textContent = item.title;
       note.querySelector("span").textContent = [item.relatedTo, shortDate(item.updatedAt)].filter(Boolean).join(" · ");
       note.querySelector("p").textContent = item.body;
-      note.addEventListener("click", () => selectNote(item.id));
-      noteList.append(note);
+      fragment.append(note);
+    }
+    noteList.replaceChildren(fragment);
+  }
+
+  function handleNoteListClick(event) {
+    const note = event.target.closest(".admin-note-item[data-id]");
+    if (note) {
+      selectNote(note.dataset.id);
     }
   }
 
@@ -975,6 +999,13 @@
   function setValue(selector, val) {
     const el = document.querySelector(selector);
     if (el) el.value = val ?? "";
+  }
+
+  function selectTableRow(event, selectFn) {
+    const row = event.target.closest("tr[data-id]");
+    if (row) {
+      selectFn(row.dataset.id);
+    }
   }
 
   function makeId(prefix) {

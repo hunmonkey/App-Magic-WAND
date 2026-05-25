@@ -51,7 +51,7 @@
   });
   clearBtn.addEventListener("click", () => {
     sourceInput.value = "";
-    sheet.innerHTML = "";
+    sheet.replaceChildren();
     summary.textContent = "라벨 내용을 입력한 뒤 미리보기를 생성하세요.";
   });
 
@@ -59,7 +59,6 @@
     const preset = getPreset();
     const perPage = preset.columns * preset.rows;
     const labels = expandCopies(parseSource(), getCopies());
-    sheet.innerHTML = "";
     sheet.style.setProperty("--label-columns", preset.columns);
     sheet.style.setProperty("--label-rows", preset.rows);
     sheet.style.setProperty("--label-gap", preset.gap);
@@ -69,17 +68,19 @@
       const empty = document.createElement("p");
       empty.className = "empty-inline";
       empty.textContent = "미리볼 라벨 내용이 없습니다.";
-      sheet.append(empty);
+      sheet.replaceChildren(empty);
       summary.textContent = "라벨 0개";
       return;
     }
 
+    const fragment = document.createDocumentFragment();
     for (let index = 0; index < labels.length; index += perPage) {
       const page = document.createElement("div");
       page.className = "label-page-sheet";
       labels.slice(index, index + perPage).forEach((label) => page.append(createLabel(label)));
-      sheet.append(page);
+      fragment.append(page);
     }
+    sheet.replaceChildren(fragment);
     summary.textContent = `라벨 ${labels.length}개 · ${preset.columns}열 × ${preset.rows}행`;
   }
 
