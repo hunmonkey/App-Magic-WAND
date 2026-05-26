@@ -73,8 +73,7 @@ const ADMIN_WORK_MENUS = [
 ];
 const PAGE_SCRIPT_ROUTES = [
   { menus: ["#systemInfoMenu"], scripts: ["./pages/system-info.js"] },
-  { menus: ["#healthMenu"], scripts: ["./pages/health.js"] },
-  { menus: ["#integratedCheckMenu"], scripts: ["./pages/integrated-check.js"] },
+  { menus: ["#healthMenu"], scripts: ["./pages/health.js", "./pages/integrated-check.js"] },
   { menus: ["#hwCheckMenu"], scripts: ["./pages/hardware-check.js"] },
   { menus: ["#swCheckMenu"], scripts: ["./pages/threat-scan.js"] },
   { menus: ["#eventLogMenu"], scripts: ["./pages/event-log.js"] },

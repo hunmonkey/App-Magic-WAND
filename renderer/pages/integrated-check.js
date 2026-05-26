@@ -1,7 +1,7 @@
 (function () {
+  // 통합 점검은 'PC 성능 점검' 화면 안 '증빙 리포트' 패널로 흡수됨.
   const ui = window.MagicWand;
-  const menu = document.querySelector("#integratedCheckMenu");
-  if (!menu || !ui) return;
+  if (!ui) return;
 
   const dateInput = document.querySelector("#icDate");
   const customerInput = document.querySelector("#icCustomer");
@@ -13,6 +13,9 @@
   const saveButton = document.querySelector("#icSaveButton");
   const progress = document.querySelector("#icProgress");
   const results = document.querySelector("#icResults");
+
+  // 리포트 패널이 화면에 없으면(혹시 모를 경우) 조용히 빠져나간다.
+  if (!startButton || !results) return;
 
   const headInputs = [dateInput, customerInput, assetTagInput, inspectorInput];
 
@@ -69,14 +72,15 @@
 
   dateInput.value = new Date().toLocaleString("ko-KR");
 
-  menu.addEventListener("click", () => {
-    ui.switchPage("#integratedCheckPage", menu);
-  });
-
   refreshButton.addEventListener("click", refreshReport);
   startButton.addEventListener("click", runAll);
   printButton.addEventListener("click", () => {
-    ui.exportPdf({ defaultFileName: buildTitle() });
+    if (!lastReport) {
+      ui.showToast("먼저 「리포트 생성」을 눌러 주세요.");
+      return;
+    }
+    // 화면 전체가 아니라 리포트 HTML만 깨끗하게 PDF로 만든다.
+    ui.exportPdf({ defaultFileName: buildTitle(), html: buildReportDocument() });
   });
   saveButton.addEventListener("click", saveReport);
 
@@ -88,7 +92,7 @@
     results.replaceChildren();
     printButton.disabled = true;
     saveButton.disabled = true;
-    ui.showToast("통합 점검을 새로고침했습니다.");
+    ui.showToast("증빙 리포트를 초기화했습니다.");
   }
 
   async function runAll() {
@@ -106,7 +110,7 @@
     lastReport = { sections: [] };
     progress.replaceChildren();
     results.replaceChildren();
-    addProgress("통합 점검을 시작합니다.", `${selected.length}개 항목을 순서대로 점검합니다.`);
+    addProgress("증빙 리포트 점검을 시작합니다.", `${selected.length}개 항목을 순서대로 점검합니다.`);
 
     for (const [, label, collector] of selected) {
       if (currentRunId !== runId) return;
@@ -129,10 +133,21 @@
     setRunning(false);
     printButton.disabled = false;
     saveButton.disabled = false;
-    await ui.notifyComplete("통합 점검을 완료했습니다.", { achievementKey: "checksDone" });
+    await ui.notifyComplete("증빙 리포트를 완성했습니다.", { achievementKey: "checksDone" });
   }
 
   // ── 항목별 수집기 ───────────────────────────────
+
+  // PC 성능 점검이 방금 돌린 스캔이 있으면(5분 이내) 다시 스캔하지 않고 그 결과를 재사용한다.
+  function reusableScan() {
+    const scan = window.MagicWandHealth && typeof window.MagicWandHealth.getScan === "function"
+      ? window.MagicWandHealth.getScan()
+      : null;
+    if (scan && Date.now() - (scan.at || 0) < 5 * 60 * 1000) {
+      return scan;
+    }
+    return null;
+  }
 
   // 1. PC 사양 — 트리를 항목명/내용/비고 표로 평탄화 (저장장치·NIC는 5·4번과 중복이라 제외)
   const SPEC_SKIP_GROUPS = new Set(["저장장치", "NIC"]);
@@ -171,7 +186,7 @@
 
   // 2. 운영체제 및 정품 인증
   async function collectActivation() {
-    const act = await window.magicWand.security.activation();
+    const act = reusableScan()?.activation || (await window.magicWand.security.activation());
     const rows = [
       ["운영체제", act.edition || "확인 안 됨", "정품 상태", act.status || "확인 안 됨"],
       ["버전", act.version || "확인 안 됨", "빌드", act.build || "확인 안 됨"],
@@ -214,7 +229,7 @@
 
   // 5. 하드웨어 점검
   async function collectHardware() {
-    const result = await window.magicWand.hardware.check(Date.now());
+    const result = reusableScan()?.hardware || (await window.magicWand.hardware.check(Date.now()));
     const rows = (result.tests || []).map((t) => [t.name, ui.statusLabel(t.status), `${t.detail || ""} ${t.hint || ""}`.trim()]);
     return {
       title: "5. 하드웨어 점검",
@@ -236,7 +251,7 @@
 
   // 7. 위험 소프트웨어 점검
   async function collectThreat(currentRunId) {
-    const result = await window.magicWand.threat.scan(currentRunId, { targets: [] });
+    const result = reusableScan()?.threat || (await window.magicWand.threat.scan(currentRunId, { targets: [] }));
     const items = result.items || [];
     const rows = items.map((item) => [
       item.name,
@@ -463,9 +478,24 @@
     return parts.join("_");
   }
 
+  // PDF 인쇄용: 리포트 본문을 독립 실행되는 인쇄용 HTML 문서로 감싼다.
+  function buildReportDocument() {
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 22px; font-family: 'Malgun Gothic','맑은 고딕',sans-serif; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 14px; }
+  h2 { font-size: 15px; margin: 18px 0 6px; border-bottom: 2px solid #333; padding-bottom: 4px; }
+  p { font-size: 12px; color: #444; margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 12px; table-layout: fixed; word-break: break-word; }
+  th, td { border: 1px solid #999; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #f0f3f8; }
+</style></head><body>${buildReportHtml()}</body></html>`;
+  }
+
   function buildReportHtml() {
     const esc = escapeHtml;
-    let html = `<h1>PC 통합 점검</h1>`;
+    let html = `<h1>PC 점검 보고서</h1>`;
     // 머리말: 1줄 제목 / 2줄 내용 (구조파일 형식)
     const headHead = ["점검일", "고객·부서", "자산번호", "점검자", "서명"];
     const headBody = [

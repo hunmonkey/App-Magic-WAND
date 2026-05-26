@@ -60,12 +60,18 @@
 
   let running = false;
   let lastResult = null; // { score, grade, items }
+  let lastScan = null; // 증빙 리포트가 재사용할 직전 스캔 원본 { hardware, threat, activation, at }
   let snapshots = [];
   let loaded = false;
   let activeRunId = 0;
   let currentStepId = "idle";
   let failedStepId = "";
   let liveProgress = createLiveProgress();
+
+  // 증빙 리포트(통합 점검 흡수)가 같은 스캔 결과를 다시 쓰도록 노출한다.
+  window.MagicWandHealth = {
+    getScan: () => lastScan,
+  };
 
   window.magicWand.hardware.onCheckProgress(handleHardwareProgress);
   window.magicWand.threat.onScanProgress(handleThreatProgress);
@@ -182,7 +188,8 @@
     summary.textContent = "PC 상태를 점검하는 중입니다...";
     renderLiveProgress();
 
-    const items = [];
+    const items = []; // 점수·스냅샷·비교용: 감점(주의/문제) 항목만
+    const breakdownItems = []; // 화면 표시용: 정상 항목까지 모두 포함
     let score = 100;
 
     try {
@@ -194,12 +201,12 @@
       currentStepId = "threat";
       renderLiveProgress();
       for (const test of hw.tests || []) {
-        if (test.status === "fail") {
-          score -= PENALTY.hwFail;
-          items.push(item(`hw`, `하드웨어 · ${test.name}`, "fail", PENALTY.hwFail, test.detail || ""));
-        } else if (test.status === "warn") {
-          score -= PENALTY.hwWarn;
-          items.push(item(`hw`, `하드웨어 · ${test.name}`, "warn", PENALTY.hwWarn, test.detail || ""));
+        const penalty = test.status === "fail" ? PENALTY.hwFail : test.status === "warn" ? PENALTY.hwWarn : 0;
+        const it = item(`hw`, `하드웨어 · ${test.name}`, test.status, penalty, test.detail || "", test.hint || "");
+        breakdownItems.push(it);
+        if (penalty > 0) {
+          score -= penalty;
+          items.push(it);
         }
       }
 
@@ -210,13 +217,26 @@
       }
       currentStepId = "activation";
       renderLiveProgress();
+      const threatList = threat.items || [];
+      if (threatList.length === 0) {
+        breakdownItems.push(
+          item("threat", "위험 소프트웨어 점검", "ok", 0, "실행 프로그램·시작프로그램·Defender/YARA에서 위험 신호가 없습니다.", ""),
+        );
+      }
       let threatPenalty = 0;
-      for (const t of threat.items || []) {
+      for (const t of threatList) {
         const p = t.status === "fail" ? PENALTY.threatFail : PENALTY.threatWarn;
         threatPenalty += p;
-        items.push(
-          item("threat", `위험 SW · ${t.name}`, t.status === "fail" ? "fail" : "warn", p, t.reason || t.source || ""),
+        const it = item(
+          "threat",
+          `위험 SW · ${t.name}`,
+          t.status === "fail" ? "fail" : "warn",
+          p,
+          t.reason || t.source || "",
+          "「점검 : 소프트웨어」 화면에서 자세한 내용을 확인하고 의심 항목을 정리할 수 있습니다.",
         );
+        breakdownItems.push(it);
+        items.push(it);
       }
       threatPenalty = Math.min(threatPenalty, PENALTY.threatCap);
       score -= threatPenalty;
@@ -227,8 +247,22 @@
       const activated = /정품|인증/.test(status) && !/안\s*됨|아님|비정품|만료/.test(status);
       if (status && !activated) {
         score -= PENALTY.notActivated;
-        items.push(item("activation", "정품 인증", "warn", PENALTY.notActivated, status));
+        const it = item(
+          "activation",
+          "정품 인증",
+          "warn",
+          PENALTY.notActivated,
+          status,
+          "Windows 정품 인증 설정에서 인증 상태를 확인하고 정품 키를 입력할 수 있습니다.",
+        );
+        breakdownItems.push(it);
+        items.push(it);
+      } else if (status) {
+        breakdownItems.push(item("activation", "정품 인증", "ok", 0, status, ""));
       }
+
+      // 증빙 리포트가 다시 스캔하지 않도록 이번 점검 원본을 보관한다.
+      lastScan = { hardware: hw, threat, activation: act, at: Date.now() };
     } catch (error) {
       failedStepId = currentStepId;
       ui.showToast(`점검 중 오류가 발생했습니다: ${error.message}`);
@@ -247,12 +281,14 @@
     const grade = gradeOf(score);
     lastResult = { score, grade, items };
     renderScore(lastResult);
-    renderBreakdown(items);
+    renderBreakdown(breakdownItems);
     setRunning(false);
     activeRunId = 0;
     currentStepId = "done";
     snapshotBtn.disabled = false;
-    summary.textContent = `점검 완료 · ${items.length}개 항목에서 감점이 있었습니다.`;
+    summary.textContent = items.length
+      ? `점검 완료 · ${items.length}개 항목에서 감점이 있었습니다.`
+      : "점검 완료 · 감점 항목 없이 모두 정상입니다.";
     await ui.notifyComplete("PC 성능 점검을 완료했습니다.", { achievementKey: "checksDone" });
   }
 
@@ -370,7 +406,7 @@
 
     const tests = liveProgress.hardwareTests;
     if (!tests.length) {
-      section.append(ui.createLoadingState("하드웨어 검사 항목을 준비 중입니다."));
+      section.append(createCalmWait("하드웨어 검사 항목을 준비 중입니다."));
       return section;
     }
 
@@ -392,7 +428,7 @@
     section.append(createLiveTitle("위험 소프트웨어 상세 진행", "프로세스, 시작프로그램, Defender, YARA 검사를 순서대로 표시합니다."));
 
     if (!liveProgress.threatEntries.length) {
-      section.append(ui.createLoadingState("위험 소프트웨어 검사 항목을 준비 중입니다."));
+      section.append(createCalmWait("위험 소프트웨어 검사 항목을 준비 중입니다."));
       return section;
     }
 
@@ -417,7 +453,7 @@
     const section = document.createElement("section");
     section.className = "health-live-section";
     section.append(createLiveTitle("정품 인증 상세 진행", "Windows 정품 인증 상태를 확인하고 점수에 반영합니다."));
-    section.append(ui.createLoadingState("정품 인증 상태를 확인하는 중입니다."));
+    section.append(createCalmWait("정품 인증 상태를 확인하는 중입니다."));
     return section;
   }
 
@@ -437,8 +473,16 @@
     return note;
   }
 
-  function item(key, label, status, penalty, detail) {
-    return { key, label, status, penalty, detail };
+  // 회전 스피너 대신 은은하게 깜빡이는 대기 문구. (산만한 빙글빙글 효과 제거)
+  function createCalmWait(message) {
+    const note = document.createElement("p");
+    note.className = "empty-inline health-live-wait";
+    note.textContent = message;
+    return note;
+  }
+
+  function item(key, label, status, penalty, detail, hint) {
+    return { key, label, status, penalty, detail, hint: hint || "" };
   }
 
   function gradeOf(score) {
@@ -506,20 +550,99 @@
 
   function renderBreakdown(items) {
     if (!items.length) {
-      breakdown.replaceChildren(createIdle("감점 항목이 없습니다. 상태가 양호합니다."));
+      breakdown.replaceChildren(createIdle("표시할 점검 항목이 없습니다."));
       return;
     }
     const fragment = document.createDocumentFragment();
     for (const it of items) {
       const card = document.createElement("article");
       card.className = `diagnostic-item ${it.status}`;
-      card.innerHTML = `<div><strong></strong><span></span></div><p></p>`;
-      card.querySelector("strong").textContent = it.label;
-      card.querySelector("span").textContent = `−${it.penalty}점`;
-      card.querySelector("p").textContent = it.detail || "";
+
+      const head = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = it.label;
+      const actions = document.createElement("div");
+      actions.className = "diagnostic-actions";
+      const score = document.createElement("span");
+      // 정상 항목은 '정상', 감점 항목은 '−N점'으로 표시한다.
+      score.textContent = it.status === "ok" ? "정상" : `−${it.penalty}점`;
+      actions.append(score);
+
+      // 점수 옆 '해결' 버튼: 감점 항목에만, 바로 열 수 있는 도구/화면이 있으면 단다.
+      const fix = it.status === "ok" ? null : solutionAction(it);
+      if (fix) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "diagnostic-fix";
+        btn.textContent = fix.text;
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          try {
+            await fix.run();
+          } catch (error) {
+            ui.showToast(`열지 못했습니다: ${error.message}`);
+          } finally {
+            btn.disabled = false;
+          }
+        });
+        actions.append(btn);
+      }
+      head.append(strong, actions);
+      card.append(head);
+
+      if (it.detail) {
+        const detail = document.createElement("p");
+        detail.textContent = it.detail;
+        card.append(detail);
+      }
+      // 감점 항목은 '해결 방법' 안내, 정상 항목은 상태 설명을 그대로 보여 준다.
+      if (it.hint) {
+        const hint = document.createElement("p");
+        hint.className = "diagnostic-hint";
+        hint.textContent = it.status === "ok" ? it.hint : `해결 방법 · ${it.hint}`;
+        card.append(hint);
+      }
       fragment.append(card);
     }
     breakdown.replaceChildren(fragment);
+  }
+
+  // 감점 항목별로 바로 열 수 있는 Windows 도구/앱 화면을 정해 준다.
+  function solutionAction(it) {
+    const label = it.label || "";
+    if (it.key === "threat") {
+      return { text: "위험 SW 점검 열기", run: () => goToPage("#softwareCheckPage", "#swCheckMenu") };
+    }
+    if (it.key === "activation" || /정품 인증/.test(label)) {
+      return { text: "정품 인증 설정 열기", run: () => openTool("activation") };
+    }
+    if (/여유 공간/.test(label)) {
+      return { text: "디스크 정리 열기", run: () => openTool("diskCleanup") };
+    }
+    if (/SMART|디스크 상태/.test(label)) {
+      return { text: "디스크 관리 열기", run: () => openTool("diskManagement") };
+    }
+    if (/메모리 진단/.test(label)) {
+      return { text: "메모리 진단 열기", run: () => openTool("memoryDiagnostic") };
+    }
+    if (/메모리 사용량/.test(label)) {
+      return { text: "작업 관리자 열기", run: () => openTool("taskManager") };
+    }
+    if (/배터리/.test(label)) {
+      return { text: "전원 설정 열기", run: () => openTool("powerOptions") };
+    }
+    if (/온도|비정상 종료|WHEA|드라이버 오류|저장장치 오류/.test(label)) {
+      return { text: "이벤트 뷰어 열기", run: () => openTool("eventViewer") };
+    }
+    return null;
+  }
+
+  async function openTool(toolName) {
+    await window.magicWand.system.openWindowsTool(toolName);
+  }
+
+  function goToPage(pageSelector, menuSelector) {
+    ui.switchPage(pageSelector, document.querySelector(menuSelector));
   }
 
   // ── 스냅샷 / Before·After ───────────────────────
@@ -664,13 +787,17 @@
   function setRunning(isRunning) {
     running = isRunning;
     runBtn.disabled = isRunning;
-    ui.setBusy(runBtn, isRunning);
-    // 점검 중에는 게이지를 회전 스캔 모드로 전환한다.
+    // 버튼은 회전 스피너 없이 글자만 "점검 중"으로 바꾼다.
+    runBtn.textContent = isRunning ? "점검 중" : "점검 실행";
+    // 점검 중에는 게이지 안에서 돋보기가 훑는 스캔 모드로 전환한다.
     gaugeWrap.classList.toggle("is-scanning", isRunning);
     if (isRunning) {
       gaugeWrap.classList.remove("is-done");
       gaugeFill.classList.remove("health-good", "health-warn", "health-bad");
       gradeValue.classList.remove("health-good", "health-warn", "health-bad");
+      // 게이지 호는 비워 두고(회전 없음) 돋보기 애니메이션만 보여 준다.
+      gaugeFill.style.strokeDasharray = String(CIRC);
+      gaugeFill.style.strokeDashoffset = String(CIRC);
       scoreValue.textContent = "";
       gradeValue.textContent = "점검 중";
     }

@@ -70,6 +70,26 @@ const TOOLS = {
     command: "cleanmgr.exe",
     args: [],
   },
+
+  // PC 성능 점검: 감점 항목별 '해결' 버튼이 여는 도구
+  activation: {
+    url: "ms-settings:activation",
+  },
+  taskManager: {
+    command: "taskmgr.exe",
+    args: [],
+  },
+  memoryDiagnostic: {
+    command: "MdSched.exe",
+    args: [],
+  },
+  powerOptions: {
+    command: "control.exe",
+    args: ["powercfg.cpl"],
+  },
+  eventViewer: {
+    path: path.join(SYSTEM32, "eventvwr.msc"),
+  },
 };
 
 function register(ipcMain) {

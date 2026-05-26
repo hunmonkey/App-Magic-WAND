@@ -27,7 +27,6 @@
             <div class="menu-sublist">
               <button id="systemInfoMenu" class="menu-link sub-link active" type="button" data-icon="ⓘ">PC 기본 정보</button>
               <button id="healthMenu" class="menu-link sub-link" type="button" data-icon="∿">PC 성능 점검</button>
-              <button id="integratedCheckMenu" class="menu-link sub-link" type="button" data-icon="▤">통합 점검</button>
               <button id="hwCheckMenu" class="menu-link sub-link" type="button" data-icon="◇">점검 : 하드웨어</button>
               <button id="swCheckMenu" class="menu-link sub-link" type="button" data-icon="◈">점검 : 소프트웨어</button>
               <button id="eventLogMenu" class="menu-link sub-link" type="button" data-icon="▥">점검 : 이벤트 로그</button>
@@ -963,51 +962,6 @@
               </div>
             </section>
           </div>
-        </section>
-
-        <section id="integratedCheckPage" class="page">
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="section-label">통합 점검</p>
-                <p class="muted-text">여러 점검을 한 번에 실행하고 결과를 증빙 문서로 저장합니다.</p>
-              </div>
-              <div class="ic-header-actions">
-                <button id="icRefreshButton" type="button">새로고침</button>
-              </div>
-            </div>
-
-            <div class="ic-info-row">
-              <div class="ic-info-grid">
-                <label class="ic-field"><span>점검일</span><input id="icDate" type="text" readonly /></label>
-                <label class="ic-field"><span>고객·부서</span><input id="icCustomer" type="text" autocomplete="off" /></label>
-                <label class="ic-field"><span>자산번호</span><input id="icAssetTag" type="text" autocomplete="off" /></label>
-                <label class="ic-field"><span>점검자</span><input id="icInspector" type="text" autocomplete="off" /></label>
-              </div>
-              <div class="ic-header-actions ic-report-actions">
-                <button id="icStartButton" type="button">통합 점검</button>
-                <button id="icPrintButton" type="button" title="PDF로 저장" disabled>PDF 저장</button>
-                <button id="icSaveButton" type="button" disabled>증빙 저장</button>
-              </div>
-            </div>
-
-            <div class="ic-options">
-              <span class="ic-options-label">점검 항목</span>
-              <label class="ic-check"><input type="checkbox" id="icOptSpec" checked /><span>PC 사양</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptActivation" checked /><span>OS·정품</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptUsers" checked /><span>사용자 계정</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptNetwork" checked /><span>네트워크</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptHardware" checked /><span>하드웨어 점검</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptSoftware" checked /><span>설치 SW</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptThreat" checked /><span>위험 SW</span></label>
-              <label class="ic-check"><input type="checkbox" id="icOptShare" checked /><span>공유 폴더</span></label>
-            </div>
-
-            <div id="icScroll" class="ic-scroll">
-              <div id="icProgress"></div>
-              <div id="icResults"></div>
-            </div>
-          </section>
         </section>
 
         <section id="adminOverviewPage" class="page admin-work-page">
@@ -2226,15 +2180,47 @@
             <section class="panel health-detail-panel">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">항목별 점검 내역</p>
-                  <p class="muted-text">감점 항목과 사유를 확인합니다.</p>
+                  <p class="section-label">증빙 리포트 (PC 점검 보고서)</p>
+                  <p class="muted-text">점검 결과를 고객 제출용 문서로 만들어 PDF·보관함에 저장합니다.</p>
                 </div>
+              </div>
+              <div class="ic-info-grid health-report-info">
+                <label class="ic-field"><span>점검일</span><input id="icDate" type="text" readonly /></label>
+                <label class="ic-field"><span>고객·부서</span><input id="icCustomer" type="text" autocomplete="off" /></label>
+                <label class="ic-field"><span>자산번호</span><input id="icAssetTag" type="text" autocomplete="off" /></label>
+                <label class="ic-field"><span>점검자</span><input id="icInspector" type="text" autocomplete="off" /></label>
+              </div>
+              <div class="ic-options">
+                <span class="ic-options-label">리포트 항목</span>
+                <label class="ic-check"><input type="checkbox" id="icOptSpec" checked /><span>PC 사양</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptActivation" checked /><span>OS·정품</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptUsers" checked /><span>사용자 계정</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptNetwork" checked /><span>네트워크</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptHardware" checked /><span>하드웨어 점검</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptSoftware" checked /><span>설치 SW</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptThreat" checked /><span>위험 SW</span></label>
+                <label class="ic-check"><input type="checkbox" id="icOptShare" checked /><span>공유 폴더</span></label>
+              </div>
+              <div class="ic-header-actions ic-report-actions">
+                <button id="icStartButton" type="button">리포트 생성</button>
+                <button id="icRefreshButton" type="button">초기화</button>
+                <button id="icPrintButton" type="button" title="PDF로 저장" disabled>PDF 저장</button>
+                <button id="icSaveButton" type="button" disabled>보관함 저장</button>
+              </div>
+              <div id="icProgress"></div>
+              <div id="icResults"></div>
+
+              <div class="sec-subhead">
+                <p class="section-label">항목별 점검 내역</p>
+                <p class="muted-text">정상·감점 항목과 사유를 모두 확인합니다.</p>
               </div>
               <div id="healthBreakdown" class="health-breakdown">
                 <p class="empty-inline">「점검 실행」을 눌러 PC 상태를 점검하세요.</p>
               </div>
+
               <div class="sec-subhead">
                 <p class="section-label">전·후 비교 (Before / After)</p>
+                <p class="muted-text">스냅샷을 저장한 뒤 작업 후 다시 점검해 비교합니다.</p>
               </div>
               <div id="healthCompareResult" class="health-compare">
                 <p class="empty-inline">스냅샷을 저장한 뒤 작업 후 다시 점검해 비교하세요.</p>

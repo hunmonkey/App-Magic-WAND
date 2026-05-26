@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 
 const ipRecords = require("./modules/ip-records");
 const network = require("./modules/network");
@@ -242,13 +243,34 @@ async function exportPdf(event, payload = {}) {
     filePath += ".pdf";
   }
 
-  const data = await win.webContents.printToPDF({
-    printBackground: true,
-    preferCSSPageSize: true,
-    pageSize: "A4",
-  });
+  // payload.html이 있으면 현재 화면이 아니라 그 HTML 문서만 인쇄해 깨끗한 PDF를 만든다.
+  const data =
+    typeof payload.html === "string" && payload.html.trim()
+      ? await printHtmlToPdf(payload.html)
+      : await win.webContents.printToPDF({
+          printBackground: true,
+          preferCSSPageSize: true,
+          pageSize: "A4",
+        });
   await fs.promises.writeFile(filePath, data);
   return { canceled: false, filePath };
+}
+
+// 전달받은 HTML 문서를 화면 밖 창에 띄워 그 내용만 PDF로 만든다.
+async function printHtmlToPdf(html) {
+  const tmpFile = path.join(os.tmpdir(), `magicwand-report-${Date.now()}.html`);
+  await fs.promises.writeFile(tmpFile, html, "utf-8");
+  const offscreen = new BrowserWindow({
+    show: false,
+    webPreferences: { sandbox: true, javascript: false },
+  });
+  try {
+    await offscreen.loadFile(tmpFile);
+    return await offscreen.webContents.printToPDF({ printBackground: true, pageSize: "A4" });
+  } finally {
+    offscreen.destroy();
+    fs.promises.unlink(tmpFile).catch(() => {});
+  }
 }
 
 function registerLicenseHandlers() {

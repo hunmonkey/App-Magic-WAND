@@ -453,9 +453,13 @@ function evaluateSmartReport(report, device) {
     .filter(Boolean);
   const warnings = [];
   const failures = [];
+  const notes = [];
 
+  // SMART '읽기 실패'는 디스크 고장이 아니라 도구가 값을 못 읽은 상황이다.
+  // (저장장치 컨트롤러가 RAID/Intel VMD 모드이거나 권한 제한일 때 흔함)
+  // 디스크 건강은 Windows가 보고하는 "디스크 상태" 항목에서 따로 확인되므로 감점하지 않는다.
   if (toolErrors.length > 0) {
-    warnings.push(`SMART 읽기 실패: ${toolErrors[0]}`);
+    notes.push("SMART 상세값을 읽지 못했습니다. 저장장치 컨트롤러가 RAID/VMD 모드이거나 권한 제한일 수 있습니다. 디스크 건강 상태는 'SMART 상세'가 아닌 '디스크 상태' 항목을 참고하세요.");
   }
   if (passed === false) {
     failures.push("SMART 자체 판정 실패");
@@ -494,6 +498,7 @@ function evaluateSmartReport(report, device) {
     Number.isFinite(percentUsed) ? `수명 사용량: ${percentUsed}%` : "",
     ...failures,
     ...warnings,
+    ...notes,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -525,7 +530,9 @@ function evaluateSmartReport(report, device) {
     detail,
     hint:
       status === "ok"
-        ? "디스크 자체 진단값에서 큰 이상은 보이지 않습니다."
+        ? notes.length
+          ? "디스크 건강 상태는 'SMART 상세'가 아니라 위쪽 '디스크 상태' 항목에서 확인하세요. SMART 값은 컨트롤러 모드 때문에 읽지 못했을 뿐 고장 신호가 아닙니다."
+          : "디스크 자체 진단값에서 큰 이상은 보이지 않습니다."
         : "중요 자료를 먼저 백업하고, 관리자 권한 실행 상태에서도 같은 경고가 반복되는지 확인해 주세요.",
     meters,
   };
@@ -601,12 +608,16 @@ function evaluateNics(nics) {
       .filter(Boolean)
       .join(" · ");
 
+    // 연결 안 됨(Disconnected)·장치 없음(Not Present)은 안 쓰는 포트일 뿐 고장이 아니므로
+    // 감점하지 않고 정상(정보)으로 표시한다. NIC는 여러 개일 수 있다.
     return {
       category: "nic",
       name: `NIC 상태 · ${cleanText(nic.Name) || cleanText(nic.Description)}`,
-      status: isUp ? "ok" : "warn",
+      status: "ok",
       detail,
-      hint: isUp ? "네트워크 어댑터가 연결 상태로 보고됩니다." : "사용하지 않는 포트라면 정상일 수 있고, 필요한 연결이라면 케이블과 어댑터 상태를 확인해 주세요.",
+      hint: isUp
+        ? "네트워크 어댑터가 연결 상태로 보고됩니다."
+        : "지금 사용하지 않는 어댑터입니다. 연결이 필요하면 케이블·Wi-Fi 연결 상태를 확인하세요. (사용 안 함은 정상이며 감점하지 않습니다.)",
     };
   });
 }

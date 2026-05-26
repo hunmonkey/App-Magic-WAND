@@ -659,6 +659,62 @@ select:focus-visible,
   line-height: 1.4;
 }
 
+/* 점수 칩 + '해결' 버튼을 한 줄에 둔다 */
+.diagnostic-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.diagnostic-fix {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--blue);
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.diagnostic-fix:hover:not(:disabled) {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #ffffff;
+}
+.diagnostic-fix:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+/* 해결 방법 안내 문구 */
+.diagnostic-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+/* 회전 스피너 대신 은은하게 깜빡이는 대기 문구 */
+.health-live-wait {
+  animation: mw-wait-pulse 1.4s ease-in-out infinite;
+}
+@keyframes mw-wait-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* 증빙 리포트 영역(성능 점검 화면 안) 간격 */
+.health-report-info {
+  margin: 6px 0 12px;
+}
+.health-detail-panel .ic-report-actions {
+  margin: 0 0 14px;
+}
+.health-detail-panel #icResults {
+  display: grid;
+  gap: 10px;
+}
+
 .usage-summary {
   display: flex;
   flex-wrap: wrap;
@@ -3873,8 +3929,12 @@ tbody tr.selected {
 }
 .health-stage-card.is-running .health-stage-mark {
   border-color: var(--blue);
-  border-right-color: transparent;
-  animation: busy-spin 0.72s linear infinite;
+  background: var(--blue);
+  animation: mw-stage-pulse 1.3s ease-in-out infinite;
+}
+@keyframes mw-stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
 }
 .health-stage-card.is-done .health-stage-mark {
   border-color: var(--green);
@@ -5133,25 +5193,31 @@ body.motion-off *::after {
     stroke 0.3s ease,
     filter 0.4s ease;
 }
-/* 점검 중: 게이지 호가 빙글빙글 도는 스캔 모드 */
+/* 점검 중: 게이지 호는 비워 두고, 돋보기가 도넛 안을 이리저리 훑는다 */
 .health-gauge-wrap.is-scanning .health-gauge-fill {
-  stroke: var(--blue);
-  stroke-dasharray: 80 247 !important;
-  stroke-dashoffset: 0 !important;
-  transform-box: fill-box;
-  transform-origin: center;
+  stroke: var(--line);
   transition: none;
-  animation: mw-gauge-scan 1.1s linear infinite;
 }
-.health-gauge-wrap.is-scanning .health-gauge-center {
-  animation: mw-gauge-pulse 1.1s ease-in-out infinite;
+.health-gauge-wrap.is-scanning .health-gauge-center::before {
+  content: "🔍";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  font-size: 28px;
+  line-height: 32px;
+  text-align: center;
+  pointer-events: none;
+  animation: mw-gauge-search 2.6s ease-in-out infinite;
 }
-@keyframes mw-gauge-scan {
-  to { transform: rotate(360deg); }
-}
-@keyframes mw-gauge-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+@keyframes mw-gauge-search {
+  0%   { transform: translate(-30px, -28px) rotate(-12deg); }
+  25%  { transform: translate(28px, -22px) rotate(12deg); }
+  50%  { transform: translate(24px, 24px) rotate(-10deg); }
+  75%  { transform: translate(-26px, 20px) rotate(12deg); }
+  100% { transform: translate(-30px, -28px) rotate(-12deg); }
 }
 /* 결과 도착: 게이지가 톡 튀어오르고 등급 색으로 빛난다 */
 .health-gauge-wrap.is-done { animation: mw-gauge-done 0.7s var(--mw-out); }

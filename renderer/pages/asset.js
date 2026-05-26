@@ -589,7 +589,7 @@
     if (pcLike(asset.type)) {
       const checkBtn = document.createElement("button");
       checkBtn.type = "button";
-      checkBtn.textContent = "이 자산으로 통합 점검";
+      checkBtn.textContent = "이 자산으로 점검 리포트";
       checkBtn.addEventListener("click", () => startCheckForAsset(asset));
       actions.append(checkBtn);
     }
@@ -806,14 +806,16 @@
   }
 
   function startCheckForAsset(asset) {
-    document.querySelector("#integratedCheckMenu")?.click();
+    // 통합 점검은 'PC 성능 점검' 화면의 증빙 리포트 패널로 흡수됨.
+    document.querySelector("#healthMenu")?.click();
     const tagInput = document.querySelector("#icAssetTag");
     const customerInput = document.querySelector("#icCustomer");
     if (tagInput) tagInput.value = asset.assetTag || "";
     if (customerInput && !customerInput.value.trim()) {
       customerInput.value = asset.owner || asset.department || asset.location || "";
     }
-    ui.showToast("통합 점검 화면에 자산 정보를 채웠습니다.");
+    tagInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+    ui.showToast("PC 성능 점검 화면의 증빙 리포트에 자산 정보를 채웠습니다.");
   }
 
   function saveAssetPdf(asset) {
